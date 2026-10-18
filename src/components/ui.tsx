@@ -1,13 +1,12 @@
-import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 
-import { C, Fonts, Radius, Space } from '@/constants/theme';
+import { C, Display, Fonts } from '@/constants/theme';
 import { tap } from '@/lib/haptics';
 
 import { Icon, type IconName } from './icon';
+import { ArcadeButton, MetalPanel, SprayLabel } from './underground';
 
 export { tap };
 
@@ -28,29 +27,34 @@ export function T({
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
 }) {
+  // Display faces ship a single weight; asking for bold would make iOS fall back to the system font.
+  const face = rounded ? { fontFamily: Display.block } : { fontFamily: Fonts?.sans, fontWeight: weight };
   return (
-    <Text
-      numberOfLines={numberOfLines}
-      style={[{ fontSize: size, fontWeight: weight, color, fontFamily: rounded ? Fonts?.rounded : Fonts?.sans }, style]}>
+    <Text numberOfLines={numberOfLines} style={[{ fontSize: size, color }, face, style]}>
       {children}
     </Text>
   );
 }
 
-export function Card({ children, style, onPress }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
-  const body = <View style={[styles.card, style]}>{children}</View>;
-  if (!onPress) return body;
+const OUTER_KEYS = /^(margin|width$|minWidth|maxWidth|flex$|flexGrow|flexShrink|flexBasis|alignSelf|position|top|left|right|bottom|transform)/;
+
+/** Content card, drawn as a riveted steel plate. Layout styles go inside, placement styles outside. */
+export function Card({ children, style, onPress, accent }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void; accent?: string }) {
+  const flat = (StyleSheet.flatten(style as never) ?? {}) as Record<string, unknown>;
+  const outer: Record<string, unknown> = {};
+  const inner: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(flat)) (OUTER_KEYS.test(k) ? outer : inner)[k] = v;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
-      {body}
-    </Pressable>
+    <MetalPanel style={outer as ViewStyle} innerStyle={inner as ViewStyle} onPress={onPress} accent={accent}>
+      {children}
+    </MetalPanel>
   );
 }
 
 export function GradientButton({
   label,
   onPress,
-  colors = [C.lime, C.cyan],
+  colors,
   disabled,
   icon,
   style,
@@ -62,22 +66,7 @@ export function GradientButton({
   icon?: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  return (
-    <Pressable
-      disabled={disabled}
-      onPress={() => {
-        tap(Haptics.ImpactFeedbackStyle.Medium);
-        onPress();
-      }}
-      style={({ pressed }) => [{ opacity: disabled ? 0.4 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }, style]}>
-      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradBtn}>
-        {icon}
-        <T size={16} weight="700" color="#07080C">
-          {label}
-        </T>
-      </LinearGradient>
-    </Pressable>
-  );
+  return <ArcadeButton label={label.toUpperCase()} onPress={onPress} colors={colors} disabled={disabled} icon={icon} style={style} size="md" />;
 }
 
 export function Chip({
@@ -99,13 +88,9 @@ export function Chip({
         tap();
         onPress();
       }}
-      style={({ pressed }) => [
-        styles.chip,
-        active && { backgroundColor: color, borderColor: color },
-        pressed && { opacity: 0.7 },
-      ]}>
-      {icon && <Icon name={icon} size={13} color={active ? '#07080C' : C.textDim} weight="bold" />}
-      <T size={13} weight="600" color={active ? '#07080C' : C.text}>
+      style={({ pressed }) => [styles.chip, active && { backgroundColor: color }, pressed && { transform: [{ translateY: 2 }] }]}>
+      {icon && <Icon name={icon} size={13} color={active ? C.ink : C.textDim} weight="bold" />}
+      <T size={13} rounded color={active ? C.ink : C.text}>
         {label}
       </T>
     </Pressable>
@@ -118,7 +103,7 @@ export function Ring({
   stroke,
   progress,
   colors,
-  track = 'rgba(255,255,255,0.07)',
+  track = '#0E1011',
   children,
 }: {
   size: number;
@@ -163,57 +148,30 @@ export function Ring({
 export function Bar({ value, max, color, height = 8 }: { value: number; max: number; color: string; height?: number }) {
   const pct = max > 0 ? Math.min(value / max, 1) : 0;
   return (
-    <View style={{ height, borderRadius: height, backgroundColor: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
-      <View style={{ width: `${pct * 100}%`, height: '100%', borderRadius: height, backgroundColor: color }} />
+    <View style={[styles.track, { height: height + 4, borderRadius: 4 }]}>
+      <View style={{ width: `${pct * 100}%`, height: '100%', borderRadius: 2, backgroundColor: color, overflow: 'hidden' }}>
+        <View style={{ height: '45%', backgroundColor: 'rgba(255,255,255,0.35)' }} />
+      </View>
     </View>
   );
 }
 
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
-  return (
-    <View style={styles.sectionTitle}>
-      <T size={13} weight="700" color={C.textDim} style={{ letterSpacing: 1.2, textTransform: 'uppercase' }}>
-        {children}
-      </T>
-      {right}
-    </View>
-  );
+  return <SprayLabel right={right}>{String(children).toUpperCase()}</SprayLabel>;
 }
 
 const styles = StyleSheet.create({
-  card: {
-    backgroundColor: C.surface,
-    borderRadius: Radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
-    padding: Space.md,
-  },
-  gradBtn: {
-    height: 56,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: Space.lg,
-  },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: Radius.pill,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 8,
     backgroundColor: C.surfaceHi,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
+    borderWidth: 2,
+    borderColor: C.ink,
+    borderBottomWidth: 4,
   },
-  sectionTitle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Space.lg,
-    marginBottom: Space.sm,
-    paddingHorizontal: 4,
-  },
+  track: { backgroundColor: '#0E1011', borderWidth: 2, borderColor: '#000', padding: 1, overflow: 'hidden' },
 });

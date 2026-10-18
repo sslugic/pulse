@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassButton, Icon, IconBadge } from '@/components/icon';
 import { Bar, Card, Chip, Ring, SectionTitle, T, tap } from '@/components/ui';
+import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { wellbeingInsight, type WellbeingInsight } from '@/lib/gemini';
 import { journalPhotoUri, pickImage } from '@/lib/media';
@@ -81,15 +82,15 @@ export default function WellbeingScreen() {
   };
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Backdrop />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}>
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <T size={13} color={C.textDim} weight="600">
             Stress, sleep & journal
           </T>
-          <T size={28} weight="800" rounded>
-            Mind & recovery
-          </T>
+          <Comic size={38}>MIND & RECOVERY</Comic>
         </View>
         <GlassButton icon="close" onPress={() => router.back()} />
       </View>
@@ -313,6 +314,7 @@ export default function WellbeingScreen() {
         ))
       )}
     </ScrollView>
+    </View>
   );
 }
 

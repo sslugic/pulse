@@ -1,3 +1,7 @@
+import { Bangers_400Regular } from '@expo-google-fonts/bangers';
+import { PermanentMarker_400Regular } from '@expo-google-fonts/permanent-marker';
+import { RussoOne_400Regular } from '@expo-google-fonts/russo-one';
+import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -16,12 +20,14 @@ const theme = {
 export default function RootLayout() {
   const ready = useStore((s) => s.ready);
   const onboarded = useStore((s) => s.onboarded);
+  const [fontsLoaded, fontError] = useFonts({ Bangers_400Regular, PermanentMarker_400Regular, RussoOne_400Regular });
 
   useEffect(() => {
     hydrate().finally(() => SplashScreen.hideAsync());
   }, []);
 
-  if (!ready) return null;
+  // Fall back to system fonts rather than hang if a font fails to load.
+  if (!ready || (!fontsLoaded && !fontError)) return null;
 
   return (
     <ThemeProvider value={theme}>

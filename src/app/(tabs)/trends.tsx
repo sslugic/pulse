@@ -5,6 +5,7 @@ import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { EntryRow } from '@/components/entry-row';
 import { Card, Chip, SectionTitle, T } from '@/components/ui';
+import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { dayKey, fmtKg, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
 import { useStore } from '@/lib/store';
@@ -41,13 +42,13 @@ export default function Trends() {
   }, [entries, todayKey]);
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: C.bg }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.md, paddingBottom: insets.bottom + 100 }]}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <Backdrop />
+      <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.md, paddingBottom: Space.xl }]}>
       <View style={styles.headerRow}>
-        <T size={30} weight="800" rounded>
-          Trends
-        </T>
+        <Comic size={42}>STATS</Comic>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           {(Object.keys(RANGES) as (keyof typeof RANGES)[]).map((r) => (
             <Chip key={r} label={r} active={range === r} onPress={() => setRange(r)} />
@@ -131,14 +132,15 @@ export default function Trends() {
         );
       })}
     </ScrollView>
+    </View>
   );
 }
 
 function Kpi({ label, value, unit, color }: { label: string; value: string; unit: string; color: string }) {
   return (
     <Card style={styles.kpi}>
-      <T size={12} color={C.textDim} weight="600">
-        {label}
+      <T size={12} rounded color={C.textDim}>
+        {label.toUpperCase()}
       </T>
       <T size={26} weight="800" rounded color={color}>
         {value} <T size={12} color={C.textMute}>{unit}</T>

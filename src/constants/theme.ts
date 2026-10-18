@@ -2,46 +2,60 @@ import '@/global.css';
 
 import { Platform } from 'react-native';
 
-// Pulse is dark-first: deep ink background, glassy surfaces, neon accents.
+// "The Underground": 80s subway arcade. Concrete and riveted steel, with
+// neon green, hazard orange, spray-paint purple and comic yellow on top.
 export const C = {
-  bg: '#07080C',
-  surface: '#11131A',
-  surfaceHi: '#1A1D27',
-  border: 'rgba(255,255,255,0.08)',
-  text: '#F5F7FA',
-  textDim: '#9AA1B2',
-  textMute: '#5D6475',
+  bg: '#16181A',
+  surface: '#23272B',
+  surfaceHi: '#30353A',
+  border: 'rgba(0,0,0,0.55)',
+  steel: '#6E747A',
+  steelHi: '#A7ADB2',
+  rust: '#8A4A22',
+  ink: '#0B0C0D',
+  text: '#F3EEDC',
+  textDim: '#B5B09F',
+  textMute: '#7A776C',
 
-  lime: '#C6FF3D',
-  cyan: '#3DE7FF',
-  violet: '#9B7BFF',
-  pink: '#FF5CA8',
-  orange: '#FF9F43',
-  blue: '#4D8BFF',
+  lime: '#9CFF2E',
+  cyan: '#38D6FF',
+  violet: '#A267FF',
+  pink: '#FF4FA0',
+  orange: '#FF7A1A',
+  yellow: '#FFD319',
+  blue: '#3E8BFF',
 
   // Semantic
-  eaten: '#FF9F43',
-  burned: '#3DE7FF',
-  protein: '#FF5CA8',
-  carbs: '#C6FF3D',
-  fat: '#9B7BFF',
-  water: '#4D8BFF',
-  danger: '#FF5C5C',
+  eaten: '#FF7A1A',
+  burned: '#38D6FF',
+  protein: '#FF4FA0',
+  carbs: '#9CFF2E',
+  fat: '#A267FF',
+  water: '#3E8BFF',
+  danger: '#FF4141',
 } as const;
 
 export const Gradients = {
-  brand: ['#C6FF3D', '#3DE7FF'] as const,
-  violet: ['#9B7BFF', '#FF5CA8'] as const,
-  warm: ['#FF9F43', '#FF5CA8'] as const,
-  cool: ['#3DE7FF', '#4D8BFF'] as const,
+  brand: ['#B8FF4A', '#5BE01E'] as const,
+  violet: ['#B07BFF', '#7A2FE0'] as const,
+  warm: ['#FF9A3D', '#E8530E'] as const,
+  cool: ['#5FE2FF', '#1E8FE0'] as const,
+  arcade: ['#FFE34A', '#FFB800'] as const,
 };
 
+// Display faces are loaded in the root layout via expo-font.
+export const Display = {
+  comic: 'Bangers_400Regular',
+  tag: 'PermanentMarker_400Regular',
+  block: 'RussoOne_400Regular',
+} as const;
+
 export const Fonts = Platform.select({
-  ios: { sans: 'system-ui', rounded: 'ui-rounded', mono: 'ui-monospace' },
-  web: { sans: 'var(--font-display)', rounded: 'var(--font-rounded)', mono: 'var(--font-mono)' },
-  default: { sans: 'normal', rounded: 'normal', mono: 'monospace' },
+  ios: { sans: 'system-ui', rounded: Display.block, mono: 'ui-monospace' },
+  web: { sans: 'var(--font-display)', rounded: Display.block, mono: 'var(--font-mono)' },
+  default: { sans: 'normal', rounded: Display.block, mono: 'monospace' },
 });
 
-export const Radius = { sm: 12, md: 18, lg: 26, pill: 999 } as const;
+export const Radius = { sm: 8, md: 12, lg: 16, pill: 999 } as const;
 export const Space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 } as const;
 export const MaxContentWidth = 640;

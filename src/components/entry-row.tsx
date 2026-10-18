@@ -141,15 +141,17 @@ export function EntryRow({ entry, compact }: { entry: Entry; compact?: boolean }
 
 const styles = StyleSheet.create({
   row: {
-    backgroundColor: C.surface,
+    backgroundColor: '#25292D',
     borderRadius: Radius.md,
     padding: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
+    borderWidth: 2,
+    borderColor: '#4E5458',
+    borderBottomWidth: 4,
+    borderBottomColor: '#0E1011',
   },
-  compact: { backgroundColor: C.surfaceHi },
+  compact: { backgroundColor: '#2C3135' },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  emoji: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  emoji: { width: 44, height: 44, borderRadius: 10, borderWidth: 2, borderColor: '#0E1011', alignItems: 'center', justifyContent: 'center' },
   detail: { marginTop: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border, gap: 4 },
   item: { flexDirection: 'row', gap: 8 },
   photo: { width: '100%', aspectRatio: 4 / 3, borderRadius: 14, marginTop: 4 },

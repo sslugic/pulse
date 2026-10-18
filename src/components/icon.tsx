@@ -1,4 +1,5 @@
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from 'expo-glass-effect';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import type { ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -93,7 +94,7 @@ export function Glass({ children, style, tint, interactive }: { children?: React
   return <View style={[styles.fallback, tint ? { backgroundColor: tint } : null, style]}>{children}</View>;
 }
 
-/** Round glass icon button. */
+/** Round riveted steel button (bolt head). */
 export function GlassButton({
   icon,
   onPress,
@@ -118,9 +119,15 @@ export function GlassButton({
         onPress();
       }}
       style={({ pressed }) => ({ opacity: disabled ? 0.4 : 1, transform: [{ scale: pressed ? 0.92 : 1 }] })}>
-      <Glass interactive tint={tint} style={[styles.round, { width: size, height: size, borderRadius: size / 2 }]}>
-        <Icon name={icon} size={size * 0.42} color={color} />
-      </Glass>
+      <LinearGradient
+        colors={['#B9BEC2', '#5E6468', '#3A3F43']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.round, { width: size, height: size, borderRadius: size / 2, padding: 3 }]}>
+        <View style={[styles.round, styles.boltFace, { width: size - 6, height: size - 6, borderRadius: size / 2, backgroundColor: tint ?? '#25292C' }]}>
+          <Icon name={icon} size={size * 0.42} color={color} />
+        </View>
+      </LinearGradient>
     </Pressable>
   );
 }
@@ -128,7 +135,7 @@ export function GlassButton({
 /** Icon in a soft tinted badge, used for list rows and stat labels. */
 export function IconBadge({ name, color, size = 36 }: { name: IconName; color: string; size?: number }) {
   return (
-    <View style={[styles.round, { width: size, height: size, borderRadius: size * 0.34, backgroundColor: color + '22' }]}>
+    <View style={[styles.round, styles.badge, { width: size, height: size, borderRadius: size * 0.26, backgroundColor: color + '2A', borderColor: color + '88' }]}>
       <Icon name={name} size={size * 0.5} color={color} />
     </View>
   );
@@ -136,6 +143,8 @@ export function IconBadge({ name, color, size = 36 }: { name: IconName; color: s
 
 const styles = StyleSheet.create({
   round: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  boltFace: { borderWidth: 1.5, borderColor: '#0B0C0D' },
+  badge: { borderWidth: 1.5 },
   fallback: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: StyleSheet.hairlineWidth,

@@ -1,4 +1,3 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -7,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconBadge } from '@/components/icon';
 import { Field, inputStyle, ProfileFields } from '@/components/profile-form';
 import { Card, SectionTitle, T } from '@/components/ui';
+import { Backdrop, Comic, MetalPanel } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { DEFAULT_MODEL } from '@/lib/gemini';
 import { GOAL_INFO, macroTargets, PACE_INFO } from '@/lib/nutrition';
@@ -23,13 +23,11 @@ export default function ProfileScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.md, paddingBottom: insets.bottom + 100 }]} keyboardShouldPersistTaps="handled">
-        <T size={30} weight="800" rounded>
-          Profile
-        </T>
+      <Backdrop />
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.md, paddingBottom: Space.xl }]} keyboardShouldPersistTaps="handled">
+        <Comic size={42}>THE CREW</Comic>
 
-        <Pressable onPress={() => router.push('/goals')} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.985 : 1 }] })}>
-          <LinearGradient colors={['#1A1F2E', '#11141C']} style={styles.plan}>
+        <MetalPanel onPress={() => router.push('/goals')} accent={C.lime + '99'} style={{ marginTop: Space.sm }} innerStyle={{ gap: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <IconBadge name="target" color={C.lime} size={40} />
               <View style={{ flex: 1 }}>
@@ -49,11 +47,10 @@ export default function ProfileScreen() {
               <Target label="carbs" value={t.carbs} unit="g" color={C.carbs} />
               <Target label="fat" value={t.fat} unit="g" color={C.fat} />
             </View>
-            <T size={12} color={C.cyan} weight="700">
-              Set a goal with AI or edit targets →
+            <T size={12} rounded color={C.cyan}>
+              SET A GOAL WITH AI OR EDIT TARGETS →
             </T>
-          </LinearGradient>
-        </Pressable>
+        </MetalPanel>
 
         <SectionTitle>You</SectionTitle>
         <Card style={{ gap: 18 }}>
@@ -145,6 +142,5 @@ function Target({ label, value, unit = '', color }: { label: string; value: numb
 
 const styles = StyleSheet.create({
   content: { paddingHorizontal: Space.md, gap: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
-  plan: { borderRadius: 26, padding: Space.md, gap: 16, marginTop: Space.sm, borderWidth: 1, borderColor: C.lime + '33' },
   targets: { flexDirection: 'row' },
 });

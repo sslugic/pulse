@@ -1,9 +1,8 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { C, Radius, Space } from '@/constants/theme';
+import { C } from '@/constants/theme';
 import { tap } from '@/lib/haptics';
 import { summarize, targets as getTargets } from '@/lib/nutrition';
 import { actions, useStore } from '@/lib/store';
@@ -11,6 +10,7 @@ import { dayWellbeing, impactFor, LEVEL_COLOR, MOODS, moodEmoji, patterns } from
 
 import { Icon, IconBadge } from './icon';
 import { Ring, T } from './ui';
+import { MetalPanel } from './underground';
 
 /**
  * Today's stress, sleep and mood, tied to today's nutrition and the user's own history,
@@ -33,17 +33,16 @@ export function WellbeingCard({ todayKey, onTalk }: { todayKey: string; onTalk: 
   const links = correlate(w, day, t, profile.goal, history);
 
   return (
-    <Pressable onPress={() => router.push('/wellbeing')} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.99 : 1 }] })}>
-      <LinearGradient colors={['#1A1626', '#100F17']} style={[styles.card, { borderColor: color + '44' }]}>
+    <MetalPanel onPress={() => router.push('/wellbeing')} accent={w.level ? color + 'CC' : undefined} innerStyle={styles.card}>
         <View style={styles.head}>
           <IconBadge name="brain" color={C.pink} size={32} />
-          <T size={15} weight="800" style={{ flex: 1 }}>
-            Mind & recovery
+          <T size={15} rounded style={{ flex: 1 }}>
+            MIND & RECOVERY
           </T>
           {w.level && (
-            <View style={[styles.pill, { backgroundColor: color + '22' }]}>
-              <T size={11} weight="800" color={color}>
-                {w.level.toUpperCase()} STRESS
+            <View style={[styles.pill, { backgroundColor: color }]}>
+              <T size={10} rounded color={C.ink}>
+                {w.level.toUpperCase()}
               </T>
             </View>
           )}
@@ -102,12 +101,11 @@ export function WellbeingCard({ todayKey, onTalk }: { todayKey: string; onTalk: 
           }}
           style={({ pressed }) => [styles.talk, pressed && { opacity: 0.7 }]}>
           <Icon name="mic" size={14} color={C.pink} />
-          <T size={13} weight="700" color={C.pink}>
-            {w.notes.length ? 'Add to today’s journal' : 'Tell me about your day & sleep'}
+          <T size={13} rounded color={C.pink}>
+            {w.notes.length ? 'ADD TO TODAY’S JOURNAL' : 'TELL ME ABOUT YOUR DAY & SLEEP'}
           </T>
         </Pressable>
-      </LinearGradient>
-    </Pressable>
+    </MetalPanel>
   );
 }
 
@@ -163,9 +161,9 @@ function Stat({ icon, emoji, color, label, value }: { icon?: 'moon' | 'bolt'; em
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: Radius.lg, padding: Space.md, gap: 14, borderWidth: 1 },
+  card: { gap: 14 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  pill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.pill },
+  pill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, borderWidth: 2, borderColor: C.ink, transform: [{ rotate: '-3deg' }] },
   stats: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   trio: { flex: 1, flexDirection: 'row' },
   moods: { flexDirection: 'row', justifyContent: 'space-between' },
@@ -177,7 +175,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     paddingVertical: 10,
-    borderRadius: Radius.pill,
-    backgroundColor: C.pink + '18',
+    borderRadius: 8,
+    backgroundColor: '#2A1424',
+    borderWidth: 2,
+    borderColor: C.ink,
+    borderBottomWidth: 4,
   },
 });

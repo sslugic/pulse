@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { IconBadge } from '@/components/icon';
 import { Field, inputStyle, ProfileFields } from '@/components/profile-form';
 import { GradientButton, T } from '@/components/ui';
+import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { calorieTarget } from '@/lib/nutrition';
 import { actions, getState } from '@/lib/store';
@@ -23,6 +24,7 @@ export default function Onboarding() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Backdrop />
       <ScrollView
         ref={scroll}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.lg, paddingBottom: insets.bottom + Space.lg }]}
@@ -36,9 +38,10 @@ export default function Onboarding() {
         {step === 0 && (
           <Animated.View entering={FadeIn.duration(400)} style={styles.hero}>
             <Image source={require('@/assets/images/icon.png')} style={styles.logo} />
-            <T size={40} weight="900" rounded style={{ textAlign: 'center' }}>
-              Pulse
-            </T>
+            <Comic size={56} color={C.yellow}>
+              PULSE
+            </Comic>
+            <Comic size={20}>THE UNDERGROUND FITNESS CREW</Comic>
             <T size={17} color={C.textDim} style={{ textAlign: 'center', lineHeight: 24, maxWidth: 320 }}>
               Your AI fitness coach. Just talk, snap a photo, or type a few words — calories, macros and burn are worked out for you.
             </T>
@@ -63,9 +66,7 @@ export default function Onboarding() {
 
         {step === 1 && (
           <Animated.View entering={FadeInDown.duration(350)} style={{ gap: 18 }}>
-            <T size={30} weight="800" rounded>
-              About you
-            </T>
+            <Comic size={38}>ABOUT YOU</Comic>
             <T size={14} color={C.textDim}>
               Used to estimate calorie burn and set your daily targets.
             </T>
@@ -86,9 +87,7 @@ export default function Onboarding() {
 
         {step === 2 && (
           <Animated.View entering={FadeInDown.duration(350)} style={{ gap: 18 }}>
-            <T size={30} weight="800" rounded>
-              Connect Google AI
-            </T>
+            <Comic size={38}>CONNECT GOOGLE AI</Comic>
             <T size={14} color={C.textDim} style={{ lineHeight: 20 }}>
               Pulse uses your own Gemini API key. It’s stored in the device Keychain and only sent to Google.
             </T>

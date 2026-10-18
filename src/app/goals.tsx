@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassButton, Icon, IconBadge, type IconName } from '@/components/icon';
 import { Card, Chip, GradientButton, SectionTitle, T, tap } from '@/components/ui';
+import { Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { planGoal } from '@/lib/gemini';
 import { fmtWater, GOAL_INFO, PACE_INFO, recommendedTargets, targets as getTargets, tdee } from '@/lib/nutrition';
@@ -64,15 +65,14 @@ export default function GoalsScreen() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Backdrop />
       <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
               Your daily targets
             </T>
-            <T size={28} weight="800" rounded>
-              Nutrition plan
-            </T>
+            <Comic size={38}>NUTRITION PLAN</Comic>
           </View>
           <GlassButton icon="close" onPress={() => router.back()} />
         </View>

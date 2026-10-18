@@ -10,7 +10,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EntryRow } from '@/components/entry-row';
 import { GlassButton, Icon, type IconName } from '@/components/icon';
+import { TagAvatar } from '@/components/tag-avatar';
 import { Chip, T, tap } from '@/components/ui';
+import { Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { audioMime, pickImage, readBase64, VOICE_PRESET } from '@/lib/media';
 import { actions, useStore } from '@/lib/store';
@@ -41,15 +43,6 @@ export default function Coach() {
   const hasKey = useStore((s) => !!s.settings.apiKey);
 
   const [text, setText] = useState('');
-  const [kbOpen, setKbOpen] = useState(false);
-  useEffect(() => {
-    const show = Keyboard.addListener('keyboardWillShow', () => setKbOpen(true));
-    const hide = Keyboard.addListener('keyboardWillHide', () => setKbOpen(false));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
   const didInitialScroll = useRef(false);
@@ -162,16 +155,13 @@ export default function Coach() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <Backdrop />
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <LinearGradient colors={Gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.avatar}>
-          <Icon name="sparkles" size={20} color="#07080C" />
-        </LinearGradient>
+        <TagAvatar size={48} band={C.violet} online={!thinking} letter="C" />
         <View style={{ flex: 1 }}>
-          <T size={20} weight="800" rounded>
-            Pulse Coach
-          </T>
-          <T size={12} color={thinking ? C.lime : C.textDim} weight="600">
-            {thinking ? 'Analyzing…' : 'Talk, snap, or type — I’ll log it'}
+          <Comic size={30}>COACH</Comic>
+          <T size={12} rounded color={thinking ? C.lime : C.textDim}>
+            {thinking ? 'ANALYZING…' : 'TALK, SNAP OR TYPE. I’LL LOG IT.'}
           </T>
         </View>
         {!empty && (
@@ -195,7 +185,7 @@ export default function Coach() {
             <Icon name="sparkles" size={44} color={C.lime} animation={{ effect: { type: 'pulse' }, repeating: true }} />
           </LinearGradient>
           <T size={26} weight="800" rounded style={{ textAlign: 'center' }}>
-            What did you eat{'\n'}or do today?
+            WHAT DID YOU EAT{'\n'}OR DO TODAY?
           </T>
           <T size={14} color={C.textDim} style={{ textAlign: 'center', maxWidth: 300 }}>
             No forms, no searching. Tap the mic and talk, or snap your plate or the treadmill screen.
@@ -225,7 +215,7 @@ export default function Coach() {
       )}
 
       {/* Composer */}
-      <View style={[styles.composerWrap, { paddingBottom: kbOpen ? 8 : Math.max(insets.bottom, 8) + 12 }]}>
+      <View style={[styles.composerWrap, { paddingBottom: 10 }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
           {repeats.map((r) => (
             <Chip key={`r-${r}`} icon="repeat" label={r} onPress={() => sendText(`Same again: ${r}`)} />
@@ -283,7 +273,7 @@ function Bubble({ msg, entryById }: { msg: ChatMessage; entryById: Map<string, E
       <Animated.View entering={FadeInDown.duration(220)} style={{ alignItems: 'flex-end', gap: 6 }}>
         {msg.imageUri && <Image source={{ uri: msg.imageUri }} style={styles.photo} contentFit="cover" />}
         {!!msg.text && (
-          <LinearGradient colors={Gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.bubble, styles.mine]}>
+          <LinearGradient colors={Gradients.arcade} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.bubble, styles.mine]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
               {msg.isVoice && <Icon name="mic" size={15} color="#07080C" />}
               <T size={15} weight="600" color="#07080C">
@@ -455,8 +445,9 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: Space.md,
     paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: C.border,
+    borderBottomWidth: 3,
+    borderBottomColor: '#5E6468',
+    backgroundColor: 'rgba(22,24,26,0.9)',
   },
   avatar: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   list: { padding: Space.md, gap: 14, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
@@ -475,8 +466,8 @@ const styles = StyleSheet.create({
   bigAction: { width: 76, height: 76, borderRadius: 26, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   gloss: { position: 'absolute', top: 0, left: 0, right: 0, height: '55%' },
   bubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, maxWidth: '85%' },
-  mine: { borderBottomRightRadius: 6 },
-  theirs: { backgroundColor: C.surface, borderBottomLeftRadius: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: C.border, maxWidth: '100%' },
+  mine: { borderBottomRightRadius: 4, borderWidth: 2.5, borderColor: C.ink, borderBottomWidth: 5 },
+  theirs: { backgroundColor: '#262A2E', borderBottomLeftRadius: 4, borderWidth: 2.5, borderColor: '#5E6468', maxWidth: '100%' },
   photo: { width: 200, height: 200, borderRadius: 20 },
   retry: {
     flexDirection: 'row',
@@ -488,24 +479,24 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: Radius.pill,
   },
-  composerWrap: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.border, backgroundColor: C.bg, gap: 10, paddingTop: 10 },
+  composerWrap: { borderTopWidth: 3, borderTopColor: '#5E6468', backgroundColor: 'rgba(22,24,26,0.96)', gap: 10, paddingTop: 10 },
   chips: { gap: 8, paddingHorizontal: Space.md },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: Space.md },
   input: {
     flex: 1,
     minHeight: 44,
     maxHeight: 120,
-    backgroundColor: C.surface,
-    borderRadius: 22,
+    backgroundColor: '#0F1112',
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
     color: C.text,
     fontSize: 15,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: C.border,
+    borderWidth: 2,
+    borderColor: '#5E6468',
   },
-  sendBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  sendBtn: { width: 44, height: 44, borderRadius: 12, borderWidth: 2.5, borderColor: C.ink, alignItems: 'center', justifyContent: 'center' },
   recBar: {
     flexDirection: 'row',
     alignItems: 'center',
