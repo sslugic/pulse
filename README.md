@@ -1,56 +1,42 @@
-# Welcome to your Expo app 👋
+# Pulse — AI fitness & nutrition coach
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An Expo (React Native) app: iPhone first, with Android and web from the same code.
 
-## Get started
+Log meals and workouts by **talking**, **snapping a photo** (your plate, a nutrition label, a treadmill or smartwatch screen) or **typing a few words**. Google Gemini turns it into calories, macros and calories burned, and the dashboard tracks calories in vs out, macros, water, streaks and trends.
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+- **AI Coach**: voice notes, photos or text become log entries. Corrections like "actually it was 2 slices" work too.
+- **Nutrition plan**: describe your goal ("build muscle and lose fat") and get calorie, protein, carb, fat, fiber and water targets for your body, or pick a goal and pace and fine-tune each target yourself.
+- **Today dashboard**: calories-left ring, macros, water and activity, plus a daily AI insight.
+- **Trends**: 7- and 30-day calories in vs out, macro split, weight trend and history.
+- **Private by default**: all data stays on the device, and your Gemini key is stored in the iOS Keychain.
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Run
 
 ```bash
-npm run reset-project
+npm install
+npx expo start        # press i for the iOS Simulator, or scan the QR code with Expo Go
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Add your Gemini API key during onboarding or in **Profile**. For development you can preset it in `.env` (see `.env.example`). The model defaults to `gemini-3.8-flash` and can be changed in Profile.
 
-### Other setup steps
+### Install on an iPhone
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+LANG=en_US.UTF-8 npx expo run:ios --device --configuration Release
+```
 
-## Learn more
+This needs Xcode and an Apple Developer signing identity. Set `ios.appleTeamId` and `ios.bundleIdentifier` in `app.json` to your own values.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Layout
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `src/app/(tabs)`: Today, Coach, Trends and Profile screens
+- `src/app/goals.tsx`: nutrition plan (AI planner and target editor)
+- `src/lib/gemini.ts`: Gemini calls with structured JSON output, timeouts and retries
+- `src/lib/nutrition.ts`: BMR/TDEE, goal- and pace-based targets, daily summaries
+- `src/lib/store.ts`: local persisted store (AsyncStorage + SecureStore)
 
-## Join the community
+## License
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+MIT
