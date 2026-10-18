@@ -88,4 +88,6 @@ export interface ChatMessage {
 export interface Settings {
   apiKey: string;
   model: string;
+  /** Coach reads its replies out loud. */
+  voiceReplies: boolean;
 }

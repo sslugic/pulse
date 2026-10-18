@@ -7,6 +7,7 @@ Log meals and workouts by **talking**, **snapping a photo** (your plate, a nutri
 ## Features
 
 - **AI Coach**: voice notes, photos or text become log entries. Corrections like "actually it was 2 slices" work too.
+- **Ask the Coach**: training, workouts, form, recovery, nutrition and supplement questions get real answers tailored to your goal and logs, and the Coach talks back out loud (mute it with the speaker button, or tap Listen on any reply).
 - **Nutrition plan**: describe your goal ("build muscle and lose fat") and get calorie, protein, carb, fat, fiber and water targets for your body, or pick a goal and pace and fine-tune each target yourself.
 - **Mind & recovery journal**: tell the Coach how you slept, how you feel and what happened, or add photo moments. Pulse turns it into a daily stress score (life stress, sleep debt, mood, fatigue, training load), connects it to your calories and protein, explains how it affects fat loss, and finds patterns in your own history.
 - **Today dashboard**: calories-left ring, macros, water and activity, plus a daily AI insight.

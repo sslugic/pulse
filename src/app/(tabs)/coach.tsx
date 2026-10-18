@@ -17,6 +17,7 @@ import { C, Gradients, MaxContentWidth, Radius, Space } from '@/constants/theme'
 import { audioMime, pickImage, readBase64, VOICE_PRESET } from '@/lib/media';
 import { actions, useStore } from '@/lib/store';
 import type { ChatMessage, Entry } from '@/lib/types';
+import { speak, stopSpeaking, useSpeakingId } from '@/lib/voice';
 
 const SUGGESTIONS = [
   '😴 Slept badly, about 5 hours',
@@ -30,6 +31,10 @@ const SUGGESTIONS = [
   '🚶 10k steps walk',
   '💧 Big glass of water',
   '📊 How am I doing today?',
+  '💬 Plan me a 20 min home workout',
+  '💬 How much protein do I need?',
+  '💬 Best cardio for fat loss?',
+  '💬 How do I fix sore legs?',
 ];
 
 const MAX_RECORDING_S = 90;
@@ -41,6 +46,8 @@ export default function Coach() {
   const entries = useStore((s) => s.entries);
   const thinking = useStore((s) => s.thinking);
   const hasKey = useStore((s) => !!s.settings.apiKey);
+  const voiceReplies = useStore((s) => s.settings.voiceReplies);
+  const speakingId = useSpeakingId();
 
   const [text, setText] = useState('');
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
@@ -117,6 +124,7 @@ export default function Coach() {
   async function startRecording() {
     if (!guardKey() || thinking) return;
     Keyboard.dismiss();
+    stopSpeaking();
     try {
       const perm = await AudioModule.requestRecordingPermissionsAsync();
       if (!perm.granted) {
@@ -161,9 +169,15 @@ export default function Coach() {
         <View style={{ flex: 1 }}>
           <Comic size={30}>COACH</Comic>
           <T size={12} rounded color={thinking ? C.lime : C.textDim}>
-            {thinking ? 'ANALYZING…' : 'TALK, SNAP OR TYPE. I’LL LOG IT.'}
+            {thinking ? 'ANALYZING…' : speakingId ? 'TALKING…' : 'LOG IT OR ASK ME ANYTHING.'}
           </T>
         </View>
+        <GlassButton
+          icon={voiceReplies ? 'speaker' : 'speakerOff'}
+          size={38}
+          color={voiceReplies ? C.lime : C.textDim}
+          onPress={() => actions.setVoiceReplies(!voiceReplies)}
+        />
         {!empty && (
           <GlassButton
             icon="trash"
@@ -188,7 +202,7 @@ export default function Coach() {
             WHAT DID YOU EAT{'\n'}OR DO TODAY?
           </T>
           <T size={14} color={C.textDim} style={{ textAlign: 'center', maxWidth: 300 }}>
-            No forms, no searching. Tap the mic and talk, or snap your plate or the treadmill screen.
+            No forms, no searching. Tap the mic and talk, or snap your plate or the treadmill screen. Ask me anything about training, food or recovery and I’ll talk back.
           </T>
           <View style={styles.bigActions}>
             <BigAction icon="mic" label="Talk" colors={Gradients.violet} onPress={startRecording} />
@@ -203,6 +217,7 @@ export default function Coach() {
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.list}
           keyboardDismissMode="interactive"
+          extraData={speakingId}
           onContentSizeChange={() => {
             // Open on the latest message, not the oldest.
             if (!didInitialScroll.current) {
@@ -210,7 +225,7 @@ export default function Coach() {
               listRef.current?.scrollToEnd({ animated: false });
             }
           }}
-          renderItem={({ item }) => <Bubble msg={item} entryById={entryById} />}
+          renderItem={({ item }) => <Bubble msg={item} entryById={entryById} speaking={speakingId === item.id} />}
         />
       )}
 
@@ -235,7 +250,7 @@ export default function Coach() {
               ref={inputRef}
               value={text}
               onChangeText={setText}
-              placeholder="e.g. chicken salad & a coke"
+              placeholder="Log a meal or ask me anything"
               placeholderTextColor={C.textMute}
               style={styles.input}
               multiline
@@ -264,7 +279,7 @@ export default function Coach() {
 
 const PENDING_LABEL = { voice: 'Listening to your voice note', photo: 'Looking at your photo', text: 'Crunching the numbers' } as const;
 
-function Bubble({ msg, entryById }: { msg: ChatMessage; entryById: Map<string, Entry> }) {
+function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map<string, Entry>; speaking: boolean }) {
   const mine = msg.role === 'user';
   const logged = (msg.entryIds ?? []).map((id) => entryById.get(id)).filter(Boolean) as Entry[];
 
@@ -316,6 +331,21 @@ function Bubble({ msg, entryById }: { msg: ChatMessage; entryById: Map<string, E
           </T>
         )}
       </View>
+      {!msg.pending && !msg.error && !!msg.text && (
+        <Pressable
+          hitSlop={8}
+          onPress={() => {
+            tap();
+            if (speaking) stopSpeaking();
+            else speak(msg.id, msg.text);
+          }}
+          style={({ pressed }) => [styles.listen, pressed && { opacity: 0.6 }]}>
+          <Icon name={speaking ? 'stop' : 'speaker'} size={13} color={speaking ? C.lime : C.textMute} />
+          <T size={11} weight="700" color={speaking ? C.lime : C.textMute} style={{ letterSpacing: 1 }}>
+            {speaking ? 'STOP' : 'LISTEN'}
+          </T>
+        </Pressable>
+      )}
       {logged.length > 0 && (
         <View style={{ gap: 6, alignSelf: 'stretch', minWidth: 280 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4 }}>
@@ -469,6 +499,7 @@ const styles = StyleSheet.create({
   mine: { borderBottomRightRadius: 4, borderWidth: 2.5, borderColor: C.ink, borderBottomWidth: 5 },
   theirs: { backgroundColor: '#262A2E', borderBottomLeftRadius: 4, borderWidth: 2.5, borderColor: '#5E6468', maxWidth: '100%' },
   photo: { width: 200, height: 200, borderRadius: 20 },
+  listen: { flexDirection: 'row', alignItems: 'center', gap: 5, marginLeft: 6, marginTop: -2 },
   retry: {
     flexDirection: 'row',
     alignItems: 'center',
