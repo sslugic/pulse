@@ -31,6 +31,26 @@ LANG=en_US.UTF-8 npx expo run:ios --device --configuration Release
 
 This needs Xcode and an Apple Developer signing identity. Set `ios.appleTeamId` and `ios.bundleIdentifier` in `app.json` to your own values.
 
+### Build in the cloud with EAS
+
+`eas.json` has two profiles:
+
+- `preview`: a Release build signed for the devices you register (ad hoc), installed from a link. Use this to put the app on your phone without Xcode.
+- `production`: an App Store build, with the build number incremented automatically, ready for `eas submit` to TestFlight.
+
+The first time, run it on your Mac. It links the project to your Expo account, sets up Apple signing and registers your iPhone:
+
+```bash
+npx eas-cli@latest device:create                          # open the link on your iPhone to register it
+npx eas-cli@latest build -p ios --profile preview          # then install from the link when the build finishes
+```
+
+After that, builds can run non-interactively (for example from CI or a cloud agent) with an `EXPO_TOKEN`:
+
+```bash
+EXPO_TOKEN=... npx eas-cli@latest build -p ios --profile preview --non-interactive --no-wait
+```
+
 ## Layout
 
 - `src/app/(tabs)`: Today, Coach, Trends and Profile screens
