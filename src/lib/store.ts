@@ -7,6 +7,7 @@ import { AiError, askCoach, DEFAULT_MODEL, type Media, type PlanResult } from '.
 import { deleteJournalPhoto, saveJournalPhoto } from './media';
 import { recommendedTargets } from './nutrition';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
+import { speak, stopSpeaking } from './voice';
 
 interface State {
   ready: boolean;
@@ -39,7 +40,7 @@ let state: State = {
   profile: defaultProfile,
   entries: [],
   messages: [],
-  settings: { apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '', model: DEFAULT_MODEL },
+  settings: { apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '', model: DEFAULT_MODEL, voiceReplies: true },
   thinking: false,
 };
 
@@ -65,6 +66,7 @@ function schedulePersist() {
       // Photos live in the picker cache; keep chat light.
       messages: messages.filter((m) => !m.pending).map(({ retryable, ...m }) => m).slice(-150),
       model: settings.model,
+      voiceReplies: settings.voiceReplies,
     };
     AsyncStorage.setItem(DATA_KEY, JSON.stringify(data)).catch(() => {});
   }, 250);
@@ -86,7 +88,7 @@ export async function hydrate() {
       profile: migrateProfile(data.profile),
       entries: data.entries ?? [],
       messages: data.messages ?? [],
-      settings: { apiKey: key || state.settings.apiKey, model: data.model || DEFAULT_MODEL },
+      settings: { apiKey: key || state.settings.apiKey, model: data.model || DEFAULT_MODEL, voiceReplies: data.voiceReplies ?? true },
     };
   } catch {
     // corrupt storage: start fresh rather than crash
@@ -146,6 +148,10 @@ export const actions = {
   setModel(model: string) {
     set((s) => ({ settings: { ...s.settings, model: model.trim() || DEFAULT_MODEL } }));
   },
+  setVoiceReplies(voiceReplies: boolean) {
+    set((s) => ({ settings: { ...s.settings, voiceReplies } }));
+    if (!voiceReplies) stopSpeaking();
+  },
   addEntry(e: Omit<Entry, 'id' | 'createdAt'> & { createdAt?: number }) {
     const entry: Entry = { ...e, id: uid(), createdAt: e.createdAt ?? Date.now() };
     set((s) => ({ entries: [entry, ...s.entries].sort((a, b) => b.createdAt - a.createdAt) }));
@@ -199,6 +205,7 @@ export const actions = {
     return actions.sendToCoach(input);
   },
   clearChat() {
+    stopSpeaking();
     set({ messages: [] });
   },
   resetAll() {
@@ -224,6 +231,7 @@ export const actions = {
       pendingKind: input.audio ? 'voice' : input.image ? 'photo' : 'text',
     };
     set({ messages: [...s.messages, userMsg, pending], thinking: true });
+    stopSpeaking();
 
     try {
       const result = await askCoach({
@@ -262,6 +270,7 @@ export const actions = {
           m.id === pending.id ? { ...m, pending: false, text: result.reply, entryIds: added.map((a) => a.id) } : m,
         ),
       }));
+      if (state.settings.voiceReplies) speak(pending.id, result.reply);
       return added;
     } catch (err) {
       const retryable = !(err instanceof AiError) || err.retryable;

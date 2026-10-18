@@ -49,6 +49,9 @@ const ICONS = {
   gauge: ['gauge.with.needle.fill', 'speed'],
   warning: ['exclamationmark.triangle.fill', 'warning'],
   photoAdd: ['photo.badge.plus', 'add_photo_alternate'],
+  speaker: ['speaker.wave.2.fill', 'volume_up'],
+  speakerOff: ['speaker.slash.fill', 'volume_off'],
+  stop: ['stop.fill', 'stop'],
 } as const;
 
 export type IconName = keyof typeof ICONS;
