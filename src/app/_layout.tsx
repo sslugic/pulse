@@ -30,6 +30,7 @@ export default function RootLayout() {
         <Stack.Protected guard={onboarded}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="wellbeing" options={{ presentation: 'modal' }} />
         </Stack.Protected>
         <Stack.Protected guard={!onboarded}>
           <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />

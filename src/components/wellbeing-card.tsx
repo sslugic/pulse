@@ -1,0 +1,183 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { useMemo } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import { C, Radius, Space } from '@/constants/theme';
+import { tap } from '@/lib/haptics';
+import { summarize, targets as getTargets } from '@/lib/nutrition';
+import { actions, useStore } from '@/lib/store';
+import { dayWellbeing, impactFor, LEVEL_COLOR, MOODS, moodEmoji, patterns } from '@/lib/wellbeing';
+
+import { Icon, IconBadge } from './icon';
+import { Ring, T } from './ui';
+
+/**
+ * Today's stress, sleep and mood, tied to today's nutrition and the user's own history,
+ * so the numbers explain each other instead of living on separate screens.
+ */
+export function WellbeingCard({ todayKey, onTalk }: { todayKey: string; onTalk: () => void }) {
+  const entries = useStore((s) => s.entries);
+  const profile = useStore((s) => s.profile);
+  const w = useMemo(() => dayWellbeing(entries, todayKey), [entries, todayKey]);
+  const day = useMemo(() => summarize(entries, todayKey), [entries, todayKey]);
+  const history = useMemo(() => patterns(entries, profile), [entries, profile]);
+  const t = getTargets(profile);
+
+  const logMood = (mood: number) => {
+    tap();
+    actions.addEntry({ kind: 'journal', title: 'Mood check-in', emoji: moodEmoji(mood), mood, source: 'quick' });
+  };
+
+  const color = w.level ? LEVEL_COLOR[w.level] : C.textMute;
+  const links = correlate(w, day, t, profile.goal, history);
+
+  return (
+    <Pressable onPress={() => router.push('/wellbeing')} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.99 : 1 }] })}>
+      <LinearGradient colors={['#1A1626', '#100F17']} style={[styles.card, { borderColor: color + '44' }]}>
+        <View style={styles.head}>
+          <IconBadge name="brain" color={C.pink} size={32} />
+          <T size={15} weight="800" style={{ flex: 1 }}>
+            Mind & recovery
+          </T>
+          {w.level && (
+            <View style={[styles.pill, { backgroundColor: color + '22' }]}>
+              <T size={11} weight="800" color={color}>
+                {w.level.toUpperCase()} STRESS
+              </T>
+            </View>
+          )}
+          <Icon name="chevron" size={14} color={C.textMute} />
+        </View>
+
+        {w.stress != null ? (
+          <View style={styles.stats}>
+            <Ring size={84} stroke={9} progress={w.stress / 100} colors={[color, color]}>
+              <T size={24} weight="900" rounded color={color}>
+                {w.stress}
+              </T>
+              <T size={9} color={C.textMute} weight="700">
+                STRESS
+              </T>
+            </Ring>
+            <View style={styles.trio}>
+              <Stat icon="moon" color={C.violet} label="Sleep" value={w.sleepHours != null ? `${w.sleepHours}h` : '—'} />
+              <Stat emoji={moodEmoji(w.mood)} label="Mood" value={w.mood ? MOODS[Math.round(w.mood) - 1].label : '—'} />
+              <Stat icon="bolt" color={C.lime} label="Energy" value={w.energy ? `${w.energy.toFixed(0)}/5` : '—'} />
+            </View>
+          </View>
+        ) : (
+          <T size={13} color={C.textDim} style={{ lineHeight: 19 }}>
+            How are you feeling? Tap a face, or tell the Coach how you slept and what’s going on. Stress and sleep shape cravings, recovery and the
+            scale.
+          </T>
+        )}
+
+        {w.mood == null && (
+          <View style={styles.moods}>
+            {MOODS.map((m) => (
+              <Pressable key={m.v} onPress={() => logMood(m.v)} style={({ pressed }) => [styles.mood, pressed && { transform: [{ scale: 0.9 }] }]}>
+                <T size={26}>{m.emoji}</T>
+                <T size={10} color={C.textMute} weight="700">
+                  {m.label}
+                </T>
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {links.map((l, i) => (
+          <View key={i} style={styles.link}>
+            <Icon name={l.icon} size={14} color={l.color} />
+            <T size={13} color={C.text} style={{ flex: 1, lineHeight: 19 }}>
+              {l.text}
+            </T>
+          </View>
+        ))}
+
+        <Pressable
+          onPress={() => {
+            tap();
+            onTalk();
+          }}
+          style={({ pressed }) => [styles.talk, pressed && { opacity: 0.7 }]}>
+          <Icon name="mic" size={14} color={C.pink} />
+          <T size={13} weight="700" color={C.pink}>
+            {w.notes.length ? 'Add to today’s journal' : 'Tell me about your day & sleep'}
+          </T>
+        </Pressable>
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
+type Link = { text: string; icon: 'warning' | 'sparkles' | 'flame' | 'dumbbell' | 'moon'; color: string };
+
+/** Connect today's strain with today's food and the user's own patterns. */
+function correlate(
+  w: ReturnType<typeof dayWellbeing>,
+  day: ReturnType<typeof summarize>,
+  t: ReturnType<typeof getTargets>,
+  goal: Parameters<typeof impactFor>[1],
+  history: ReturnType<typeof patterns>,
+): Link[] {
+  if (!w.level) return [];
+  const out: Link[] = [{ text: impactFor(w.level, goal).body, icon: w.stress! >= 55 ? 'warning' : 'sparkles', color: LEVEL_COLOR[w.level] }];
+  const left = t.calories + day.burned - day.eaten;
+  const proteinPct = t.protein ? day.protein / t.protein : 1;
+  const stressed = w.stress! >= 55;
+  const shortSleep = w.sleepHours != null && w.sleepHours < 6.5;
+
+  if (stressed && left < 0) {
+    out.push({ text: `You’re ${Math.abs(Math.round(left))} kcal over. That’s normal on a hard day; don’t compensate tomorrow, just reset.`, icon: 'flame', color: C.orange });
+  } else if ((stressed || shortSleep) && proteinPct < 0.6 && day.meals > 0) {
+    out.push({
+      text: `Protein is at ${Math.round(proteinPct * 100)}%. Hitting ${t.protein} g helps blunt stress cravings. Plan a protein-rich next meal.`,
+      icon: 'dumbbell',
+      color: C.protein,
+    });
+  } else if (stressed && left > 300) {
+    out.push({ text: `${Math.round(left)} kcal left. Decide dinner now so stress doesn’t decide for you later.`, icon: 'flame', color: C.lime });
+  }
+
+  const sleepPattern = history.find((p) => p.text.startsWith('After short nights'));
+  if (shortSleep && sleepPattern) out.push({ text: `Heads-up: ${sleepPattern.text}`, icon: 'moon', color: C.violet });
+  const stressPattern = history.find((p) => p.text.startsWith('On high-stress days'));
+  if (stressed && stressPattern) out.push({ text: `Heads-up: ${stressPattern.text}`, icon: 'warning', color: C.orange });
+
+  return out.slice(0, 3);
+}
+
+function Stat({ icon, emoji, color, label, value }: { icon?: 'moon' | 'bolt'; emoji?: string; color?: string; label: string; value: string }) {
+  return (
+    <View style={{ alignItems: 'center', gap: 4, flex: 1 }}>
+      {emoji ? <T size={20}>{emoji}</T> : <Icon name={icon!} size={20} color={color} />}
+      <T size={15} weight="800" rounded>
+        {value}
+      </T>
+      <T size={10} color={C.textMute} weight="700">
+        {label.toUpperCase()}
+      </T>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: { borderRadius: Radius.lg, padding: Space.md, gap: 14, borderWidth: 1 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.pill },
+  stats: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  trio: { flex: 1, flexDirection: 'row' },
+  moods: { flexDirection: 'row', justifyContent: 'space-between' },
+  mood: { alignItems: 'center', gap: 2, paddingVertical: 6, paddingHorizontal: 4, borderRadius: 14 },
+  link: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
+  talk: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: Radius.pill,
+    backgroundColor: C.pink + '18',
+  },
+});

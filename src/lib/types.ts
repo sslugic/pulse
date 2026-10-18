@@ -1,4 +1,4 @@
-export type EntryKind = 'meal' | 'exercise' | 'water' | 'weight';
+export type EntryKind = 'meal' | 'exercise' | 'water' | 'weight' | 'journal';
 
 export interface Nutrition {
   calories: number;
@@ -27,6 +27,15 @@ export interface Entry {
   waterMl?: number;
   // weight
   weightKg?: number;
+  // journal: mood, sleep and what happened today
+  mood?: number; // 1 awful .. 5 great
+  energy?: number; // 1 drained .. 5 energized
+  stress?: number; // 1 calm .. 10 overwhelmed, as judged from what the user said
+  sleepHours?: number;
+  sleepQuality?: number; // 1 .. 5
+  tags?: string[]; // e.g. "work deadline", "sore legs", "travel"
+  summary?: string; // the journal note in the user's words, lightly cleaned up
+  photo?: string; // journal photo, path relative to the documents directory
   note?: string;
   confidence?: number; // 0..1 from the AI
   source: 'text' | 'voice' | 'photo' | 'quick';

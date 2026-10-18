@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EntryRow } from '@/components/entry-row';
 import { Icon, IconBadge, type IconName } from '@/components/icon';
 import { QuickTiles } from '@/components/quick-tiles';
+import { WellbeingCard } from '@/components/wellbeing-card';
 import { Bar, Card, Ring, SectionTitle, T, tap } from '@/components/ui';
 import { C, Gradients, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { dailyInsight } from '@/lib/gemini';
@@ -86,6 +87,11 @@ export default function Today() {
       {/* Quick log */}
       <View style={{ marginTop: Space.sm }}>
         <QuickTiles onTalk={() => openCoach('voice')} onSnap={() => openCoach('camera')} onType={() => openCoach('type')} />
+      </View>
+
+      {/* Mind & recovery, tied to today's food */}
+      <View style={{ marginTop: Space.sm }}>
+        <WellbeingCard todayKey={todayKey} onTalk={() => openCoach('voice')} />
       </View>
 
       {/* AI insight */}

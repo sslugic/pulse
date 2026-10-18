@@ -1,5 +1,5 @@
 import { AudioQuality, IOSOutputFormat, type RecordingOptions } from 'expo-audio';
-import { File } from 'expo-file-system';
+import { Directory, File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Platform } from 'react-native';
 
@@ -69,4 +69,30 @@ export async function pickImage(from: 'camera' | 'library'): Promise<PickedImage
   const a = res.assets[0];
   const base64 = a.base64 ?? (await readBase64(a.uri));
   return { uri: a.uri, base64, mimeType: a.mimeType ?? 'image/jpeg' };
+}
+
+// Journal photos live in documents/journal. We store the relative path because the absolute
+// container path changes when iOS updates the app.
+export async function saveJournalPhoto(uri: string, id: string): Promise<string> {
+  if (Platform.OS === 'web') return uri;
+  const dir = new Directory(Paths.document, 'journal');
+  if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
+  const name = `journal/${id}.jpg`;
+  await new File(uri).copy(new File(Paths.document, name));
+  return name;
+}
+
+export function journalPhotoUri(photo: string) {
+  if (Platform.OS === 'web' || /^[a-z]+:/i.test(photo)) return photo;
+  return new File(Paths.document, photo).uri;
+}
+
+export function deleteJournalPhoto(photo: string) {
+  if (Platform.OS === 'web' || /^[a-z]+:/i.test(photo)) return;
+  try {
+    const f = new File(Paths.document, photo);
+    if (f.exists) f.delete();
+  } catch {
+    // already gone
+  }
 }

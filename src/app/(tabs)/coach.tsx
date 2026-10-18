@@ -17,6 +17,9 @@ import { actions, useStore } from '@/lib/store';
 import type { ChatMessage, Entry } from '@/lib/types';
 
 const SUGGESTIONS = [
+  '😴 Slept badly, about 5 hours',
+  '😤 Stressful day at work',
+  '😄 Feeling great today',
   '☕ Flat white',
   '🥣 Oats with berries',
   '🍌 A banana',

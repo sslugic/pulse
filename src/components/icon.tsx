@@ -42,6 +42,12 @@ const ICONS = {
   bubble: ['text.bubble.fill', 'chat'],
   pencil: ['pencil.and.scribble', 'edit_note'],
   cameraLens: ['camera.aperture', 'camera'],
+  moon: ['moon.zzz.fill', 'bedtime'],
+  brain: ['brain.head.profile', 'psychology'],
+  book: ['book.closed.fill', 'menu_book'],
+  gauge: ['gauge.with.needle.fill', 'speed'],
+  warning: ['exclamationmark.triangle.fill', 'warning'],
+  photoAdd: ['photo.badge.plus', 'add_photo_alternate'],
 } as const;
 
 export type IconName = keyof typeof ICONS;

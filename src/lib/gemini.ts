@@ -1,5 +1,6 @@
 import type { ChatMessage, Entry, Goal, Pace, Profile, Targets } from './types';
 import { dayKey, GOAL_INFO, recommendedTargets, summarize, targets as currentTargets } from './nutrition';
+import { dayWellbeing, wellbeingDigest } from './wellbeing';
 
 const ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models';
 export const DEFAULT_MODEL = 'gemini-3.8-flash';
@@ -40,7 +41,7 @@ const PACES = ['gentle', 'standard', 'aggressive'];
 const ENTRY_SCHEMA = {
   type: 'OBJECT',
   properties: {
-    kind: { type: 'STRING', enum: ['meal', 'exercise', 'water', 'weight'] },
+    kind: { type: 'STRING', enum: ['meal', 'exercise', 'water', 'weight', 'journal'] },
     title: { type: 'STRING', description: 'Short name, e.g. "Chicken burrito bowl" or "5k run"' },
     emoji: { type: 'STRING', description: 'One emoji that fits the entry' },
     hoursAgo: { type: 'NUMBER', description: 'How long ago it happened if the user said so, else 0' },
@@ -70,6 +71,13 @@ const ENTRY_SCHEMA = {
     intensity: { type: 'STRING', enum: ['low', 'moderate', 'high'] },
     waterMl: { type: 'NUMBER' },
     weightKg: { type: 'NUMBER' },
+    mood: { type: 'NUMBER', description: 'journal: 1 awful, 2 low, 3 okay, 4 good, 5 great' },
+    energy: { type: 'NUMBER', description: 'journal: 1 drained .. 5 energized' },
+    stress: { type: 'NUMBER', description: 'journal: 1 calm .. 10 overwhelmed, judged from what they describe' },
+    sleepHours: { type: 'NUMBER', description: 'journal: hours slept last night' },
+    sleepQuality: { type: 'NUMBER', description: 'journal: 1 terrible .. 5 great' },
+    tags: { type: 'ARRAY', items: { type: 'STRING' }, description: 'journal: 1-4 short factors, e.g. "work deadline", "sore legs"' },
+    summary: { type: 'STRING', description: 'journal: their note in first person, 1-2 sentences' },
     note: { type: 'STRING', description: 'One-line tip or observation about this entry' },
     confidence: { type: 'NUMBER', description: '0..1 how sure you are of the estimate' },
   },
@@ -98,6 +106,12 @@ const RESPONSE_SCHEMA = {
   required: ['reply', 'entries', 'removeEntryIds'],
 };
 
+function wellbeingLine(entries: Entry[]) {
+  const w = dayWellbeing(entries, dayKey(Date.now()));
+  if (w.stress == null) return 'nothing logged yet';
+  return `stress ${w.stress}/100 (${w.level}), sleep ${w.sleepHours ?? '?'}h, mood ${w.mood?.toFixed(1) ?? '?'}/5, energy ${w.energy?.toFixed(1) ?? '?'}/5${w.tags.length ? `, factors: ${w.tags.join(', ')}` : ''}`;
+}
+
 function userContext(profile: Profile, entries: Entry[]) {
   const today = summarize(entries, dayKey(Date.now()));
   const t = currentTargets(profile);
@@ -118,6 +132,7 @@ function userContext(profile: Profile, entries: Entry[]) {
 DAILY TARGETS: ${t.calories} kcal, protein ${t.protein} g, carbs ${t.carbs} g, fat ${t.fat} g, fiber ${t.fiber} g, water ${t.waterMl} ml.
 NOW: ${new Date().toLocaleString()}
 TODAY SO FAR: eaten ${today.eaten} kcal (P ${today.protein}g / C ${today.carbs}g / F ${today.fat}g), burned ${today.burned} kcal, water ${today.water} ml.
+WELLBEING TODAY: ${wellbeingLine(entries)}
 REMAINING TODAY: ${t.calories + today.burned - today.eaten} kcal (target + burned - eaten), protein ${Math.max(0, t.protein - today.protein)} g. Always use these exact numbers when mentioning what is left.
 RECENT ENTRIES:
 ${recent || '(none)'}`;
@@ -137,9 +152,11 @@ RULES
 - Several things in one message -> several entries.
 - Corrections like "actually it was 2 slices" or "delete that" -> put the old entry id in removeEntryIds and add the corrected entry.
 - The user states a new goal ("I want to build muscle and lose weight", "time to bulk") -> set goalUpdate (lose = fat loss, recomp = build muscle AND lose fat, maintain, gain = build muscle/bulk) and explain the new targets in the reply. Otherwise omit goalUpdate.
+- Mood, sleep, energy, or what happened in their day ("slept 5 hours", "rough day at work", "feeling great", "had a fight with my partner", "legs are sore") -> one "journal" entry. ALWAYS set sleepHours as a number when any amount of sleep is mentioned ("5 and a half hours" -> 5.5, "barely slept" -> 4); ALWAYS set mood (1-5) from their tone; set energy, stress (1-10) and sleepQuality when implied, tags with the key factors, summary in their words, and a short supportive note. A message can contain a journal entry AND meals/exercise. Sleep "last night" belongs to today.
+- When today's stress is high or sleep was short, adapt: suggest a lighter session or a maintenance-calorie day, and mention how stress and poor sleep raise cravings and water retention.
 - Questions ("how am I doing?", "what should I eat for dinner?") -> no entries; answer using today's numbers.
 - Voice notes: if the audio is silent or unintelligible, log nothing and say you couldn't hear it.
-- If an image is not food or exercise, say so kindly and log nothing.
+- An image that is not food or exercise (a moment, view, place, pet, people, something they want to remember) -> a "journal" entry: summary describing the moment in first person, tags, and mood/stress only if evident. If they say "journal" or "add to my journal", always create a journal entry for the photo (and also log a meal if it's food they ate).
 - Never ask follow-up questions just to get more precision; make your best estimate and mention the main assumption.
 - reply: 1-3 short sentences, friendly, with one useful insight (e.g. remaining calories or protein). No markdown headings, no lists. Use ${profile.units} units.`;
 }
@@ -345,4 +362,45 @@ export async function dailyInsight(opts: { apiKey: string; model: string; profil
   } catch {
     return '';
   }
+}
+
+export interface WellbeingInsight {
+  headline: string;
+  body: string;
+  tips: string[];
+}
+
+/** Coaching on how the user's stress, sleep and mood are affecting their goal. */
+export async function wellbeingInsight(opts: { apiKey: string; model: string; profile: Profile; entries: Entry[] }): Promise<WellbeingInsight> {
+  const { apiKey, model, profile, entries } = opts;
+  const raw = await generate(
+    apiKey,
+    model,
+    {
+      systemInstruction: {
+        parts: [
+          {
+            text: `You are Pulse, a supportive coach who understands how stress, sleep and mood affect body composition (cortisol, cravings, water retention, recovery, adherence).
+${userContext(profile, entries)}
+LAST 14 DAYS:
+${wellbeingDigest(entries, 14) || '(little data yet)'}
+Write: headline (max 8 words), body (2-3 sentences linking THEIR stress/sleep/mood data to their ${GOAL_INFO[profile.goal].label} progress, citing their numbers; if data is thin, say what to log), and exactly 3 short, specific tips for the next few days. Kind, direct, no medical claims, no diagnosis. Use ${profile.units} units.`,
+          },
+        ],
+      },
+      contents: [{ role: 'user', parts: [{ text: 'How are stress and sleep affecting my progress?' }] }],
+      generationConfig: {
+        temperature: 0.6,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: { headline: { type: 'STRING' }, body: { type: 'STRING' }, tips: { type: 'ARRAY', items: { type: 'STRING' } } },
+          required: ['headline', 'body', 'tips'],
+        },
+      },
+    },
+    30_000,
+  );
+  const j = JSON.parse(raw);
+  return { headline: String(j.headline ?? ''), body: String(j.body ?? ''), tips: (j.tips ?? []).slice(0, 3).map(String) };
 }

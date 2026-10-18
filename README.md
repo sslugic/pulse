@@ -8,6 +8,7 @@ Log meals and workouts by **talking**, **snapping a photo** (your plate, a nutri
 
 - **AI Coach**: voice notes, photos or text become log entries. Corrections like "actually it was 2 slices" work too.
 - **Nutrition plan**: describe your goal ("build muscle and lose fat") and get calorie, protein, carb, fat, fiber and water targets for your body, or pick a goal and pace and fine-tune each target yourself.
+- **Mind & recovery journal**: tell the Coach how you slept, how you feel and what happened, or add photo moments. Pulse turns it into a daily stress score (life stress, sleep debt, mood, fatigue, training load), connects it to your calories and protein, explains how it affects fat loss, and finds patterns in your own history.
 - **Today dashboard**: calories-left ring, macros, water and activity, plus a daily AI insight.
 - **Trends**: 7- and 30-day calories in vs out, macro split, weight trend and history.
 - **Private by default**: all data stays on the device, and your Gemini key is stored in the iOS Keychain.

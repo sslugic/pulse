@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
 import { AiError, askCoach, DEFAULT_MODEL, type Media, type PlanResult } from './gemini';
+import { deleteJournalPhoto, saveJournalPhoto } from './media';
 import { recommendedTargets } from './nutrition';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
 
@@ -102,6 +103,15 @@ function migrateProfile(raw: (Partial<Profile> & { calorieOverride?: number; wat
   return p;
 }
 
+// Safety net: models sometimes leave sleep hours only in the prose.
+function fillJournal<T extends Partial<Entry>>(e: T): T {
+  if (e.kind !== 'journal' || e.sleepHours != null) return e;
+  const text = `${e.summary ?? ''} ${(e.tags ?? []).join(' ')}`.toLowerCase().replace(/(\d+)\s+and\s+a\s+half/g, '$1.5');
+  const m = text.match(/(\d+(?:\.\d+)?)\s*(?:h\b|hrs?\b|hours?\b)/);
+  const n = m ? Number(m[1]) : NaN;
+  return n > 0 && n <= 14 && /sleep|slept|night/.test(text) ? { ...e, sleepHours: n } : e;
+}
+
 type CoachInput = { text?: string; image?: Media & { uri: string }; audio?: Media };
 // Failed sends keep their payload in memory so the user can retry with one tap.
 const retryInputs = new Map<string, CoachInput>();
@@ -144,7 +154,12 @@ export const actions = {
     return entry;
   },
   removeEntry(id: string) {
+    const photo = state.entries.find((e) => e.id === id)?.photo;
+    if (photo) deleteJournalPhoto(photo);
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
+  },
+  updateEntry(id: string, patch: Partial<Entry>) {
+    set((s) => ({ entries: s.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
   },
   setGoal(goal: Profile['goal'], pace: Profile['pace'] = state.profile.pace, note?: string) {
     // A new goal starts from fresh recommendations.
@@ -224,7 +239,7 @@ export const actions = {
       result.removeEntryIds.forEach(actions.removeEntry);
       if (result.goalUpdate) actions.setGoal(result.goalUpdate.goal, result.goalUpdate.pace, result.goalUpdate.note);
       const source: Entry['source'] = input.audio ? 'voice' : input.image ? 'photo' : 'text';
-      const added = result.entries.map(({ hoursAgo, ...e }) =>
+      const added = result.entries.map(fillJournal).map(({ hoursAgo, ...e }) =>
         actions.addEntry({
           ...e,
           source,
@@ -232,6 +247,15 @@ export const actions = {
           createdAt: Date.now() - Math.max(0, Math.min(hoursAgo ?? 0, 48)) * 3600_000,
         }),
       );
+      // Keep the photo with journal moments so the timeline can show it later.
+      const img = input.image;
+      if (img) {
+        for (const e of added.filter((a) => a.kind === 'journal')) {
+          saveJournalPhoto(img.uri, e.id)
+            .then((photo) => actions.updateEntry(e.id, { photo }))
+            .catch((err) => console.warn('[journal] photo save failed', err));
+        }
+      }
       set((st) => ({
         thinking: false,
         messages: st.messages.map((m) =>
