@@ -7,7 +7,8 @@ import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, type Media, type PlanR
 import { deleteJournalPhoto, saveJournalPhoto } from './media';
 import { celebrate } from './haptics';
 import { macroTargets, recommendedTargets } from './nutrition';
-import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, type Claim } from './quests';
+import { ARCADE_CLAIM, ARCADE_XP, gameById, isUnlocked, type GameId } from './arcade';
+import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, type GameState } from './quests';
 import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
 import { speak, stopSpeaking } from './voice';
@@ -20,7 +21,7 @@ interface State {
   messages: ChatMessage[]; // oldest first
   settings: Settings;
   thinking: boolean;
-  game: { claims: Claim[] };
+  game: GameState;
   /** Latest "+XP" pop-up; not persisted. */
   reward: Reward | null;
 }
@@ -56,7 +57,7 @@ let state: State = {
   messages: [],
   settings: { apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '', model: DEFAULT_MODEL, voiceReplies: true, coachVoice: DEFAULT_VOICE },
   thinking: false,
-  game: { claims: [] },
+  game: { claims: [], unlocked: [] },
   reward: null,
 };
 
@@ -112,7 +113,7 @@ export async function hydrate() {
         voiceReplies: data.voiceReplies ?? true,
         coachVoice: data.coachVoice || DEFAULT_VOICE,
       },
-      game: { claims: data.game?.claims ?? [] },
+      game: { claims: data.game?.claims ?? [], unlocked: data.game?.unlocked ?? [] },
     };
   } catch {
     // corrupt storage: start fresh rather than crash
@@ -254,6 +255,23 @@ export const actions = {
     pushReward(xp, tokens, perfect ? 'PERFECT DAY' : q.title);
     celebrate();
   },
+  /** Buys an arcade game with tokens. Returns false when it can't be afforded. */
+  unlockGame(id: GameId) {
+    const g = gameById(id);
+    const { game } = state;
+    if (!g || isUnlocked(id, game.unlocked)) return true;
+    if (tokenBalance(game) < g.price) return false;
+    set((s) => ({ game: { ...s.game, unlocked: [...s.game.unlocked, id] } }));
+    celebrate();
+    return true;
+  },
+  /** A full minute in the arcade pays a little XP, once a day. */
+  finishGame(day: string) {
+    if (state.game.claims.some((c) => c.day === day && c.questId === ARCADE_CLAIM)) return;
+    set((s) => ({ game: { ...s.game, claims: [...s.game.claims, { day, questId: ARCADE_CLAIM, xp: ARCADE_XP, tokens: 0, at: Date.now() }] } }));
+    pushReward(ARCADE_XP, 0, 'CHILLED OUT');
+    celebrate();
+  },
   clearReward(id: string) {
     if (state.reward?.id === id) set({ reward: null });
   },
@@ -273,7 +291,7 @@ export const actions = {
     set({ messages: [] });
   },
   resetAll() {
-    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [] }, reward: null });
+    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [], unlocked: [] }, reward: null });
   },
 
   async sendToCoach(input: CoachInput) {
