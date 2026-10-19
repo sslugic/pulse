@@ -1,15 +1,17 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { RankScene, useWallLevel, WALL_NAMES } from '@/components/backdrops';
 import { GlassButton, Icon } from '@/components/icon';
 import { Bar, Card, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { questXp } from '@/lib/quests';
 import { crewRank, RANKS, XP_SOURCES } from '@/lib/rank';
-import { useStore } from '@/lib/store';
+import { actions, useStore } from '@/lib/store';
+import { tap } from '@/lib/haptics';
 
 const RANK_COLORS = [C.textDim, C.orange, C.yellow, C.lime, C.cyan, C.violet, C.pink];
 
@@ -19,6 +21,8 @@ export default function RanksScreen() {
   const entries = useStore((s) => s.entries);
   const claims = useStore((s) => s.game.claims);
   const crew = useMemo(() => crewRank(entries, questXp(claims)), [entries, claims]);
+  const { wall } = useWallLevel();
+  const following = useStore((s) => s.game.wall == null);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -59,7 +63,21 @@ export default function RanksScreen() {
           </T>
         </Card>
 
-        <SectionTitle>The ladder</SectionTitle>
+        <SectionTitle
+          right={
+            !following ? (
+              <Pressable onPress={() => actions.setWall(undefined)} hitSlop={6}>
+                <T size={11} rounded color={C.cyan}>
+                  FOLLOW MY RANK
+                </T>
+              </Pressable>
+            ) : undefined
+          }>
+          The ladder
+        </SectionTitle>
+        <T size={12} color={C.textDim} style={{ lineHeight: 17, marginTop: -4 }}>
+          Every rank unlocks a new wall for the whole app. Tap an unlocked wall to use it.
+        </T>
         <View style={{ gap: 8 }}>
           {RANKS.map((r, i) => {
             const done = i < crew.level - 1;
@@ -89,6 +107,7 @@ export default function RanksScreen() {
                   <T size={12} color={current || done ? C.textDim : C.textMute} style={{ lineHeight: 17 }}>
                     {r.blurb}
                   </T>
+                  <WallThumb level={i + 1} unlocked={done || current} inUse={wall === i + 1} color={color} />
                 </Card>
               </View>
             );
@@ -113,7 +132,44 @@ export default function RanksScreen() {
   );
 }
 
+/** Preview of a rank's wall; unlocked ones can be tapped to use as the app background. */
+function WallThumb({ level, unlocked, inUse, color }: { level: number; unlocked: boolean; inUse: boolean; color: string }) {
+  const [width, setWidth] = useState(0);
+  return (
+    <Pressable
+      disabled={!unlocked || inUse}
+      onPress={() => {
+        tap();
+        actions.setWall(level);
+      }}
+      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
+      accessibilityRole="button"
+      accessibilityLabel={`${WALL_NAMES[level - 1]} wall${unlocked ? '' : ', locked'}`}
+      style={[styles.thumb, { borderColor: inUse ? color : C.ink }]}>
+      {width > 0 && <RankScene level={level} width={width} height={130} />}
+      {!unlocked && (
+        <View style={styles.locked}>
+          <Icon name="lock" size={16} color={C.textDim} />
+        </View>
+      )}
+      <View style={styles.thumbLabel}>
+        <T size={10} rounded color={C.text}>
+          {WALL_NAMES[level - 1]}
+        </T>
+        {(inUse || unlocked) && (
+          <T size={10} rounded color={inUse ? color : C.cyan}>
+            {inUse ? 'IN USE' : 'TAP TO USE'}
+          </T>
+        )}
+      </View>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  thumb: { height: 130, marginTop: 8, borderRadius: 8, overflow: 'hidden', borderWidth: 2 },
+  locked: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(11,12,13,0.4)', alignItems: 'center', justifyContent: 'center' },
+  thumbLabel: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 4, backgroundColor: 'rgba(11,12,13,0.7)' },
   content: { paddingHorizontal: Space.md, paddingTop: Space.lg, gap: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: Space.sm },
   between: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
