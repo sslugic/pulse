@@ -11,7 +11,10 @@ import { GradientButton, T } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { calorieTarget } from '@/lib/nutrition';
-import { actions, getState } from '@/lib/store';
+import { AccountCard } from '@/components/account-card';
+import { cloudConfigured } from '@/lib/cloud';
+import { HEALTH_DISCLAIMER } from '@/lib/legal';
+import { actions, getState, useStore } from '@/lib/store';
 import type { Profile } from '@/lib/types';
 
 export default function Onboarding() {
@@ -19,6 +22,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [p, setP] = useState<Profile>(getState().profile);
   const [key, setKey] = useState(getState().settings.apiKey);
+  const signedIn = useStore((st) => !!st.account.userId);
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const set = (patch: Partial<Profile>) => setP((x) => ({ ...x, ...patch }));
 
@@ -85,7 +89,20 @@ export default function Onboarding() {
           </Animated.View>
         )}
 
-        {step === 2 && (
+        {step === 2 && cloudConfigured && (
+          <Animated.View entering={FadeInDown.duration(350)} style={{ gap: 18 }}>
+            <Comic size={38}>JOIN THE CREW</Comic>
+            <T size={14} color={C.textDim} style={{ lineHeight: 20 }}>
+              The Coach, plans and recaps run on AI credits. Sign in to start with 50 free and keep your progress backed up.
+            </T>
+            <AccountCard />
+            <T size={11} color={C.textMute} style={{ lineHeight: 15 }}>
+              {HEALTH_DISCLAIMER}
+            </T>
+          </Animated.View>
+        )}
+
+        {step === 2 && !cloudConfigured && (
           <Animated.View entering={FadeInDown.duration(350)} style={{ gap: 18 }}>
             <Comic size={38}>CONNECT GOOGLE AI</Comic>
             <T size={14} color={C.textDim} style={{ lineHeight: 20 }}>
@@ -114,7 +131,7 @@ export default function Onboarding() {
 
         <View style={{ flex: 1 }} />
         <GradientButton
-          label={step === 0 ? 'Get started' : step === 1 ? 'Continue' : key.trim() ? 'Start logging' : 'Skip for now'}
+          label={step === 0 ? 'Get started' : step === 1 ? 'Continue' : key.trim() || signedIn ? 'Start logging' : 'Skip for now'}
           onPress={() => {
             if (step < 2) {
               setStep(step + 1);

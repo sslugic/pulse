@@ -3,10 +3,12 @@ import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
-import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, estimateMeal, makeMealPlan, makeWorkoutPlan, type Media, type PlanResult } from './gemini';
+import { AiError, aiAvailable, askCoach, onCreditBalance, DEFAULT_MODEL, DEFAULT_VOICE, estimateMeal, makeMealPlan, makeWorkoutPlan, type Media, type PlanResult } from './gemini';
 import { matchMeal, mealKey, nextDays, resultFor, spanDays, type MealPlanState, type MealSpan, type PlanResult as PlanDayResult, type WorkoutPlanState, type WorkoutSpan } from './plans';
 import { deleteJournalPhoto, pickImage, saveJournalPhoto, saveProgressPhoto } from './media';
 import { celebrate } from './haptics';
+import { deleteAccount, fetchBalance, fetchCosts, fetchSubscription, loadBackup, onSessionChange, saveBackup, signInWithApple, signOut } from './cloud';
+import { linkPurchases, unlinkPurchases } from './purchases';
 import { connectHealth, healthAvailable, pullHealth } from './health';
 import { cancelReminders, enableReminders, scheduleReminder } from './reminders';
 import { dayKey, macroTargets, recommendedTargets } from './nutrition';
@@ -27,6 +29,8 @@ interface State {
   settings: Settings;
   thinking: boolean;
   game: GameState;
+  /** Pulse cloud account (not persisted here; Supabase keeps the session). */
+  account: Account;
   /** Private body-progress photos (paths relative to documents), oldest first. */
   photos: { id: string; path: string; at: number; weightKg?: number }[];
   /** Last AI meal plan and which grocery items are ticked; persisted. */
@@ -72,6 +76,7 @@ let state: State = {
   game: { claims: [], unlocked: [] },
   photos: [],
   planHistory: {},
+  account: { costs: {} },
   reward: null,
 };
 
@@ -109,7 +114,20 @@ function schedulePersist() {
       photos,
     };
     AsyncStorage.setItem(DATA_KEY, JSON.stringify(data)).catch(() => {});
+    scheduleBackup(data);
   }, 250);
+}
+
+// Signed-in users get their data backed up to Pulse cloud, at most once a minute.
+let backupTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleBackup(data: unknown) {
+  if (!state.account.userId) return;
+  clearTimeout(backupTimer);
+  backupTimer = setTimeout(() => {
+    saveBackup(data)
+      .then(() => set({ account: { ...state.account, backedUpAt: Date.now() } }))
+      .catch((e) => console.warn('[backup] failed', e));
+  }, 60_000);
 }
 
 // The API key stays out of AsyncStorage on device: Keychain via SecureStore.
@@ -228,6 +246,10 @@ export function useStore<T>(select: (s: State) => T): T {
 
 export const getState = () => state;
 
+/** AI features can run: signed in to Pulse cloud (credits) or a personal Gemini key is set. */
+export const canUseAI = () => !!state.account.userId || !!state.settings.apiKey;
+export const useAiReady = () => useStore((s) => !!s.account.userId || !!s.settings.apiKey);
+
 /** Newest weigh-in by date (entries are kept newest first). */
 const latestWeight = (entries: Entry[]) => entries.find((e) => e.kind === 'weight' && e.weightKg);
 
@@ -283,6 +305,27 @@ function pushReward(xp: number, tokens: number, label: string, always = false) {
     set({ reward: { id: uid(), xp, tokens, label, at: now } });
   }
 }
+
+export interface Account {
+  userId?: string;
+  email?: string;
+  credits?: number;
+  costs: Record<string, number>;
+  subscription?: { active: boolean; expiresAt?: string; willRenew: boolean } | null;
+  backedUpAt?: number;
+}
+
+// Keep the account in step with the Supabase session and every AI call's new balance.
+onSessionChange((s) => {
+  const userId = s?.user.id;
+  if (userId === state.account.userId) return;
+  set({ account: { costs: state.account.costs, userId, email: s?.user.email } });
+  if (userId) {
+    actions.refreshAccount();
+    linkPurchases(userId).catch(() => {});
+  } else unlinkPurchases().catch(() => {});
+});
+onCreditBalance((credits) => set({ account: { ...state.account, credits } }));
 
 export const actions = {
   completeOnboarding(profile: Partial<Profile>, apiKey?: string) {
@@ -576,7 +619,7 @@ export const actions = {
         set({ planHistory: history, mealPlan: meals?.days.length ? meals : undefined, workoutPlan: workouts?.days.length ? workouts : undefined });
       }
       const { settings } = state;
-      if (!settings.apiKey || settings.autoPlans === false || !state.onboarded) return;
+      if (!aiAvailable(settings.apiKey) || settings.autoPlans === false || !state.onboarded) return;
       if (!state.mealPlan?.days.some((d) => d.day === today)) await actions.generateMealPlan('today', '', true).catch((e) => console.warn('[plans] meal', e));
       if (!state.workoutPlan?.days.some((d) => d.day === today)) await actions.generateWorkoutPlan('today', '', true).catch((e) => console.warn('[plans] workout', e));
     } finally {
@@ -610,10 +653,42 @@ export const actions = {
     );
     markWorkoutDone(day, entry.id);
   },
+  /** Reloads balance, prices and subscription from Pulse cloud. */
+  async refreshAccount() {
+    const [credits, costs, subscription] = await Promise.all([fetchBalance(), fetchCosts(), fetchSubscription()]);
+    set({ account: { ...state.account, credits: credits ?? state.account.credits, costs: Object.keys(costs).length ? costs : state.account.costs, subscription } });
+  },
+  async signInWithApple() {
+    const { name } = await signInWithApple();
+    if (name && !state.profile.name) actions.updateProfile({ name });
+    // A fresh device with an empty log picks up the account's backup.
+    const backup = await loadBackup();
+    if (backup && state.entries.length === 0) actions.restoreBackup(backup.data);
+  },
+  async signOut() {
+    await signOut();
+  },
+  /** Deletes the cloud account and its data (credits, backup). Local data on this phone stays. */
+  async deleteAccount() {
+    await deleteAccount();
+    set({ account: { costs: state.account.costs } });
+  },
+  async backupNow() {
+    const raw = await AsyncStorage.getItem(DATA_KEY);
+    if (raw) await saveBackup(JSON.parse(raw));
+    set({ account: { ...state.account, backedUpAt: Date.now() } });
+  },
+  restoreBackup(data: unknown) {
+    const d = data as Record<string, unknown>;
+    if (!d || !Array.isArray(d.entries)) return;
+    AsyncStorage.setItem(DATA_KEY, JSON.stringify(d))
+      .then(() => hydrate())
+      .catch(() => {});
+  },
   /** Meals saved without calories (an incomplete Coach reply) get estimated in the background. */
   async repairMeals() {
     const { settings, entries } = state;
-    if (!settings.apiKey) return;
+    if (!aiAvailable(settings.apiKey)) return;
     const broken = entries.filter((e) => e.kind === 'meal' && !hasNutrition(e)).slice(0, 10);
     for (const e of broken) {
       try {
@@ -729,7 +804,7 @@ export const actions = {
       set((st) => ({
         thinking: false,
         messages: st.messages.map((m) =>
-          m.id === pending.id ? { ...m, pending: false, error: true, retryable, text: (err as Error).message } : m,
+          m.id === pending.id ? { ...m, pending: false, error: true, retryable, needsCredits: err instanceof AiError && err.code === 'credits', text: (err as Error).message } : m,
         ),
       }));
       return [];

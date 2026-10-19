@@ -74,6 +74,7 @@ export default function RootLayout() {
               <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal' }} />
               <Stack.Screen name="progress-photos" options={{ presentation: 'modal' }} />
               <Stack.Screen name="season" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="credits" options={{ presentation: 'modal' }} />
             </Stack.Protected>
             <Stack.Protected guard={!onboarded}>
               <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />

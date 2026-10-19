@@ -10,7 +10,7 @@ import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { GOAL_INFO } from '@/lib/nutrition';
 import { personaById } from '@/lib/personas';
 import { mealKey, type MealSpan, type WorkoutSpan } from '@/lib/plans';
-import { actions, PLAN_MEAL_XP, PLAN_WORKOUT_XP, useStore } from '@/lib/store';
+import { actions, PLAN_MEAL_XP, PLAN_WORKOUT_XP, useAiReady, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 
 const AISLES = ['Produce', 'Meat & Fish', 'Dairy & Eggs', 'Bakery', 'Pantry', 'Frozen', 'Other'];
@@ -30,7 +30,7 @@ export default function PlansScreen() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<'meals' | 'workouts'>(params.tab === 'workouts' ? 'workouts' : 'meals');
   const profile = useStore((s) => s.profile);
-  const hasKey = useStore((s) => !!s.settings.apiKey);
+  const hasKey = useAiReady();
   const auto = useStore((s) => s.settings.autoPlans !== false);
   const persona = personaById(profile.persona);
 

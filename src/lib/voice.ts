@@ -4,7 +4,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
-import { synthesizeSpeech } from './gemini';
+import { synthesizeSpeech, aiAvailable } from './gemini';
 
 // expo-speech throws on import when its native code isn't in the build (an app binary built
 // before it was added), which would crash the app at launch. Load it only when it's there.
@@ -201,7 +201,7 @@ export function speakStream(id: string, opts: { apiKey: string; voice: string })
   const my = ++turn;
   releasePlayer();
   Speech?.stop().catch(() => {});
-  const natural = opts.voice !== 'device' && !!opts.apiKey;
+  const natural = opts.voice !== 'device' && aiAvailable(opts.apiKey);
 
   const parts: string[] = []; // chunks queued to speak, in order
   let pending: string[] = []; // complete sentences not yet grouped into a chunk
