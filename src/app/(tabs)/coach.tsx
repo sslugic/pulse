@@ -17,7 +17,7 @@ import { C, Gradients, MaxContentWidth, Radius, Space } from '@/constants/theme'
 import { audioMime, pickImage, readBase64, VOICE_PRESET } from '@/lib/media';
 import { actions, useStore } from '@/lib/store';
 import type { ChatMessage, Entry } from '@/lib/types';
-import { speak, stopSpeaking, useSpeakingId, voiceAvailable } from '@/lib/voice';
+import { stopSpeaking, useSpeakingId } from '@/lib/voice';
 
 const SUGGESTIONS = [
   '😴 Slept badly, about 5 hours',
@@ -172,14 +172,12 @@ export default function Coach() {
             {thinking ? 'ANALYZING…' : speakingId ? 'TALKING…' : 'LOG IT OR ASK ME ANYTHING.'}
           </T>
         </View>
-        {voiceAvailable && (
-          <GlassButton
-            icon={voiceReplies ? 'speaker' : 'speakerOff'}
-            size={38}
-            color={voiceReplies ? C.lime : C.textDim}
-            onPress={() => actions.setVoiceReplies(!voiceReplies)}
-          />
-        )}
+        <GlassButton
+          icon={voiceReplies ? 'speaker' : 'speakerOff'}
+          size={38}
+          color={voiceReplies ? C.lime : C.textDim}
+          onPress={() => actions.setVoiceReplies(!voiceReplies)}
+        />
         {!empty && (
           <GlassButton
             icon="trash"
@@ -333,13 +331,13 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
           </T>
         )}
       </View>
-      {voiceAvailable && !msg.pending && !msg.error && !!msg.text && (
+      {!msg.pending && !msg.error && !!msg.text && (
         <Pressable
           hitSlop={8}
           onPress={() => {
             tap();
             if (speaking) stopSpeaking();
-            else speak(msg.id, msg.text);
+            else actions.speakMessage(msg.id, msg.text);
           }}
           style={({ pressed }) => [styles.listen, pressed && { opacity: 0.6 }]}>
           <Icon name={speaking ? 'stop' : 'speaker'} size={13} color={speaking ? C.lime : C.textMute} />

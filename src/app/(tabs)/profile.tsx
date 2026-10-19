@@ -5,10 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, IconBadge } from '@/components/icon';
 import { Field, inputStyle, ProfileFields } from '@/components/profile-form';
-import { Card, SectionTitle, T } from '@/components/ui';
+import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic, MetalPanel } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
-import { DEFAULT_MODEL } from '@/lib/gemini';
+import { COACH_VOICES, DEFAULT_MODEL } from '@/lib/gemini';
 import { GOAL_INFO, macroTargets, PACE_INFO } from '@/lib/nutrition';
 import { actions, useStore } from '@/lib/store';
 
@@ -102,6 +102,26 @@ export default function ProfileScreen() {
               </T>
             </Pressable>
           </View>
+        </Card>
+
+        <SectionTitle>Coach voice</SectionTitle>
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {[...COACH_VOICES, { id: 'device', label: 'Offline' }].map((v) => (
+              <Chip
+                key={v.id}
+                label={v.id === 'device' ? v.label : `${v.id} · ${v.label}`}
+                active={settings.coachVoice === v.id}
+                onPress={() => {
+                  actions.setCoachVoice(v.id);
+                  actions.speakMessage('voice-preview', "Hey, I'm your Pulse coach. Let's crush today's goals together!");
+                }}
+              />
+            ))}
+          </View>
+          <T size={12} color={C.textMute}>
+            Natural voices come from Google Gemini and use your API key. Offline uses the iPhone’s built-in voice.
+          </T>
         </Card>
 
         <SectionTitle>Data</SectionTitle>

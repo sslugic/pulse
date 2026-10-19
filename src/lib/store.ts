@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
-import { AiError, askCoach, DEFAULT_MODEL, type Media, type PlanResult } from './gemini';
+import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, type Media, type PlanResult } from './gemini';
 import { deleteJournalPhoto, saveJournalPhoto } from './media';
 import { recommendedTargets } from './nutrition';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
@@ -40,7 +40,7 @@ let state: State = {
   profile: defaultProfile,
   entries: [],
   messages: [],
-  settings: { apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '', model: DEFAULT_MODEL, voiceReplies: true },
+  settings: { apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '', model: DEFAULT_MODEL, voiceReplies: true, coachVoice: DEFAULT_VOICE },
   thinking: false,
 };
 
@@ -67,6 +67,7 @@ function schedulePersist() {
       messages: messages.filter((m) => !m.pending).map(({ retryable, ...m }) => m).slice(-150),
       model: settings.model,
       voiceReplies: settings.voiceReplies,
+      coachVoice: settings.coachVoice,
     };
     AsyncStorage.setItem(DATA_KEY, JSON.stringify(data)).catch(() => {});
   }, 250);
@@ -88,7 +89,12 @@ export async function hydrate() {
       profile: migrateProfile(data.profile),
       entries: data.entries ?? [],
       messages: data.messages ?? [],
-      settings: { apiKey: key || state.settings.apiKey, model: data.model || DEFAULT_MODEL, voiceReplies: data.voiceReplies ?? true },
+      settings: {
+        apiKey: key || state.settings.apiKey,
+        model: data.model || DEFAULT_MODEL,
+        voiceReplies: data.voiceReplies ?? true,
+        coachVoice: data.coachVoice || DEFAULT_VOICE,
+      },
     };
   } catch {
     // corrupt storage: start fresh rather than crash
@@ -151,6 +157,13 @@ export const actions = {
   setVoiceReplies(voiceReplies: boolean) {
     set((s) => ({ settings: { ...s.settings, voiceReplies } }));
     if (!voiceReplies) stopSpeaking();
+  },
+  setCoachVoice(coachVoice: string) {
+    set((s) => ({ settings: { ...s.settings, coachVoice } }));
+  },
+  speakMessage(id: string, text: string) {
+    const { apiKey, coachVoice } = state.settings;
+    return speak(id, text, { apiKey, voice: coachVoice });
   },
   addEntry(e: Omit<Entry, 'id' | 'createdAt'> & { createdAt?: number }) {
     const entry: Entry = { ...e, id: uid(), createdAt: e.createdAt ?? Date.now() };
@@ -270,7 +283,7 @@ export const actions = {
           m.id === pending.id ? { ...m, pending: false, text: result.reply, entryIds: added.map((a) => a.id) } : m,
         ),
       }));
-      if (state.settings.voiceReplies) speak(pending.id, result.reply);
+      if (state.settings.voiceReplies) actions.speakMessage(pending.id, result.reply);
       return added;
     } catch (err) {
       const retryable = !(err instanceof AiError) || err.retryable;
