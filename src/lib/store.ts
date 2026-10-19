@@ -12,7 +12,8 @@ import { linkPurchases, unlinkPurchases } from './purchases';
 import { connectHealth, healthAvailable, pullHealth } from './health';
 import { cancelReminders, enableReminders, scheduleReminder } from './reminders';
 import { dayKey, macroTargets, recommendedTargets } from './nutrition';
-import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, MAX_FREEZES, gameById, isUnlocked, type GameId } from './arcade';
+import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, MAX_FREEZES, SHOP, gameById, isUnlocked, type BrainId, type ChestTier, type GameId } from './arcade';
+import { BEST_BONUS, CHESTS_PER_DAY, PAID_WINS_PER_DAY, WIN_TOKENS, WIN_XP, chestFor, chestsEarnedToday, dailyChestId, rollLoot, winsToday, type Loot, type RunResult } from './brain';
 import { season, SEASON_BADGE_REWARD, SEASON_REWARD } from './seasons';
 import { isPersonaUnlocked, personaById, personaUnlockId, type PersonaId } from './personas';
 import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, type GameState } from './quests';
@@ -160,7 +161,17 @@ export async function hydrate() {
       workoutPlan: data.workoutPlan,
       planHistory: data.planHistory ?? {},
       photos: data.photos ?? [],
-      game: { claims: data.game?.claims ?? [], unlocked: data.game?.unlocked ?? [], wall: data.game?.wall, freezes: data.game?.freezes ?? 0, frozenDays: data.game?.frozenDays ?? [] },
+      game: {
+        claims: data.game?.claims ?? [],
+        unlocked: data.game?.unlocked ?? [],
+        wall: data.game?.wall,
+        freezes: data.game?.freezes ?? 0,
+        frozenDays: data.game?.frozenDays ?? [],
+        chests: data.game?.chests ?? [],
+        doubler: data.game?.doubler ?? 0,
+        bests: data.game?.bests ?? {},
+        playedDay: data.game?.playedDay,
+      },
     };
   } catch {
     // corrupt storage: start fresh rather than crash
@@ -502,10 +513,102 @@ export const actions = {
   },
   /** A full minute in the arcade pays a little XP, once a day. */
   finishGame(day: string) {
+    if (state.game.playedDay !== day) set((s) => ({ game: { ...s.game, playedDay: day } }));
     if (state.game.claims.some((c) => c.day === day && c.questId === ARCADE_CLAIM)) return;
     set((s) => ({ game: { ...s.game, claims: [...s.game.claims, { day, questId: ARCADE_CLAIM, xp: ARCADE_XP, tokens: 0, at: Date.now() }] } }));
     pushReward(ARCADE_XP, 0, 'CHILLED OUT');
     celebrate();
+  },
+  /**
+   * Scores a finished Brain Gym run. A win pays tokens and XP (doubled while a Token Doubler is active)
+   * and drops a chest, up to the daily caps; a new best score always pays a small bonus.
+   */
+  finishBrain(id: BrainId, score: number, day: string): RunResult {
+    const g = gameById(id)!;
+    const { game } = state;
+    const now = Date.now();
+    const best = game.bests?.[id] ?? 0;
+    const newBest = score > best;
+    const won = score >= (g.win ?? Infinity);
+    const paid = won && winsToday(game.claims, day) < PAID_WINS_PER_DAY;
+    const doubled = paid && (game.doubler ?? 0) > 0;
+    const tokens = paid ? WIN_TOKENS * (doubled ? 2 : 1) : 0;
+    const xp = paid ? WIN_XP : 0;
+    const bonus = newBest && best > 0 ? BEST_BONUS : 0;
+    const chest = paid && chestsEarnedToday(game.claims, day) < CHESTS_PER_DAY ? chestFor(g, score) : null;
+    const claims: Claim[] = [];
+    if (paid) claims.push({ day, questId: `brain:${id}:${now}`, xp, tokens, at: now });
+    if (bonus) claims.push({ day, questId: `best:${id}:${now}`, xp: 0, tokens: bonus, at: now });
+    if (chest) claims.push({ day, questId: `chest-drop:${now}`, xp: 0, tokens: 0, at: now });
+    set((s) => ({
+      game: {
+        ...s.game,
+        claims: [...s.game.claims, ...claims],
+        bests: newBest ? { ...s.game.bests, [id]: score } : s.game.bests,
+        doubler: doubled ? (s.game.doubler ?? 1) - 1 : s.game.doubler,
+        chests: chest ? [...(s.game.chests ?? []), { id: `c${now}`, tier: chest, from: id, at: now }] : s.game.chests,
+        playedDay: day,
+      },
+    }));
+    if (won || newBest) celebrate();
+    return { game: id, score, won, newBest, tokens: tokens + bonus, xp, chest, chestId: chest ? `c${now}` : undefined, doubled, capped: won && !paid };
+  },
+  /** The free chest for playing any arcade game today. Returns false if it isn't ready or was taken. */
+  claimDailyChest(day: string) {
+    const { game } = state;
+    const id = dailyChestId(day);
+    const played = game.playedDay === day || game.claims.some((c) => c.day === day && c.questId === ARCADE_CLAIM);
+    if (!played || game.claims.some((c) => c.questId === id)) return false;
+    const now = Date.now();
+    set((s) => ({
+      game: {
+        ...s.game,
+        claims: [...s.game.claims, { day, questId: id, xp: 0, tokens: 0, at: now }],
+        chests: [...(s.game.chests ?? []), { id: `c${now}`, tier: 'wood', from: 'daily', at: now }],
+      },
+    }));
+    return true;
+  },
+  /** Opens a chest: rolls its loot and applies it. Returns what was inside, or null if there's no such chest. */
+  openChest(chestId: string, day: string): Loot[] | null {
+    const { game } = state;
+    const chest = game.chests?.find((c) => c.id === chestId);
+    if (!chest) return null;
+    const loot = rollLoot(chest.tier, game);
+    const tokens = loot.reduce((n, l) => n + (l.kind === 'tokens' ? l.amount : 0), 0);
+    const xp = loot.reduce((n, l) => n + (l.kind === 'xp' ? l.amount : 0), 0);
+    const freeze = loot.some((l) => l.kind === 'freeze');
+    const doubler = loot.reduce((n, l) => n + (l.kind === 'doubler' ? l.wins : 0), 0);
+    const gifts = loot.flatMap((l) => (l.kind === 'game' ? [`gift:${l.game.id}`] : []));
+    set((s) => ({
+      game: {
+        ...s.game,
+        chests: (s.game.chests ?? []).filter((c) => c.id !== chestId),
+        claims: [...s.game.claims, { day, questId: `chest:${chestId}`, xp, tokens, at: Date.now() }],
+        freezes: freeze ? Math.min(MAX_FREEZES, (s.game.freezes ?? 0) + 1) : s.game.freezes,
+        doubler: (s.game.doubler ?? 0) + doubler,
+        unlocked: [...s.game.unlocked, ...gifts],
+      },
+    }));
+    celebrate();
+    return loot;
+  },
+  /** Buys a Token Doubler: the next few Brain Gym wins pay double tokens. */
+  buyDoubler() {
+    const { game } = state;
+    if (tokenBalance(game) < SHOP.doubler.price) return false;
+    set((s) => ({ game: { ...s.game, doubler: (s.game.doubler ?? 0) + SHOP.doubler.wins, unlocked: [...s.game.unlocked, `doubler:${Date.now()}`] } }));
+    celebrate();
+    return true;
+  },
+  /** Buys a chest from the shop. Returns its id so the screen can open it straight away, or null. */
+  buyChest(tier: Exclude<ChestTier, 'wood'>) {
+    const price = tier === 'gold' ? SHOP.chestGold.price : SHOP.chestSilver.price;
+    if (tokenBalance(state.game) < price) return null;
+    const now = Date.now();
+    const id = `c${now}`;
+    set((s) => ({ game: { ...s.game, unlocked: [...s.game.unlocked, `chest-${tier}:${now}`], chests: [...(s.game.chests ?? []), { id, tier, from: 'shop', at: now }] } }));
+    return id;
   },
   /** Claims a finished season challenge; the last one also pays the season badge. */
   claimSeason(challengeId: string) {
@@ -723,7 +826,7 @@ export const actions = {
     set({ messages: [] });
   },
   resetAll() {
-    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [], unlocked: [], freezes: 0, frozenDays: [] }, photos: [], mealPlan: undefined, workoutPlan: undefined, planHistory: {}, reward: null });
+    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [], unlocked: [], freezes: 0, frozenDays: [], chests: [], doubler: 0, bests: {} }, photos: [], mealPlan: undefined, workoutPlan: undefined, planHistory: {}, reward: null });
   },
 
   async sendToCoach(input: CoachInput) {
