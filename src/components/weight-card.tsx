@@ -1,8 +1,14 @@
-import { StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { C } from '@/constants/theme';
+import { tap } from '@/lib/haptics';
+import { dayKey } from '@/lib/nutrition';
+import { actions } from '@/lib/store';
 import type { Entry, Profile } from '@/lib/types';
+import { useTodayKey } from '@/lib/use-today';
+
+import { Icon } from './icon';
 
 import { Card, T } from './ui';
 import { Comic } from './underground';
@@ -58,12 +64,65 @@ export function WeightCard({ weighIns, profile }: { weighIns: Entry[]; profile: 
         <Chart values={points.map((p) => show(p.kg))} dates={points.map((p) => p.at)} unit={unit} wantDown={wantDown} />
       ) : null}
 
+      {weighIns.length > 0 && <WeighInList weighIns={weighIns} fmt={fmt} unit={unit} />}
+
       <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
         {points.length < 2
           ? `Log another weigh-in to see your trend. Say “I weigh ${imperial ? '172 lb' : '78 kg'}” to the Coach.`
           : `Say “I weigh ${imperial ? '172 lb' : '78 kg'}” to the Coach to add a weigh-in.`}
       </T>
     </Card>
+  );
+}
+
+function dayLabel(t: number, todayKey: string) {
+  const k = dayKey(t);
+  const y = new Date(todayKey + 'T12:00');
+  y.setDate(y.getDate() - 1);
+  return k === todayKey ? 'TODAY' : k === dayKey(y) ? 'YESTERDAY' : new Date(t).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
+}
+
+/** Recent weigh-ins, newest first, with arrows to move one to another day and a delete button. */
+function WeighInList({ weighIns, fmt, unit }: { weighIns: Entry[]; fmt: (kg: number) => string; unit: string }) {
+  const todayKey = useTodayKey();
+  const rows = weighIns.slice().reverse().slice(0, 7);
+  const move = (e: Entry, days: number) => {
+    tap();
+    actions.moveEntryDays(e.id, days);
+  };
+  const remove = (e: Entry) =>
+    Alert.alert('Delete weigh-in?', `${fmt(e.weightKg ?? 0)} ${unit} on ${dayLabel(e.createdAt, todayKey).toLowerCase()}`, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => actions.removeEntry(e.id) },
+    ]);
+  return (
+    <View style={styles.list}>
+      <T size={10} rounded color={C.textMute}>
+        WEIGH-INS · USE THE ARROWS TO FIX A DAY
+      </T>
+      {rows.map((e) => {
+        const isToday = dayKey(e.createdAt) === todayKey;
+        return (
+          <View key={e.id} style={styles.row}>
+            <Pressable onPress={() => move(e, -1)} style={styles.arrow} hitSlop={6} accessibilityLabel="Move to the day before">
+              <Icon name="back" size={14} color={C.text} weight="bold" />
+            </Pressable>
+            <T size={12} rounded color={C.textDim} style={{ flex: 1, textAlign: 'center' }}>
+              {dayLabel(e.createdAt, todayKey)}
+            </T>
+            <Pressable onPress={() => move(e, 1)} disabled={isToday} style={[styles.arrow, isToday && { opacity: 0.25 }]} hitSlop={6} accessibilityLabel="Move to the day after">
+              <Icon name="chevron" size={14} color={C.text} weight="bold" />
+            </Pressable>
+            <T size={15} rounded color={C.text} style={{ width: 84, textAlign: 'right' }}>
+              {fmt(e.weightKg ?? 0)} {unit}
+            </T>
+            <Pressable onPress={() => remove(e)} style={styles.trash} hitSlop={6} accessibilityLabel="Delete weigh-in">
+              <Icon name="trash" size={14} color={C.textMute} />
+            </Pressable>
+          </View>
+        );
+      })}
+    </View>
   );
 }
 
@@ -131,5 +190,9 @@ const styles = StyleSheet.create({
   big: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   side: { gap: 6, alignItems: 'flex-end', justifyContent: 'center' },
   stat: { alignItems: 'flex-end' },
+  list: { gap: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  arrow: { width: 30, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceHi, borderWidth: 2, borderColor: C.ink },
+  trash: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
   axis: { flexDirection: 'row', justifyContent: 'space-between', marginTop: -16, paddingHorizontal: 4 },
 });
