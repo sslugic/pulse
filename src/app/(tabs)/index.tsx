@@ -106,9 +106,9 @@ export default function Today() {
         </View>
 
         {/* Today's numbers first: calories left, eaten, burned and macros in one card */}
-        <Card style={{ gap: 12, marginTop: Space.xs }} accent={remaining < 0 ? C.danger : C.orange + '99'}>
+        <Card style={{ gap: 12, marginTop: Space.xs }} accent={remaining < 0 ? C.danger : C.orange + '99'} onPress={() => openDay(todayKey)}>
           <View style={styles.todayRow}>
-            <Pressable onPress={() => router.push('/goals')} style={{ flex: 1.3 }} accessibilityRole="button" accessibilityLabel="Calorie target">
+            <View style={{ flex: 1.3 }}>
               <T size={11} rounded color={C.textDim}>
                 {remaining < 0 ? 'KCAL OVER' : 'KCAL LEFT'}
               </T>
@@ -121,7 +121,7 @@ export default function Today() {
               <T size={10} color={C.textMute} weight="700">
                 OF {budget.toLocaleString()} TODAY
               </T>
-            </Pressable>
+            </View>
             <View style={styles.todayStat}>
               <T size={11} rounded color={C.textDim}>
                 EATEN

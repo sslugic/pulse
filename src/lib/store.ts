@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
-import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, makeMealPlan, type Media, type MealPlan, type PlanResult } from './gemini';
+import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, estimateMeal, makeMealPlan, type Media, type MealPlan, type PlanResult } from './gemini';
 import { deleteJournalPhoto, pickImage, saveJournalPhoto, saveProgressPhoto } from './media';
 import { celebrate } from './haptics';
 import { connectHealth, healthAvailable, pullHealth } from './health';
@@ -148,6 +148,31 @@ function migrateProfile(raw: (Partial<Profile> & { calorieOverride?: number; wat
 }
 
 // Safety net: models sometimes leave sleep hours only in the prose.
+// Fields that belong to each kind; anything else the model sends (e.g. weightKg on a coffee) is dropped.
+const KIND_FIELDS: Record<Entry['kind'], (keyof Entry)[]> = {
+  meal: ['nutrition', 'items'],
+  exercise: ['caloriesBurned', 'durationMin', 'intensity'],
+  water: ['waterMl'],
+  weight: ['weightKg'],
+  journal: ['mood', 'energy', 'stress', 'sleepHours', 'sleepQuality', 'tags', 'summary', 'photo', 'scene'],
+};
+const KIND_SPECIFIC = new Set(Object.values(KIND_FIELDS).flat());
+
+/** Keeps only the fields that make sense for the entry's kind, and fills meal nutrition from items if it's missing. */
+function cleanEntry<T extends Partial<Entry>>(e: T): T {
+  const kind = e.kind as Entry['kind'] | undefined;
+  if (!kind) return e;
+  const out = { ...e };
+  for (const k of KIND_SPECIFIC) if (!KIND_FIELDS[kind].includes(k)) delete (out as Partial<Entry>)[k];
+  if (kind === 'meal' && !hasNutrition(out) && out.items?.length) {
+    const calories = out.items.reduce((n, i) => n + (i.calories || 0), 0);
+    if (calories > 0) out.nutrition = { calories, protein: 0, carbs: 0, fat: 0 };
+  }
+  return out;
+}
+
+const hasNutrition = (e: Partial<Entry>) => !!e.nutrition && e.nutrition.calories > 0;
+
 function fillJournal<T extends Partial<Entry>>(e: T): T {
   if (e.kind !== 'journal' || e.sleepHours != null) return e;
   const text = `${e.summary ?? ''} ${(e.tags ?? []).join(' ')}`.toLowerCase().replace(/(\d+)\s+and\s+a\s+half/g, '$1.5');
@@ -465,6 +490,21 @@ export const actions = {
     actions.addEntry({ kind: 'meal', title: m.name, emoji: m.emoji, nutrition: { calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat }, source: 'quick', note: 'From your meal plan' });
     set((s) => (s.mealPlan ? { mealPlan: { ...s.mealPlan, logged: [...s.mealPlan.logged, key] } } : {}));
   },
+  /** Meals saved without calories (an incomplete Coach reply) get estimated in the background. */
+  async repairMeals() {
+    const { settings, entries } = state;
+    if (!settings.apiKey) return;
+    const broken = entries.filter((e) => e.kind === 'meal' && !hasNutrition(e)).slice(0, 10);
+    for (const e of broken) {
+      try {
+        const description = [e.title, e.summary, e.note, e.items?.map((i) => `${i.amount} ${i.name}`).join(', ')].filter(Boolean).join('. ');
+        const nutrition = await estimateMeal({ apiKey: settings.apiKey, model: settings.model, description, units: state.profile.units });
+        if (nutrition.calories > 0) actions.updateEntry(e.id, { nutrition, weightKg: undefined, waterMl: undefined });
+      } catch (err) {
+        console.warn('[repair] meal estimate failed', err);
+      }
+    }
+  },
   /** Picks a rank wall as the app background; undefined goes back to following the current rank. */
   setWall(level: number | undefined) {
     set((s) => ({ game: { ...s.game, wall: level } }));
@@ -536,7 +576,7 @@ export const actions = {
       result.removeEntryIds.forEach(actions.removeEntry);
       if (result.goalUpdate) actions.setGoal(result.goalUpdate.goal, result.goalUpdate.pace, result.goalUpdate.note);
       const source: Entry['source'] = input.audio ? 'voice' : input.image ? 'photo' : 'text';
-      const added = result.entries.map(fillJournal).map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
+      const added = result.entries.map(cleanEntry).map(fillJournal).map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
         actions.addEntry({
           ...e,
           source,
@@ -560,6 +600,7 @@ export const actions = {
         ),
       }));
       voice?.finish(result.reply);
+      if (added.some((e) => e.kind === 'meal' && !hasNutrition(e))) actions.repairMeals();
       return added;
     } catch (err) {
       voice?.cancel();
