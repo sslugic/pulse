@@ -53,58 +53,6 @@ export default function ProfileScreen() {
             </T>
         </MetalPanel>
 
-        <SectionTitle>You</SectionTitle>
-        <Card style={{ gap: 18 }}>
-          <Field label="Name">
-            <TextInput value={profile.name} onChangeText={(name) => actions.updateProfile({ name })} placeholder="Your first name" placeholderTextColor={C.textMute} style={inputStyle} />
-          </Field>
-          <ProfileFields p={profile} set={actions.updateProfile} showGoal={false} />
-        </Card>
-
-        <SectionTitle>Google AI</SectionTitle>
-        <Card style={{ gap: 14 }}>
-          <Field label="Gemini API key">
-            <TextInput
-              value={key}
-              onChangeText={(v) => {
-                setKey(v);
-                actions.setApiKey(v);
-              }}
-              placeholder="AIza…"
-              placeholderTextColor={C.textMute}
-              secureTextEntry
-              textContentType="none"
-              autoComplete="off"
-              importantForAutofill="no"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={inputStyle}
-            />
-          </Field>
-          <Field label="Model">
-            <TextInput
-              value={model}
-              onChangeText={setModel}
-              onBlur={() => actions.setModel(model)}
-              placeholder={DEFAULT_MODEL}
-              placeholderTextColor={C.textMute}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={inputStyle}
-            />
-          </Field>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <T size={12} color={settings.apiKey ? C.lime : C.orange} weight="700">
-              {settings.apiKey ? '● Connected · key stored in Keychain' : '● Not connected'}
-            </T>
-            <Pressable onPress={() => Linking.openURL('https://aistudio.google.com/apikey')}>
-              <T size={12} color={C.cyan} weight="700">
-                Get a key ↗
-              </T>
-            </Pressable>
-          </View>
-        </Card>
-
         <SectionTitle>Your coach</SectionTitle>
         <PersonaPicker />
 
@@ -185,6 +133,58 @@ export default function ProfileScreen() {
           <T size={12} color={C.textMute}>
             Natural voices come from Google Gemini and use your API key. Offline uses the iPhone’s built-in voice.
           </T>
+        </Card>
+
+        <SectionTitle>Your details</SectionTitle>
+        <Card style={{ gap: 18 }}>
+          <Field label="Name">
+            <TextInput value={profile.name} onChangeText={(name) => actions.updateProfile({ name })} placeholder="Your first name" placeholderTextColor={C.textMute} style={inputStyle} />
+          </Field>
+          <ProfileFields p={profile} set={actions.updateProfile} showGoal={false} />
+        </Card>
+
+        <SectionTitle>Google AI</SectionTitle>
+        <Card style={{ gap: 14 }}>
+          <Field label="Gemini API key">
+            <TextInput
+              value={key}
+              onChangeText={(v) => {
+                setKey(v);
+                actions.setApiKey(v);
+              }}
+              placeholder="AIza…"
+              placeholderTextColor={C.textMute}
+              secureTextEntry
+              textContentType="none"
+              autoComplete="off"
+              importantForAutofill="no"
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={inputStyle}
+            />
+          </Field>
+          <Field label="Model">
+            <TextInput
+              value={model}
+              onChangeText={setModel}
+              onBlur={() => actions.setModel(model)}
+              placeholder={DEFAULT_MODEL}
+              placeholderTextColor={C.textMute}
+              autoCapitalize="none"
+              autoCorrect={false}
+              style={inputStyle}
+            />
+          </Field>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <T size={12} color={settings.apiKey ? C.lime : C.orange} weight="700">
+              {settings.apiKey ? '● Connected · key stored in Keychain' : '● Not connected'}
+            </T>
+            <Pressable onPress={() => Linking.openURL('https://aistudio.google.com/apikey')}>
+              <T size={12} color={C.cyan} weight="700">
+                Get a key ↗
+              </T>
+            </Pressable>
+          </View>
         </Card>
 
         <SectionTitle>Data</SectionTitle>
