@@ -15,8 +15,9 @@ import { Chip, T, tap } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { audioMime, pickImage, readBase64, VOICE_PRESET } from '@/lib/media';
+import { HEALTH_DISCLAIMER } from '@/lib/legal';
 import { personaById } from '@/lib/personas';
-import { actions, useStore } from '@/lib/store';
+import { actions, useAiReady, useStore } from '@/lib/store';
 import type { ChatMessage, Entry } from '@/lib/types';
 import { stopSpeaking, useSpeakingId } from '@/lib/voice';
 
@@ -47,7 +48,7 @@ export default function Coach() {
   const messages = useStore((s) => s.messages);
   const entries = useStore((s) => s.entries);
   const thinking = useStore((s) => s.thinking);
-  const hasKey = useStore((s) => !!s.settings.apiKey);
+  const hasKey = useAiReady();
   const voiceReplies = useStore((s) => s.settings.voiceReplies);
   const speakingId = useSpeakingId();
 
@@ -206,6 +207,9 @@ export default function Coach() {
           <T size={14} color={C.textDim} style={{ textAlign: 'center', maxWidth: 300 }}>
             No forms, no searching. Tap the mic and talk, or snap your plate or the treadmill screen. Ask me anything about training, food or recovery and I’ll talk back.
           </T>
+          <T size={11} color={C.textMute} style={{ textAlign: 'center', maxWidth: 320, lineHeight: 15 }}>
+            {HEALTH_DISCLAIMER}
+          </T>
           <View style={styles.bigActions}>
             <BigAction icon="mic" label="Talk" colors={Gradients.violet} onPress={startRecording} />
             <BigAction icon="camera" label="Snap" colors={Gradients.warm} onPress={() => sendPhoto('camera')} />
@@ -313,6 +317,19 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
             <T size={15} color={C.danger} style={{ lineHeight: 21 }}>
               {msg.text}
             </T>
+            {msg.needsCredits && (
+              <Pressable
+                onPress={() => {
+                  tap();
+                  router.push('/credits');
+                }}
+                style={({ pressed }) => [styles.retry, { backgroundColor: C.yellow }, pressed && { opacity: 0.7 }]}>
+                <Icon name="plus" size={14} color="#07080C" weight="bold" />
+                <T size={13} weight="800" color="#07080C">
+                  Get credits
+                </T>
+              </Pressable>
+            )}
             {msg.retryable && (
               <Pressable
                 onPress={() => {

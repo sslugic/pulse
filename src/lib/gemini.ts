@@ -1,6 +1,7 @@
 // React Native's fetch can't read a response as it arrives; expo/fetch can.
 import { fetch as streamingFetch } from 'expo/fetch';
 
+import { cloudAI } from './cloud';
 import type { ChatMessage, Entry, Goal, Nutrition, Pace, Profile, Targets } from './types';
 import { personaById } from './personas';
 import type { RecapCaptions } from './recap';
@@ -36,10 +37,63 @@ export class AiError extends Error {
   constructor(
     message: string,
     readonly retryable = true,
+    /** 'credits' when a signed-in user ran out of AI credits. */
+    readonly code?: 'credits',
   ) {
     super(message);
   }
 }
+
+/** What an AI call is for; the server prices each one (see supabase feature_costs). */
+export type Feature = 'coach' | 'coach_media' | 'voice' | 'insight' | 'wellbeing' | 'meal_plan' | 'workout_plan' | 'recap' | 'estimate' | 'goal_plan';
+
+let balanceListener: ((credits: number) => void) | null = null;
+/** Called with the new credit balance after every signed-in AI call. */
+export const onCreditBalance = (fn: (credits: number) => void) => {
+  balanceListener = fn;
+};
+
+const requestId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
+/**
+ * Sends one Gemini request. Signed in, it goes to the Pulse AI proxy, which charges credits and
+ * holds the Gemini key; otherwise straight to Google with the user's own key (development builds).
+ * The same request id is reused across retries so a retry is never charged twice.
+ */
+async function aiFetch(
+  opts: { apiKey: string; model: string; method: 'generateContent' | 'streamGenerateContent'; body: string; feature: Feature; id: string; signal?: AbortSignal },
+  fetchImpl: typeof fetch = fetch,
+): Promise<Response> {
+  const cloud = cloudAI();
+  if (cloud) {
+    const res = await fetchImpl(cloud.url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cloud.token}` },
+      body: `{"feature":${JSON.stringify(opts.feature)},"model":${JSON.stringify(opts.model)},"method":"${opts.method}","requestId":"${opts.id}","payload":${opts.body}}`,
+      signal: opts.signal,
+    });
+    if (res.status === 402) {
+      const j = await res.json().catch(() => ({}));
+      if (typeof j.balance === 'number') balanceListener?.(j.balance);
+      throw new AiError(`You’re out of AI credits (this needs ${j.cost ?? 'a few'}). Get more in Crew → Credits.`, false, 'credits');
+    }
+    if (res.status === 401) throw new AiError('Your session expired. Sign in again in Crew.', false);
+    const bal = res.headers.get('x-credits-balance');
+    if (bal != null && balanceListener) balanceListener(Number(bal));
+    return res;
+  }
+  if (!opts.apiKey) throw new AiError('Sign in (Crew → Account) or add a Gemini key to use AI features.', false);
+  const q = opts.method === 'streamGenerateContent' ? '?alt=sse' : '';
+  return fetchImpl(`${ENDPOINT}/${opts.model}:${opts.method}${q}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': opts.apiKey },
+    body: opts.body,
+    signal: opts.signal,
+  });
+}
+
+/** True when AI features can run: signed in to Pulse cloud, or a personal Gemini key is set. */
+export const aiAvailable = (apiKey: string) => !!cloudAI() || !!apiKey;
 
 const GOALS = ['lose', 'recomp', 'maintain', 'gain'];
 const PACES = ['gentle', 'standard', 'aggressive'];
@@ -234,14 +288,10 @@ async function withRetry(attempt: (signal: AbortSignal) => Promise<string>, time
 }
 
 /** POST generateContent and return the whole text answer. */
-function generate(apiKey: string, model: string, body: Record<string, unknown>, timeoutMs: number): Promise<string> {
+function generate(apiKey: string, model: string, body: Record<string, unknown>, timeoutMs: number, feature: Feature): Promise<string> {
+  const id = requestId();
   return withRetry(async (signal) => {
-    const res = await fetch(`${ENDPOINT}/${model}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: requestBody(body),
-      signal,
-    });
+    const res = await aiFetch({ apiKey, model, method: 'generateContent', body: requestBody(body), feature, id, signal });
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw requestError(res.status, json);
     const text = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
@@ -257,16 +307,13 @@ function generateStream(
   body: Record<string, unknown>,
   timeoutMs: number,
   onText: (text: string) => void,
+  feature: Feature,
 ): Promise<string> {
   let started = false;
+  const id = requestId();
   return withRetry(
     async (signal) => {
-      const res = await streamingFetch(`${ENDPOINT}/${model}:streamGenerateContent?alt=sse`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: requestBody(body),
-        signal,
-      });
+      const res = await aiFetch({ apiKey, model, method: 'streamGenerateContent', body: requestBody(body), feature, id, signal }, streamingFetch as unknown as typeof fetch);
       if (!res.ok) throw requestError(res.status, await res.json().catch(() => ({})));
       const reader = res.body?.getReader();
       if (!reader) throw new AiError('Streaming is not available.');
@@ -348,7 +395,6 @@ export async function askCoach(opts: {
   onReply?: (reply: string, done: boolean) => void;
 }): Promise<CoachResult> {
   const { apiKey, model, profile, entries, history, text, image, audio, onReply } = opts;
-  if (!apiKey) throw new AiError('Add your Google AI API key in Profile to start logging.', false);
 
   const contents = history
     .filter((m) => !m.pending && !m.error && m.text)
@@ -373,6 +419,7 @@ export async function askCoach(opts: {
   const timeoutMs = audio || image ? 45_000 : 30_000;
   let lastReply = '';
   let replyDone = false;
+  const feature: Feature = audio || image ? 'coach_media' : 'coach';
   const raw = onReply
     ? await generateStream(apiKey, model, body, timeoutMs, (json) => {
         const r = partialReply(json);
@@ -380,8 +427,8 @@ export async function askCoach(opts: {
         lastReply = r.text;
         replyDone = r.done;
         onReply(r.text, r.done);
-      })
-    : await generate(apiKey, model, body, timeoutMs);
+      }, feature)
+    : await generate(apiKey, model, body, timeoutMs, feature);
   try {
     const parsed = JSON.parse(raw) as CoachResult;
     const g = parsed.goalUpdate;
@@ -406,7 +453,6 @@ export interface PlanResult {
 /** Turns a goal in the user's own words into a goal, pace and daily targets. */
 export async function planGoal(opts: { apiKey: string; model: string; profile: Profile; request: string }): Promise<PlanResult> {
   const { apiKey, model, profile, request } = opts;
-  if (!apiKey) throw new AiError('Add your Google AI API key in Profile first.', false);
   const baseline = Object.fromEntries(
     (['lose', 'recomp', 'maintain', 'gain'] as Goal[]).map((g) => [g, recommendedTargets({ ...profile, goal: g, pace: 'standard' })]),
   );
@@ -447,6 +493,7 @@ summary: 2 short sentences in plain language explaining the plan and the single 
       },
     },
     30_000,
+    'goal_plan',
   );
   const j = JSON.parse(raw);
   const r = (n: number, to: number) => Math.round(Number(n) / to) * to;
@@ -487,6 +534,7 @@ export async function dailyInsight(opts: { apiKey: string; model: string; profil
       },
     },
     20_000,
+    'insight',
   );
   try {
     return String(JSON.parse(raw).insight ?? '').trim();
@@ -531,6 +579,7 @@ Write: headline (max 8 words), body (2-3 sentences linking THEIR stress/sleep/mo
       },
     },
     30_000,
+    'wellbeing',
   );
   const j = JSON.parse(raw);
   return { headline: String(j.headline ?? ''), body: String(j.body ?? ''), tips: (j.tips ?? []).slice(0, 3).map(String) };
@@ -554,14 +603,17 @@ export const DEFAULT_VOICE = 'Puck';
 /** Natural speech for a Coach reply. Usually 16-bit 24 kHz mono PCM; mimeType says which. */
 export async function synthesizeSpeech(opts: { apiKey: string; text: string; voice: string }): Promise<Media> {
   const { apiKey, text, voice } = opts;
-  if (!apiKey) throw new AiError('No API key', false);
   for (; ttsModel < TTS_MODELS.length; ttsModel++) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 15_000);
     try {
-      const res = await fetch(`${ENDPOINT}/${TTS_MODELS[ttsModel]}:generateContent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      const res = await aiFetch({
+        apiKey,
+        model: TTS_MODELS[ttsModel],
+        method: 'generateContent',
+        feature: 'voice',
+        id: requestId(),
+        signal: ctrl.signal,
         body: JSON.stringify({
           // Only the words to say: TTS models read any style instruction in the text out loud.
           // The tone comes from the chosen voice.
@@ -571,7 +623,6 @@ export async function synthesizeSpeech(opts: { apiKey: string; text: string; voi
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
           },
         }),
-        signal: ctrl.signal,
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -625,6 +676,7 @@ Write: title (3-6 words, ALL CAPS, comic headline), training, fuel, mind (one pu
       },
     },
     30_000,
+    'recap',
   );
   const j = JSON.parse(raw);
   return { title: String(j.title ?? ''), training: String(j.training ?? ''), fuel: String(j.fuel ?? ''), mind: String(j.mind ?? ''), verdict: String(j.verdict ?? '') };
@@ -718,6 +770,7 @@ Use ${profile.units} units for ingredient amounts.${prefs.trim() ? `\nUSER PREFE
       },
     },
     60_000,
+    'meal_plan',
   );
   const j = JSON.parse(raw) as MealPlan;
   return { summary: j.summary ?? '', days: j.days ?? [], grocery: j.grocery ?? [] };
@@ -742,6 +795,7 @@ export async function estimateMeal(opts: { apiKey: string; model: string; descri
       },
     },
     20_000,
+    'estimate',
   );
   const j = JSON.parse(raw);
   const n = (v: unknown) => (typeof v === 'number' && isFinite(v) && v >= 0 ? Math.round(v * 10) / 10 : 0);
@@ -830,6 +884,7 @@ summary: one or two sentences in character on how this plan serves the goal. Use
       },
     },
     60_000,
+    'workout_plan',
   );
   const j = JSON.parse(raw);
   return { summary: String(j.summary ?? ''), days: (j.days ?? []).slice(0, days) };

@@ -87,6 +87,8 @@ export interface ChatMessage {
   pendingKind?: 'voice' | 'photo' | 'text';
   error?: boolean;
   retryable?: boolean;
+  /** The reply failed because the account is out of AI credits. */
+  needsCredits?: boolean;
 }
 
 export interface Settings {

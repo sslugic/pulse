@@ -14,7 +14,7 @@ import { weeklyRecapCaptions } from '@/lib/gemini';
 import { fmtKg } from '@/lib/nutrition';
 import { personaById } from '@/lib/personas';
 import { fallbackCaptions, weekStats, type RecapCaptions } from '@/lib/recap';
-import { getState, useStore } from '@/lib/store';
+import { canUseAI, getState, useStore } from '@/lib/store';
 import { moodEmoji } from '@/lib/wellbeing';
 
 const fmtRange = (a: string, b: string) => {
@@ -31,13 +31,13 @@ export default function RecapScreen() {
   const persona = personaById(profile.persona);
   const stats = useMemo(() => weekStats(entries, profile, claims), [entries, profile, claims]);
   const [captions, setCaptions] = useState<RecapCaptions>(() => fallbackCaptions(stats));
-  const [loading, setLoading] = useState(() => !!getState().settings.apiKey);
+  const [loading, setLoading] = useState(() => canUseAI());
   const [round, setRound] = useState(0);
   const page = useRef<ComponentRef<typeof View>>(null);
 
   useEffect(() => {
     const s = getState();
-    if (!s.settings.apiKey) return;
+    if (!canUseAI()) return;
     let cancelled = false;
     weeklyRecapCaptions({ apiKey: s.settings.apiKey, model: s.settings.model, profile: s.profile, digest: stats.digest })
       .then((c) => !cancelled && setCaptions(c))
@@ -149,7 +149,7 @@ export default function RecapScreen() {
             size="md"
             colors={['#5FE2FF', '#1E8FE0']}
             textColor="#fff"
-            disabled={loading || !getState().settings.apiKey}
+            disabled={loading || !canUseAI()}
             onPress={() => {
               setLoading(true);
               setRound((r) => r + 1);

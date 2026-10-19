@@ -12,7 +12,7 @@ import { C, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { wellbeingInsight, type WellbeingInsight } from '@/lib/gemini';
 import { journalPhotoUri, pickImage } from '@/lib/media';
 import { dayKey, lastNDays } from '@/lib/nutrition';
-import { actions, getState, useStore } from '@/lib/store';
+import { actions, canUseAI, getState, useAiReady, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 import { dayWellbeing, impactFor, LEVEL_COLOR, MOODS, moodEmoji, patterns } from '@/lib/wellbeing';
 
@@ -21,7 +21,7 @@ export default function WellbeingScreen() {
   const entries = useStore((s) => s.entries);
   const profile = useStore((s) => s.profile);
   const thinking = useStore((s) => s.thinking);
-  const hasKey = useStore((s) => !!s.settings.apiKey);
+  const hasKey = useAiReady();
   const todayKey = useTodayKey();
 
   const today = useMemo(() => dayWellbeing(entries, todayKey), [entries, todayKey]);
@@ -41,11 +41,11 @@ export default function WellbeingScreen() {
   const impact = today.level ? impactFor(today.level, profile.goal) : null;
 
   const [insight, setInsight] = useState<WellbeingInsight | null>(null);
-  const [loading, setLoading] = useState(() => !!getState().settings.apiKey);
+  const [loading, setLoading] = useState(() => canUseAI());
   const [refresh, setRefresh] = useState(0);
   useEffect(() => {
     const s = getState();
-    if (!s.settings.apiKey) return;
+    if (!canUseAI()) return;
     let cancelled = false;
     wellbeingInsight({ apiKey: s.settings.apiKey, model: s.settings.model, profile: s.profile, entries: s.entries })
       .catch(() => ({ headline: 'Couldn’t reach Gemini', body: 'Check your connection and tap refresh.', tips: [] }))

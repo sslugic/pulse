@@ -4,6 +4,7 @@ import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, IconBadge } from '@/components/icon';
+import { AccountCard } from '@/components/account-card';
 import { PersonaPicker } from '@/components/persona-picker';
 import { Field, inputStyle, ProfileFields } from '@/components/profile-form';
 import { Card, Chip, SectionTitle, T } from '@/components/ui';
@@ -52,6 +53,9 @@ export default function ProfileScreen() {
               SET A GOAL WITH AI OR EDIT TARGETS →
             </T>
         </MetalPanel>
+
+        <SectionTitle>Account & credits</SectionTitle>
+        <AccountCard />
 
         <SectionTitle>Your coach</SectionTitle>
         <PersonaPicker />
@@ -143,7 +147,7 @@ export default function ProfileScreen() {
           <ProfileFields p={profile} set={actions.updateProfile} showGoal={false} />
         </Card>
 
-        <SectionTitle>Google AI</SectionTitle>
+        <SectionTitle>Own Gemini key (developer)</SectionTitle>
         <Card style={{ gap: 14 }}>
           <Field label="Gemini API key">
             <TextInput

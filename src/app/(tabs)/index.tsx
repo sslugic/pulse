@@ -19,7 +19,7 @@ import { dailyInsight } from '@/lib/gemini';
 import { dayKey, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
 import { questXp, tokenBalance } from '@/lib/quests';
 import { crewRank, weekDots } from '@/lib/rank';
-import { actions, getState, useStore } from '@/lib/store';
+import { actions, getState, useAiReady, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 import { useSteps } from '@/lib/health';
 import { season } from '@/lib/seasons';
@@ -35,6 +35,7 @@ export default function Today() {
   const profile = useStore((s) => s.profile);
   const entries = useStore((s) => s.entries);
   const settings = useStore((s) => s.settings);
+  const aiReady = useAiReady();
   const game = useStore((s) => s.game);
   const claims = game.claims;
 
@@ -232,7 +233,7 @@ export default function Today() {
         </View>
 
         {/* Coach says */}
-        {!!settings.apiKey && (
+        {aiReady && (
           <Card style={styles.insight} accent={C.violet + 'AA'}>
             <TagAvatar size={44} band={C.violet} online={false} letter="C" />
             <View style={{ flex: 1, gap: 2 }}>
@@ -344,9 +345,9 @@ function Track({ days, onOpen }: { days: TrackDay[]; onOpen: (key: string) => vo
 /** Refreshes the AI insight whenever today's entry count changes. */
 function useInsight(count: number) {
   const [text, setText] = useState<string | null>(null);
-  const apiKey = useStore((s) => s.settings.apiKey);
+  const ready = useAiReady();
   useEffect(() => {
-    if (!apiKey) return;
+    if (!ready) return;
     let cancelled = false;
     const t = setTimeout(async () => {
       const s = getState();
@@ -361,7 +362,7 @@ function useInsight(count: number) {
       cancelled = true;
       clearTimeout(t);
     };
-  }, [count, apiKey]);
+  }, [count, ready]);
   return text;
 }
 

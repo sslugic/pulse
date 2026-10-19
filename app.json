@@ -16,7 +16,8 @@
         "NSMicrophoneUsageDescription": "Pulse uses the microphone so you can log by voice."
       },
       "appleTeamId": "8SX4DK48U6",
-      "buildNumber": "2"
+      "buildNumber": "2",
+      "usesAppleSignIn": true
     },
     "android": {
       "adaptiveIcon": {
@@ -92,7 +93,8 @@
           "NSHealthShareUsageDescription": "Pulse reads your steps, workouts, sleep and weight so they log themselves and earn XP.",
           "NSHealthUpdateUsageDescription": false
         }
-      ]
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { C, Space } from '@/constants/theme';
 import { mealKey } from '@/lib/plans';
-import { useStore } from '@/lib/store';
+import { useAiReady, useStore } from '@/lib/store';
 
 import { Icon } from './icon';
 import { Card, T, tap } from './ui';
@@ -12,7 +12,7 @@ import { Card, T, tap } from './ui';
 export function TodayPlanCard({ todayKey }: { todayKey: string }) {
   const meals = useStore((s) => s.mealPlan);
   const workouts = useStore((s) => s.workoutPlan);
-  const hasKey = useStore((s) => !!s.settings.apiKey);
+  const hasKey = useAiReady();
   const md = meals?.days.find((d) => d.day === todayKey);
   const wd = workouts?.days.find((d) => d.day === todayKey);
 
