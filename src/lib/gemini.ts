@@ -408,3 +408,58 @@ Write: headline (max 8 words), body (2-3 sentences linking THEIR stress/sleep/mo
   const j = JSON.parse(raw);
   return { headline: String(j.headline ?? ''), body: String(j.body ?? ''), tips: (j.tips ?? []).slice(0, 3).map(String) };
 }
+
+// Newest first; a model this key can't use falls through to the next one.
+const TTS_MODELS = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
+let ttsModel = 0;
+
+/** Gemini prebuilt voices offered for the Coach. */
+export const COACH_VOICES = [
+  { id: 'Puck', label: 'Upbeat' },
+  { id: 'Kore', label: 'Firm' },
+  { id: 'Fenrir', label: 'Hype' },
+  { id: 'Aoede', label: 'Breezy' },
+  { id: 'Charon', label: 'Calm' },
+] as const;
+export const DEFAULT_VOICE = 'Puck';
+
+/** Natural speech for a Coach reply. Usually 16-bit 24 kHz mono PCM; mimeType says which. */
+export async function synthesizeSpeech(opts: { apiKey: string; text: string; voice: string }): Promise<Media> {
+  const { apiKey, text, voice } = opts;
+  if (!apiKey) throw new AiError('No API key', false);
+  for (; ttsModel < TTS_MODELS.length; ttsModel++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30_000);
+    try {
+      const res = await fetch(`${ENDPOINT}/${TTS_MODELS[ttsModel]}:generateContent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: `Say in a warm, upbeat, encouraging personal-trainer voice, at a natural conversational pace: ${text}` }] }],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+          },
+        }),
+        signal: ctrl.signal,
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg: string = json?.error?.message ?? `Speech request failed (${res.status})`;
+        if (res.status === 404 || /not found|not supported|unsupported|modalit/i.test(msg)) continue;
+        throw new AiError(msg, res.status >= 500 || res.status === 429);
+      }
+      type Part = { inlineData?: { data?: string; mimeType?: string } };
+      const audio = (json?.candidates?.[0]?.content?.parts as Part[] | undefined)?.find((p) => p.inlineData?.data)?.inlineData;
+      if (!audio?.data) throw new AiError('Gemini returned no audio.');
+      return { base64: audio.data, mimeType: audio.mimeType ?? 'audio/L16;rate=24000' };
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') throw new AiError('Speech took too long.');
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  ttsModel = 0; // try again from the top next time, e.g. after the key changes
+  throw new AiError('No Gemini speech model is available for this key.', false);
+}

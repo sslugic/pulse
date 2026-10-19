@@ -90,4 +90,6 @@ export interface Settings {
   model: string;
   /** Coach reads its replies out loud. */
   voiceReplies: boolean;
+  /** Gemini voice name for the Coach, or 'device' for the built-in offline voice. */
+  coachVoice: string;
 }
