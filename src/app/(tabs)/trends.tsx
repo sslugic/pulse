@@ -1,15 +1,13 @@
-import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EntryRow } from '@/components/entry-row';
-import { Icon } from '@/components/icon';
+import { DayHistory } from '@/components/day-history';
 import { WeightCard } from '@/components/weight-card';
 import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Radius, Space } from '@/constants/theme';
-import { dayKey, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
+import { lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
 import { useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 
@@ -34,15 +32,6 @@ export default function Trends() {
 
   const maxBar = Math.max(target, ...days.map((d) => Math.max(d.eaten, d.burned))) * 1.1;
 
-  const history = useMemo(() => {
-    const groups = new Map<string, typeof entries>();
-    for (const e of entries.slice(0, 120)) {
-      const k = dayKey(e.createdAt);
-      if (k === todayKey) continue;
-      groups.set(k, [...(groups.get(k) ?? []), e]);
-    }
-    return [...groups.entries()].slice(0, 10);
-  }, [entries, todayKey]);
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -66,6 +55,10 @@ export default function Trends() {
         <Kpi label="Avg protein" value={String(avg((d) => d.protein))} unit="g" color={C.protein} />
         <Kpi label="Streak" value={String(streak(entries, frozen))} unit="days" color={C.lime} />
       </View>
+
+      {/* Day by day: tap any day for its full breakdown */}
+      <SectionTitle>History</SectionTitle>
+      <DayHistory todayKey={todayKey} />
 
       {/* Weight */}
       <SectionTitle>Weight</SectionTitle>
@@ -106,32 +99,6 @@ export default function Trends() {
         <MacroSplit p={avg((d) => d.protein)} c={avg((d) => d.carbs)} f={avg((d) => d.fat)} />
       </Card>
 
-      {/* History */}
-      {history.length > 0 && <SectionTitle>History</SectionTitle>}
-      {history.map(([k, list]) => {
-        const s = summarize(list, k);
-        return (
-          <View key={k} style={{ gap: 6, marginBottom: Space.sm }}>
-            <Pressable
-              onPress={() => router.push({ pathname: '/day/[key]', params: { key: k } })}
-              accessibilityRole="button"
-              style={({ pressed }) => [{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }, pressed && { opacity: 0.6 }]}>
-              <T size={14} weight="700">
-                {new Date(k + 'T12:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
-              </T>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <T size={12} color={C.textDim}>
-                  {Math.round(s.eaten)} in · {Math.round(s.burned)} out
-                </T>
-                <Icon name="chevron" size={12} color={C.textMute} />
-              </View>
-            </Pressable>
-            {list.map((e) => (
-              <EntryRow key={e.id} entry={e} />
-            ))}
-          </View>
-        );
-      })}
     </ScrollView>
     </View>
   );

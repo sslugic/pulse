@@ -1,7 +1,7 @@
 // React Native's fetch can't read a response as it arrives; expo/fetch can.
 import { fetch as streamingFetch } from 'expo/fetch';
 
-import type { ChatMessage, Entry, Goal, Pace, Profile, Targets } from './types';
+import type { ChatMessage, Entry, Goal, Nutrition, Pace, Profile, Targets } from './types';
 import { personaById } from './personas';
 import type { RecapCaptions } from './recap';
 import { SCENE_NAMES } from './scene';
@@ -159,6 +159,7 @@ The user logs by talking, typing, or sending photos, and also asks you questions
 ${userContext(profile, entries)}
 
 RULES
+- Every "meal" entry, including a corrected or re-logged one, MUST include nutrition (calories, protein, carbs, fat) for the full amount. Only fill the fields that belong to an entry's kind.
 - Food photo or description -> one "meal" entry per meal (not per ingredient). List components in "items" with portion estimates. Estimate portions from visual cues (plate size, utensils). Fill nutrition incl. fiber/sugar/sodium.
 - Exercise (text, voice, or a photo of a workout, machine display, or smartwatch screen) -> "exercise" entry. Compute caloriesBurned with MET x body weight (${profile.weightKg} kg) x hours unless the screen shows a number. Infer a sensible duration if missing and say you assumed it.
 - "drank a glass of water" -> water entry (glass = 250 ml, bottle = 500 ml). Coffee/tea/drinks with calories are meals; plain water is water.
@@ -720,4 +721,29 @@ Use ${profile.units} units for ingredient amounts.${prefs.trim() ? `\nUSER PREFE
   );
   const j = JSON.parse(raw) as MealPlan;
   return { summary: j.summary ?? '', days: j.days ?? [], grocery: j.grocery ?? [] };
+}
+
+/** Nutrition for a meal the Coach logged without numbers (repairs incomplete entries). */
+export async function estimateMeal(opts: { apiKey: string; model: string; description: string; units: Profile['units'] }): Promise<Nutrition> {
+  const raw = await generate(
+    opts.apiKey,
+    opts.model,
+    {
+      systemInstruction: { parts: [{ text: 'You are a nutritionist. Estimate realistic total nutrition for the described food or drink, including every serving mentioned. Return numbers only.' }] },
+      contents: [{ role: 'user', parts: [{ text: opts.description }] }],
+      generationConfig: {
+        temperature: 0.2,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: { calories: { type: 'NUMBER' }, protein: { type: 'NUMBER' }, carbs: { type: 'NUMBER' }, fat: { type: 'NUMBER' }, fiber: { type: 'NUMBER' }, sugar: { type: 'NUMBER' } },
+          required: ['calories', 'protein', 'carbs', 'fat'],
+        },
+      },
+    },
+    20_000,
+  );
+  const j = JSON.parse(raw);
+  const n = (v: unknown) => (typeof v === 'number' && isFinite(v) && v >= 0 ? Math.round(v * 10) / 10 : 0);
+  return { calories: n(j.calories), protein: n(j.protein), carbs: n(j.carbs), fat: n(j.fat), fiber: n(j.fiber), sugar: n(j.sugar) };
 }

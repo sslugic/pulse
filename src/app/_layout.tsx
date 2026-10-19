@@ -48,6 +48,7 @@ export default function RootLayout() {
         actions.applyStreakFreezes();
         actions.refreshReminder();
         actions.syncHealth();
+        actions.repairMeals();
       })
       .finally(() => {});
   }, []);
