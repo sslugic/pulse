@@ -1,10 +1,10 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BreatheGame, BubbleGame, GameShell, SprayGame } from '@/components/arcade-games';
-import { GlassButton, IconBadge } from '@/components/icon';
+import { BreatheGame, BubbleGame, FidgetGame, GameShell, MemoryGame, ShredderGame, SprayGame } from '@/components/arcade-games';
+import { IconBadge } from '@/components/icon';
 import { TokenCoin, TokenCount } from '@/components/quests-card';
 import { Card, T } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
@@ -15,7 +15,7 @@ import { actions, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 import { dayWellbeing, LEVEL_COLOR } from '@/lib/wellbeing';
 
-const PLAY = { breathe: BreatheGame, bubbles: BubbleGame, spray: SprayGame } as const;
+const PLAY = { breathe: BreatheGame, fidget: FidgetGame, bubbles: BubbleGame, shredder: ShredderGame, memory: MemoryGame, spray: SprayGame } as const;
 
 export default function ArcadeScreen() {
   const insets = useSafeAreaInsets();
@@ -23,7 +23,14 @@ export default function ArcadeScreen() {
   const entries = useStore((s) => s.entries);
   const game = useStore((s) => s.game);
   const todayKey = useTodayKey();
-  const [playing, setPlaying] = useState<GameId | null>(() => (params.play && gameById(params.play) ? (params.play as GameId) : null));
+  const [picked, setPicked] = useState<GameId | null>(null);
+  // Deep links like /arcade?play=breathe open a game straight away, but only one the player owns.
+  const linked = params.play && gameById(params.play) && isUnlocked(params.play as GameId, game.unlocked) ? (params.play as GameId) : null;
+  const playing = picked ?? linked;
+  const exit = () => {
+    setPicked(null);
+    if (linked) router.setParams({ play: undefined });
+  };
   const [short, setShort] = useState<GameId | null>(null);
 
   const balance = useMemo(() => tokenBalance(game), [game]);
@@ -32,26 +39,14 @@ export default function ArcadeScreen() {
   const onFinish = useCallback(() => actions.finishGame(todayKey), [todayKey]);
 
   const current = playing ? gameById(playing) : undefined;
-  if (current) {
-    const Game = PLAY[current.id];
-    return (
-      <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <Backdrop />
-        <View style={[styles.play, { paddingTop: insets.top + Space.sm, paddingBottom: insets.bottom + Space.md }]}>
-          <GameShell game={current} onExit={() => setPlaying(null)} onFinish={onFinish}>
-            <Game />
-          </GameShell>
-        </View>
-      </View>
-    );
-  }
+  const Game = current ? PLAY[current.id] : null;
 
   const high = w.level === 'high' || w.level === 'very high';
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Backdrop />
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.sm, paddingBottom: insets.bottom + 40 }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.sm, paddingBottom: Space.xl * 3 }]}>
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
@@ -59,7 +54,6 @@ export default function ArcadeScreen() {
             </T>
             <Comic size={38}>STRESS ARCADE</Comic>
           </View>
-          <GlassButton icon="close" onPress={() => router.back()} />
         </View>
 
         <Card style={{ gap: 6 }} accent={w.level ? LEVEL_COLOR[w.level] + 'AA' : undefined}>
@@ -91,7 +85,7 @@ export default function ArcadeScreen() {
             afford={balance >= g.price}
             short={short === g.id}
             suggested={high && g.id === 'breathe'}
-            onPlay={() => setPlaying(g.id)}
+            onPlay={() => setPicked(g.id)}
             onUnlock={() => setShort(actions.unlockGame(g.id) ? null : g.id)}
           />
         ))}
@@ -100,6 +94,20 @@ export default function ArcadeScreen() {
           Earn tokens by clearing daily quests on HQ.
         </T>
       </ScrollView>
+
+      {/* Games run full screen, over the tab bar and the quick-log button. */}
+      <Modal visible={!!current} animationType="slide" presentationStyle="fullScreen" onRequestClose={exit}>
+        {current && Game && (
+          <View style={{ flex: 1, backgroundColor: C.bg }}>
+            <Backdrop />
+            <View style={[styles.play, { paddingTop: insets.top + Space.sm, paddingBottom: insets.bottom + Space.md }]}>
+              <GameShell key={current.id} game={current} onExit={exit} onFinish={onFinish}>
+                <Game />
+              </GameShell>
+            </View>
+          </View>
+        )}
+      </Modal>
     </View>
   );
 }

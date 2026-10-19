@@ -1,5 +1,6 @@
+import * as Haptics from 'expo-haptics';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Keyboard, Pressable, StyleSheet, TextInput, View, type LayoutChangeEvent } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
@@ -7,7 +8,7 @@ import { C } from '@/constants/theme';
 import { GAME_SECONDS, type GameDef } from '@/lib/arcade';
 import { tap } from '@/lib/haptics';
 
-import { GlassButton } from './icon';
+import { GlassButton, Icon, type IconName } from './icon';
 import { Bar, Card, T } from './ui';
 import { ArcadeButton, Comic } from './underground';
 
@@ -293,6 +294,195 @@ function SprayStroke({ d, color }: { d: string; color: string }) {
   );
 }
 
+// ---------- Fidget board ----------
+
+const FIDGET_COLORS = [C.lime, C.pink, C.cyan, C.yellow, C.orange, C.violet];
+
+export function FidgetGame() {
+  const [lit, setLit] = useState<boolean[]>(() => Array(16).fill(false));
+  const on = lit.filter(Boolean).length;
+  const flip = (i: number) => {
+    tap(Haptics.ImpactFeedbackStyle.Medium);
+    setLit((l) => l.map((v, j) => (j === i ? !v : v)));
+  };
+  return (
+    <View style={[styles.center, { gap: 18 }]}>
+      <T size={13} rounded color={C.textDim}>
+        {on} LIT
+      </T>
+      <View style={styles.board}>
+        {lit.map((v, i) => {
+          const c = FIDGET_COLORS[i % FIDGET_COLORS.length];
+          return (
+            <Pressable
+              key={i}
+              onPressIn={() => flip(i)}
+              accessibilityLabel={`Button ${i + 1}`}
+              style={({ pressed }) => [
+                styles.fidget,
+                { backgroundColor: v ? c : '#2A2D30', shadowColor: c, shadowOpacity: v ? 0.9 : 0 },
+                pressed && { transform: [{ translateY: 3 }], borderBottomWidth: 2 },
+              ]}
+            />
+          );
+        })}
+      </View>
+      <Pressable
+        onPress={() => {
+          tap();
+          setLit(Array(16).fill(false));
+        }}
+        style={styles.wipe}>
+        <T size={12} rounded color={C.text}>
+          ALL OFF
+        </T>
+      </Pressable>
+    </View>
+  );
+}
+
+// ---------- Worry shredder ----------
+
+export function ShredderGame() {
+  const [text, setText] = useState('');
+  const [paper, setPaper] = useState<string | null>(null);
+  const [count, setCount] = useState(0);
+  const drop = useSharedValue(0);
+  const strips = useSharedValue(0);
+
+  const shred = () => {
+    const worry = text.trim();
+    if (!worry || paper) return;
+    Keyboard.dismiss();
+    tap(Haptics.ImpactFeedbackStyle.Heavy);
+    setPaper(worry);
+    setText('');
+    drop.set(0);
+    strips.set(0);
+    drop.set(withTiming(1, { duration: 1100, easing: Easing.in(Easing.quad) }));
+    strips.set(withTiming(1, { duration: 1500, easing: Easing.out(Easing.quad) }));
+    setTimeout(() => {
+      setPaper(null);
+      setCount((n) => n + 1);
+    }, 1550);
+  };
+
+  const card = useAnimatedStyle(() => ({ transform: [{ translateY: drop.value * 170 }] }));
+  const fall = useAnimatedStyle(() => ({ transform: [{ translateY: strips.value * 120 }], opacity: 1 - strips.value }));
+
+  return (
+    <View style={{ flex: 1, gap: 14 }}>
+      <TextInput
+        value={text}
+        onChangeText={setText}
+        placeholder="What’s bugging you?"
+        placeholderTextColor={C.textMute}
+        multiline
+        maxLength={140}
+        style={styles.worry}
+      />
+      <ArcadeButton label="SHRED IT" size="md" colors={['#FF9A3D', '#E8530E']} textColor="#fff" disabled={!text.trim() || !!paper} onPress={shred} />
+      <View style={{ alignItems: 'center', flex: 1 }}>
+        <View style={styles.paperWell}>
+          {paper && (
+            <Animated.View style={[styles.paper, card]}>
+              <T size={15} color={C.ink} style={{ lineHeight: 20 }} numberOfLines={5}>
+                {paper}
+              </T>
+            </Animated.View>
+          )}
+        </View>
+        <View style={styles.shredder}>
+          <View style={styles.slot} />
+          <Comic size={18} color={C.text}>
+            SHREDDER
+          </Comic>
+        </View>
+        <View style={styles.stripWell}>
+          {paper && (
+            <Animated.View style={[styles.strips, fall]}>
+              {Array.from({ length: 9 }).map((_, i) => (
+                <View key={i} style={[styles.strip, { height: 40 + ((i * 37) % 50) }]} />
+              ))}
+            </Animated.View>
+          )}
+        </View>
+        <T size={13} rounded color={C.textDim}>
+          {count} {count === 1 ? 'WORRY' : 'WORRIES'} SHREDDED
+        </T>
+      </View>
+    </View>
+  );
+}
+
+// ---------- Neon match ----------
+
+const FACES: { icon: IconName; color: string }[] = [
+  { icon: 'flame', color: C.orange },
+  { icon: 'drop', color: C.cyan },
+  { icon: 'bolt', color: C.yellow },
+  { icon: 'leaf', color: C.lime },
+  { icon: 'heart', color: C.pink },
+  { icon: 'moon', color: C.violet },
+];
+
+const deal = () =>
+  [...FACES, ...FACES]
+    .map((f, i) => ({ ...f, key: i, r: Math.random() }))
+    .sort((a, b) => a.r - b.r);
+
+export function MemoryGame() {
+  const [deck, setDeck] = useState(deal);
+  const [up, setUp] = useState<number[]>([]);
+  const [found, setFound] = useState<Set<string>>(() => new Set());
+  const [rounds, setRounds] = useState(0);
+
+  const flip = (i: number) => {
+    if (up.length === 2 || up.includes(i) || found.has(deck[i].icon)) return;
+    tap();
+    const next = [...up, i];
+    setUp(next);
+    if (next.length < 2) return;
+    const [a, b] = next;
+    if (deck[a].icon === deck[b].icon) {
+      const done = new Set(found).add(deck[a].icon);
+      setFound(done);
+      setUp([]);
+      if (done.size === FACES.length) {
+        setTimeout(() => {
+          setRounds((r) => r + 1);
+          setFound(new Set());
+          setDeck(deal());
+        }, 700);
+      }
+    } else {
+      setTimeout(() => setUp([]), 750);
+    }
+  };
+
+  return (
+    <View style={[styles.center, { gap: 18 }]}>
+      <T size={13} rounded color={C.textDim}>
+        {found.size}/{FACES.length} PAIRS{rounds ? ` · ${rounds} CLEARED` : ''}
+      </T>
+      <View style={styles.cards}>
+        {deck.map((c, i) => {
+          const shown = up.includes(i) || found.has(c.icon);
+          return (
+            <Pressable
+              key={c.key}
+              onPress={() => flip(i)}
+              accessibilityLabel={shown ? c.icon : 'Hidden card'}
+              style={[styles.card, shown && { backgroundColor: '#15181A', borderColor: c.color, shadowColor: c.color, shadowOpacity: 0.8 }, found.has(c.icon) && { opacity: 0.5 }]}>
+              {shown ? <Icon name={c.icon} size={34} color={c.color} /> : <Comic size={22} color="#4A4E52">?</Comic>}
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stage: { flex: 1 },
@@ -320,5 +510,46 @@ const styles = StyleSheet.create({
   palette: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   can: { width: 38, height: 38, borderRadius: 19, borderWidth: 2, borderColor: C.ink },
   canOn: { borderColor: C.text, borderWidth: 3, transform: [{ scale: 1.12 }] },
+  board: { width: 300, flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  fidget: { width: 66, height: 66, borderRadius: 14, borderWidth: 3, borderBottomWidth: 6, borderColor: C.ink, shadowRadius: 12 },
+  worry: {
+    minHeight: 90,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#1D2023',
+    borderWidth: 2,
+    borderColor: '#3A3F43',
+    color: C.text,
+    fontSize: 16,
+    textAlignVertical: 'top',
+  },
+  paperWell: { width: 230, height: 130, overflow: 'hidden', justifyContent: 'flex-end' },
+  paper: { backgroundColor: '#F3EEDC', padding: 12, borderRadius: 4, minHeight: 110, transform: [{ rotate: '-2deg' }] },
+  shredder: {
+    width: 260,
+    paddingVertical: 10,
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 10,
+    backgroundColor: '#4A4F53',
+    borderWidth: 3,
+    borderColor: C.ink,
+  },
+  slot: { width: 210, height: 8, borderRadius: 4, backgroundColor: C.ink },
+  stripWell: { width: 230, height: 110, overflow: 'hidden' },
+  strips: { flexDirection: 'row', justifyContent: 'space-between' },
+  strip: { width: 16, backgroundColor: '#F3EEDC', borderRadius: 2 },
+  cards: { width: 320, flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
+  card: {
+    width: 70,
+    height: 88,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2A2D30',
+    borderWidth: 3,
+    borderColor: C.ink,
+    shadowRadius: 10,
+  },
   wipe: { marginLeft: 'auto', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, backgroundColor: C.surfaceHi, borderWidth: 2, borderColor: C.ink },
 });

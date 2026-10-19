@@ -3,7 +3,7 @@ import { C } from '@/constants/theme';
 
 // Stress Arcade: one-minute games bought once with quest tokens.
 
-export type GameId = 'breathe' | 'bubbles' | 'spray';
+export type GameId = 'breathe' | 'fidget' | 'bubbles' | 'shredder' | 'memory' | 'spray';
 
 export interface GameDef {
   id: GameId;
@@ -16,7 +16,10 @@ export interface GameDef {
 
 export const GAMES: GameDef[] = [
   { id: 'breathe', title: 'BOX BREATH', blurb: 'In, hold, out, hold. Four counts each, one minute.', price: 0, icon: 'leaf', color: C.cyan },
+  { id: 'fidget', title: 'FIDGET BOARD', blurb: 'Clicky arcade buttons. Light them up, switch them off.', price: 15, icon: 'grid', color: C.yellow },
   { id: 'bubbles', title: 'BUBBLE POP', blurb: 'Pop the bubbles as they float up. No score to beat.', price: 20, icon: 'drop', color: C.pink },
+  { id: 'shredder', title: 'WORRY SHREDDER', blurb: 'Type what’s bugging you, then feed it to the shredder.', price: 25, icon: 'shred', color: C.orange },
+  { id: 'memory', title: 'NEON MATCH', blurb: 'Flip the cards and find the pairs. Slow and steady.', price: 30, icon: 'cards', color: C.violet },
   { id: 'spray', title: 'SPRAY WALL', blurb: 'Tag the wall in neon. Scribble it out.', price: 40, icon: 'wand', color: C.lime },
 ];
 

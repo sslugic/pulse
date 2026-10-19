@@ -6,18 +6,20 @@ import Svg, { Path } from 'react-native-svg';
 
 import { ArcadePrompt, isStressHigh } from '@/components/arcade-prompt';
 import { EntryRow } from '@/components/entry-row';
-import { Icon, IconBadge } from '@/components/icon';
+import { Icon } from '@/components/icon';
+import { openCoach } from '@/components/quick-fab';
+import { QuickLog } from '@/components/quick-log';
 import { QuestsCard, TokenCount } from '@/components/quests-card';
 import { TagAvatar } from '@/components/tag-avatar';
-import { ArcadeButton, Backdrop, Chain, Comic, DripLetter, Sticker } from '@/components/underground';
+import { Backdrop, Comic, DripLetter, Sticker } from '@/components/underground';
 import { WellbeingCard } from '@/components/wellbeing-card';
 import { Bar, Card, SectionTitle, T, tap } from '@/components/ui';
-import { C, Display, Gradients, MaxContentWidth, Space } from '@/constants/theme';
+import { C, Display, MaxContentWidth, Space } from '@/constants/theme';
 import { dailyInsight } from '@/lib/gemini';
-import { dayKey, fmtWater, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
+import { dayKey, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
 import { questXp, tokenBalance } from '@/lib/quests';
 import { crewRank, weekDots } from '@/lib/rank';
-import { actions, getState, useStore } from '@/lib/store';
+import { getState, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 import { dayWellbeing } from '@/lib/wellbeing';
 
@@ -43,11 +45,14 @@ export default function Today() {
   const tokens = useMemo(() => tokenBalance(game), [game]);
   const mind = useMemo(() => dayWellbeing(entries, todayKey), [entries, todayKey]);
   const week = useMemo(() => weekDots(entries, new Date(todayKey + 'T12:00')), [entries, todayKey]);
-  const onTrack = useMemo(
+  // Last 7 days for the subway track: nothing logged, logged, or on calorie target (net within 12%).
+  const track = useMemo(
     () =>
-      lastNDays(7, new Date(todayKey + 'T12:00')).map((k) => {
+      lastNDays(7, new Date(todayKey + 'T12:00')).map((k): TrackDay => {
         const d = summarize(entries, k);
-        return d.eaten > 0 && Math.abs(d.eaten - d.burned - targets.calories) <= targets.calories * 0.12;
+        const any = entries.some((e) => dayKey(e.createdAt) === k);
+        const hit = d.eaten > 0 && Math.abs(d.eaten - d.burned - targets.calories) <= targets.calories * 0.12;
+        return { key: k, letter: new Date(k + 'T12:00').toLocaleDateString([], { weekday: 'narrow' }), state: hit ? 'target' : any ? 'logged' : 'none', today: k === todayKey };
       }),
     [entries, todayKey, targets.calories],
   );
@@ -57,15 +62,15 @@ export default function Today() {
 
   const insight = useInsight(todays.length);
 
-  const openCoach = (mode: 'voice' | 'camera' | 'type') => {
+  const openDay = (key: string) => {
     tap();
-    router.navigate({ pathname: '/coach', params: { mode, t: String(Date.now()) } });
+    router.push({ pathname: '/day/[key]', params: { key } });
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Backdrop tags={['NYC', 'PULSE']} />
-      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.sm, paddingBottom: Space.xl }]}>
+      <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.sm, paddingBottom: 120 }]}>
         {/* Header: title, crew rank, avatar */}
         <View style={styles.header}>
           <View style={{ flex: 1, gap: 6 }}>
@@ -73,18 +78,13 @@ export default function Today() {
               {greeting()}
               {profile.name ? `, ${profile.name.split(' ')[0]}` : ''}
             </T>
-            <View>
-              <Comic size={22} color={C.text}>
-                THE PULSE
-              </Comic>
-              <Comic size={44} color={C.text}>
-                UNDERGROUND
-              </Comic>
-            </View>
+            <Comic size={34} color={C.text}>
+              PULSE HQ
+            </Comic>
             <CrewBar label={crew.rank} progress={crew.progress} />
           </View>
           <Pressable onPress={() => router.navigate('/profile')} style={{ alignItems: 'center', gap: 4 }}>
-            <TagAvatar size={78} band={C.orange} letter={(profile.name || 'P')[0]} />
+            <TagAvatar size={60} band={C.orange} letter={(profile.name || 'P')[0]} />
             <T size={12} rounded color={C.text}>
               {(profile.name || 'Player').toUpperCase().slice(0, 10)}_{crew.level}
             </T>
@@ -92,25 +92,28 @@ export default function Today() {
           </Pressable>
         </View>
 
-        <Chain style={{ marginHorizontal: -Space.md, marginVertical: 2 }} />
-
         {/* Streak */}
         <View style={styles.streakRow}>
           <View style={styles.streakBadge}>
-            <Icon name="flame" size={22} color={C.orange} />
-            <Comic size={days >= 10 ? 18 : 22} color={C.yellow}>
+            <Icon name="flame" size={16} color={C.orange} />
+            <Comic size={days >= 10 ? 15 : 18} color={C.yellow}>
               {`${days}-DAY`}
             </Comic>
-            <Comic size={13} color={C.text}>
+            <Comic size={10} color={C.text}>
               STREAK
             </Comic>
           </View>
           <View style={styles.week}>
             {week.map((d, i) => (
-              <DripLetter key={i} letter={d.letter} on={d.on} color={d.today ? C.orange : C.lime} />
+              <Pressable key={i} onPress={() => openDay(d.key)} accessibilityLabel={`Open ${d.key}`} hitSlop={4}>
+                <DripLetter letter={d.letter} on={d.on} color={d.today ? C.orange : C.lime} />
+              </Pressable>
             ))}
           </View>
         </View>
+
+        {/* One-tap water, mood and sleep */}
+        <QuickLog todayKey={todayKey} />
 
         {isStressHigh(mind) && <ArcadePrompt w={mind} />}
 
@@ -178,26 +181,12 @@ export default function Today() {
                 SUBWAY TRACK
               </T>
             </View>
-            <Track days={onTrack} />
+            <Track days={track} onOpen={openDay} />
             <T size={11} color={C.textMute} weight="700">
-              {onTrack.filter(Boolean).length}/7 DAYS ON TARGET
+              {track.filter((d) => d.state === 'target').length}/7 ON TARGET · {track.filter((d) => d.state !== 'none').length}/7 LOGGED · TAP A DAY
             </T>
           </Card>
-          <Sticker text="STAY HARD" color={C.violet} rotate={-8} style={{ position: 'absolute', right: 70, top: -4 }} />
-          <Sticker text="GO HARD" color={C.orange} rotate={7} style={{ position: 'absolute', right: 4, top: 30 }} size={20} />
-        </View>
-
-        {/* Capture */}
-        <ArcadeButton
-          label="TALK TO COACH"
-          size="xl"
-          onPress={() => openCoach('voice')}
-          icon={<Icon name="mic" size={38} color="#FF6A00" weight="bold" />}
-          style={{ marginTop: Space.lg }}
-        />
-        <View style={styles.twoCol}>
-          <ArcadeButton label="SNAP" colors={Gradients.warm} textColor={C.yellow} onPress={() => openCoach('camera')} icon={<Icon name="camera" size={24} color={C.yellow} weight="bold" />} style={{ flex: 1 }} />
-          <ArcadeButton label="TYPE" colors={Gradients.cool} textColor="#fff" onPress={() => openCoach('type')} icon={<Icon name="bubble" size={22} color="#fff" weight="bold" />} style={{ flex: 1 }} />
+          <Sticker text="STAY HARD" color={C.violet} rotate={6} style={{ position: 'absolute', right: 6, top: -6 }} size={14} />
         </View>
 
         {/* Coach says */}
@@ -219,37 +208,6 @@ export default function Today() {
         <View style={{ marginTop: Space.sm }}>
           <WellbeingCard todayKey={todayKey} onTalk={() => openCoach('voice')} />
         </View>
-        {!isStressHigh(mind) && <ArcadePrompt w={mind} />}
-
-        {/* Water */}
-        <Card style={{ gap: 10, marginTop: Space.sm }}>
-          <View style={styles.cardHead}>
-            <IconBadge name="drop" color={C.water} size={28} />
-            <T size={13} rounded color={C.textDim} style={{ flex: 1 }}>
-              WATER
-            </T>
-            <T size={20} rounded color={C.water}>
-              {fmtWater(today.water, profile.units)}
-            </T>
-          </View>
-          <Bar value={today.water} max={targets.waterMl} color={C.water} />
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {[250, 500].map((ml) => (
-              <Pressable
-                key={ml}
-                onPress={() => {
-                  tap();
-                  actions.addEntry({ kind: 'water', title: ml === 250 ? 'Glass of water' : 'Bottle of water', emoji: '💧', waterMl: ml, source: 'quick' });
-                }}
-                style={({ pressed }) => [styles.waterBtn, pressed && { transform: [{ translateY: 2 }] }]}>
-                <Icon name="plus" size={12} color={C.water} weight="bold" />
-                <T size={13} rounded color={C.water}>
-                  {fmtWater(ml, profile.units)}
-                </T>
-              </Pressable>
-            ))}
-          </View>
-        </Card>
 
         {/* Log */}
         <SectionTitle right={<T size={12} rounded color={C.textMute}>{todays.length} ENTRIES</T>}>Today’s log</SectionTitle>
@@ -259,7 +217,7 @@ export default function Today() {
               NOTHING LOGGED YET
             </Comic>
             <T size={13} color={C.textDim} style={{ textAlign: 'center' }}>
-              Hit TALK TO COACH and say “two eggs and toast”. The math is on us.
+              Tap the + button and say “two eggs and toast”. The math is on us.
             </T>
           </Card>
         ) : (
@@ -303,18 +261,32 @@ function Pulseline() {
   );
 }
 
-/** Subway rails where each sleeper lights up for a day on target. */
-function Track({ days }: { days: boolean[] }) {
+type TrackDay = { key: string; letter: string; state: 'none' | 'logged' | 'target'; today: boolean };
+
+/** Subway rails, one pair of sleepers per day: dark when nothing was logged, amber when logged, glowing lime on target. */
+function Track({ days, onOpen }: { days: TrackDay[]; onOpen: (key: string) => void }) {
   return (
-    <View style={{ height: 40, justifyContent: 'center' }}>
-      <View style={styles.sleepers}>
-        {Array.from({ length: 14 }).map((_, i) => {
-          const day = days[Math.floor(i / 2)];
-          return <View key={i} style={[styles.sleeper, day && { backgroundColor: '#5A3A1E', borderColor: C.lime, shadowColor: C.lime, shadowOpacity: 0.8, shadowRadius: 5 }]} />;
-        })}
-      </View>
+    <View style={styles.trackRow}>
       <View style={[styles.rail, { top: 9 }]} />
-      <View style={[styles.rail, { bottom: 9 }]} />
+      <View style={[styles.rail, { top: 27 }]} />
+      {days.map((d) => {
+        const lit = d.state === 'target' ? C.lime : d.state === 'logged' ? C.orange : null;
+        return (
+          <Pressable key={d.key} onPress={() => onOpen(d.key)} style={styles.trackDay} accessibilityLabel={`${d.key}: ${d.state}`}>
+            <View style={styles.sleepers}>
+              {[0, 1].map((i) => (
+                <View
+                  key={i}
+                  style={[styles.sleeper, lit && { backgroundColor: '#5A3A1E', borderColor: lit, shadowColor: lit, shadowOpacity: d.state === 'target' ? 0.9 : 0.4, shadowRadius: 5 }]}
+                />
+              ))}
+            </View>
+            <T size={11} rounded color={d.today ? C.orange : lit ?? C.textMute}>
+              {d.letter}
+            </T>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -381,9 +353,9 @@ const styles = StyleSheet.create({
   cell: { width: 11, height: 18, borderRadius: 2 },
   streakRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   streakBadge: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#2B1A10',
@@ -407,22 +379,10 @@ const styles = StyleSheet.create({
   },
   twoCol: { flexDirection: 'row', gap: Space.sm, marginTop: Space.sm },
   statRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   insight: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: Space.md },
-  sleepers: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 },
+  trackRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  trackDay: { alignItems: 'center', gap: 4, flex: 1 },
+  sleepers: { flexDirection: 'row', gap: 6, height: 36, alignItems: 'center' },
   sleeper: { width: 10, height: 36, borderRadius: 2, backgroundColor: '#3B2A1C', borderWidth: 1, borderColor: '#1A120B' },
   rail: { position: 'absolute', left: 0, right: 0, height: 4, backgroundColor: '#9AA0A4', borderRadius: 2, borderBottomWidth: 1, borderBottomColor: '#3A3F43' },
-  waterBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 4,
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: '#1B2A3C',
-    borderWidth: 2,
-    borderColor: C.ink,
-    borderBottomWidth: 4,
-  },
 });
