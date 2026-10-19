@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path } from 'react-native-svg';
 
 import { ArcadePrompt, isStressHigh } from '@/components/arcade-prompt';
 import { EntryRow } from '@/components/entry-row';
@@ -106,6 +105,95 @@ export default function Today() {
           </Pressable>
         </View>
 
+        {/* Today's numbers first: calories left, eaten, burned and macros in one card */}
+        <Card style={{ gap: 12, marginTop: Space.xs }} accent={remaining < 0 ? C.danger : C.orange + '99'}>
+          <View style={styles.todayRow}>
+            <Pressable onPress={() => router.push('/goals')} style={{ flex: 1.3 }} accessibilityRole="button" accessibilityLabel="Calorie target">
+              <T size={11} rounded color={C.textDim}>
+                {remaining < 0 ? 'KCAL OVER' : 'KCAL LEFT'}
+              </T>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <T size={34} rounded color={remaining < 0 ? C.danger : C.text}>
+                  {Math.abs(Math.round(remaining)).toLocaleString()}
+                </T>
+                <Icon name="flame" size={24} color={C.orange} />
+              </View>
+              <T size={10} color={C.textMute} weight="700">
+                OF {budget.toLocaleString()} TODAY
+              </T>
+            </Pressable>
+            <View style={styles.todayStat}>
+              <T size={11} rounded color={C.textDim}>
+                EATEN
+              </T>
+              <T size={22} rounded color={C.eaten}>
+                {Math.round(today.eaten).toLocaleString()}
+              </T>
+              <T size={10} color={C.textMute} weight="700">
+                {today.meals} MEAL{today.meals === 1 ? '' : 'S'}
+              </T>
+            </View>
+            <View style={styles.todayStat}>
+              <T size={11} rounded color={C.textDim}>
+                BURNED
+              </T>
+              <T size={22} rounded color={C.burned}>
+                {Math.round(today.burned).toLocaleString()}
+              </T>
+              <T size={10} color={C.textMute} weight="700" numberOfLines={1}>
+                {steps != null ? `${steps.toLocaleString()} STEPS` : `${today.activeMin} MIN`}
+              </T>
+            </View>
+          </View>
+          <View style={styles.macroRow}>
+            <MiniMacro label="PROTEIN" value={today.protein} target={targets.protein} color={C.protein} />
+            <MiniMacro label="CARBS" value={today.carbs} target={targets.carbs} color={C.carbs} />
+            <MiniMacro label="FAT" value={today.fat} target={targets.fat} color={C.fat} />
+          </View>
+          <View style={styles.fuelActions}>
+            <Pressable onPress={() => router.push('/meal-plan')} style={styles.fuelBtn} accessibilityRole="button">
+              <Icon name="fork" size={14} color={C.orange} />
+              <T size={12} rounded color={C.orange}>
+                MEAL PLAN
+              </T>
+            </Pressable>
+            <Pressable onPress={() => router.push('/scan')} style={styles.fuelBtn} accessibilityRole="button">
+              <Icon name="viewfinder" size={14} color={C.cyan} />
+              <T size={12} rounded color={C.cyan}>
+                SCAN BARCODE
+              </T>
+            </Pressable>
+          </View>
+        </Card>
+
+        {/* Stress alert only when today's score is high */}
+        {isStressHigh(mind) && <ArcadePrompt w={mind} />}
+
+        {/* One-tap water, mood and sleep */}
+        <QuickLog todayKey={todayKey} />
+
+        {/* Daily quests */}
+        <QuestsCard todayKey={todayKey} />
+
+        {/* Log */}
+        <SectionTitle right={<T size={12} rounded color={C.textMute}>{todays.length} ENTRIES</T>}>Today’s log</SectionTitle>
+        {todays.length === 0 ? (
+          <Card style={{ alignItems: 'center', paddingVertical: Space.xl, gap: 6 }}>
+            <Comic size={24} color={C.lime}>
+              NOTHING LOGGED YET
+            </Comic>
+            <T size={13} color={C.textDim} style={{ textAlign: 'center' }}>
+              Tap the + button and say “two eggs and toast”. The math is on us.
+            </T>
+          </Card>
+        ) : (
+          <View style={{ gap: 8 }}>
+            {todays.map((e) => (
+              <EntryRow key={e.id} entry={e} />
+            ))}
+          </View>
+        )}
+
         {/* Streak */}
         <View style={styles.streakRow}>
           <View style={styles.streakBadge}>
@@ -133,13 +221,25 @@ export default function Today() {
           </View>
         </View>
 
-        {/* One-tap water, mood and sleep */}
-        <QuickLog todayKey={todayKey} />
+        {/* Mind & recovery, tied to today's food */}
+        <View style={{ marginTop: Space.sm }}>
+          <WellbeingCard todayKey={todayKey} onTalk={() => openCoach('voice')} />
+        </View>
 
-        {isStressHigh(mind) && <ArcadePrompt w={mind} />}
-
-        {/* Daily quests */}
-        <QuestsCard todayKey={todayKey} />
+        {/* Coach says */}
+        {!!settings.apiKey && (
+          <Card style={styles.insight} accent={C.violet + 'AA'}>
+            <TagAvatar size={44} band={C.violet} online={false} letter="C" />
+            <View style={{ flex: 1, gap: 2 }}>
+              <T size={12} rounded color={C.violet}>
+                COACH SAYS
+              </T>
+              <T size={14} color={C.text} style={{ lineHeight: 20 }}>
+                {insight ?? 'Reading the signs of your day…'}
+              </T>
+            </View>
+          </Card>
+        )}
 
         {/* This month's season */}
         <Pressable onPress={() => router.push('/season')} accessibilityRole="button">
@@ -163,71 +263,6 @@ export default function Today() {
           </Card>
         </Pressable>
 
-        {/* Stat plates */}
-        <View style={styles.twoCol}>
-          <Card style={{ flex: 1, gap: 2 }} accent={remaining < 0 ? C.danger : undefined} onPress={() => router.push('/goals')}>
-            <T size={12} rounded color={C.textDim}>
-              KCAL LEFT
-            </T>
-            <View style={styles.statRow}>
-              <T size={34} rounded color={remaining < 0 ? C.danger : C.text}>
-                {Math.abs(Math.round(remaining)).toLocaleString()}
-              </T>
-              <Icon name="flame" size={30} color={C.orange} />
-            </View>
-            <T size={11} color={C.textMute} weight="700">
-              {remaining < 0 ? 'OVER' : 'OF'} {budget.toLocaleString()} TODAY
-            </T>
-          </Card>
-          <Card style={{ flex: 1, gap: 2 }} accent={C.lime + '99'}>
-            <T size={12} rounded color={C.textDim}>
-              BURNED
-            </T>
-            <View style={styles.statRow}>
-              <T size={34} rounded color={C.text}>
-                {Math.round(today.burned)}
-              </T>
-              <Pulseline />
-            </View>
-            <T size={11} color={C.textMute} weight="700">
-              {steps != null ? `${steps.toLocaleString()} STEPS · ` : ''}
-              {today.activeMin} MIN · {today.workouts} WORKOUT{today.workouts === 1 ? '' : 'S'}
-            </T>
-          </Card>
-        </View>
-
-        <Card style={{ gap: 12, marginTop: Space.sm }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <T size={12} rounded color={C.textDim}>
-              FUEL
-            </T>
-            <T size={22} rounded>
-              {Math.round(today.eaten).toLocaleString()}
-              <T size={14} rounded color={C.textMute}>
-                {' '}
-                / {targets.calories.toLocaleString()}
-              </T>
-            </T>
-          </View>
-          <Macro label="Protein" value={today.protein} target={targets.protein} color={C.protein} />
-          <Macro label="Carbs" value={today.carbs} target={targets.carbs} color={C.carbs} />
-          <Macro label="Fat" value={today.fat} target={targets.fat} color={C.fat} />
-          <View style={styles.fuelActions}>
-            <Pressable onPress={() => router.push('/meal-plan')} style={styles.fuelBtn} accessibilityRole="button">
-              <Icon name="fork" size={14} color={C.orange} />
-              <T size={12} rounded color={C.orange}>
-                MEAL PLAN
-              </T>
-            </Pressable>
-            <Pressable onPress={() => router.push('/scan')} style={styles.fuelBtn} accessibilityRole="button">
-              <Icon name="viewfinder" size={14} color={C.cyan} />
-              <T size={12} rounded color={C.cyan}>
-                SCAN BARCODE
-              </T>
-            </Pressable>
-          </View>
-        </Card>
-
         {/* Weekly subway track */}
         <View>
           <Card style={{ gap: 10, marginTop: Space.sm }}>
@@ -246,45 +281,6 @@ export default function Today() {
           </Card>
           <Sticker text="STAY HARD" color={C.violet} rotate={6} style={{ position: 'absolute', right: 6, top: -6 }} size={14} />
         </View>
-
-        {/* Coach says */}
-        {!!settings.apiKey && (
-          <Card style={styles.insight} accent={C.violet + 'AA'}>
-            <TagAvatar size={44} band={C.violet} online={false} letter="C" />
-            <View style={{ flex: 1, gap: 2 }}>
-              <T size={12} rounded color={C.violet}>
-                COACH SAYS
-              </T>
-              <T size={14} color={C.text} style={{ lineHeight: 20 }}>
-                {insight ?? 'Reading the signs of your day…'}
-              </T>
-            </View>
-          </Card>
-        )}
-
-        {/* Mind & recovery, tied to today's food */}
-        <View style={{ marginTop: Space.sm }}>
-          <WellbeingCard todayKey={todayKey} onTalk={() => openCoach('voice')} />
-        </View>
-
-        {/* Log */}
-        <SectionTitle right={<T size={12} rounded color={C.textMute}>{todays.length} ENTRIES</T>}>Today’s log</SectionTitle>
-        {todays.length === 0 ? (
-          <Card style={{ alignItems: 'center', paddingVertical: Space.xl, gap: 6 }}>
-            <Comic size={24} color={C.lime}>
-              NOTHING LOGGED YET
-            </Comic>
-            <T size={13} color={C.textDim} style={{ textAlign: 'center' }}>
-              Tap the + button and say “two eggs and toast”. The math is on us.
-            </T>
-          </Card>
-        ) : (
-          <View style={{ gap: 8 }}>
-            {todays.map((e) => (
-              <EntryRow key={e.id} entry={e} />
-            ))}
-          </View>
-        )}
       </ScrollView>
     </View>
   );
@@ -307,15 +303,6 @@ function CrewBar({ label, progress }: { label: string; progress: number }) {
         })}
       </View>
     </View>
-  );
-}
-
-/** Small green heartbeat line. */
-function Pulseline() {
-  return (
-    <Svg width={58} height={30} viewBox="0 0 58 30">
-      <Path d="M1 18 H14 L19 8 L25 26 L31 4 L36 18 H57" stroke={C.lime} strokeWidth={3} fill="none" strokeLinejoin="round" strokeLinecap="round" />
-    </Svg>
   );
 }
 
@@ -373,21 +360,20 @@ function useInsight(count: number) {
   return text;
 }
 
-function Macro({ label, value, target, color }: { label: string; value: number; target: number; color: string }) {
+/** Compact macro: name, grams of target and a thin bar, three to a row. */
+function MiniMacro({ label, value, target, color }: { label: string; value: number; target: number; color: string }) {
   return (
-    <View style={{ gap: 6 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <T size={13} rounded>
-          {label.toUpperCase()}
+    <View style={{ flex: 1, gap: 4 }}>
+      <T size={10} rounded color={C.textDim}>
+        {label}
+      </T>
+      <T size={12} color={C.textDim}>
+        <T size={14} rounded color={color}>
+          {Math.round(value)}
         </T>
-        <T size={13} color={C.textDim}>
-          <T size={13} rounded color={color}>
-            {Math.round(value)}
-          </T>{' '}
-          / {target} g
-        </T>
-      </View>
-      <Bar value={value} max={target} color={color} />
+        /{target}g
+      </T>
+      <Bar value={value} max={target} color={color} height={5} />
     </View>
   );
 }
@@ -409,10 +395,13 @@ const styles = StyleSheet.create({
   },
   cells: { flexDirection: 'row', gap: 3, padding: 3, backgroundColor: '#0B0C0D', borderRadius: 4 },
   cell: { width: 11, height: 18, borderRadius: 2 },
+  todayRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  todayStat: { flex: 1, paddingLeft: 10, borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.08)' },
+  macroRow: { flexDirection: 'row', gap: 12 },
   fuelActions: { flexDirection: 'row', gap: 8, marginTop: 2 },
   fuelBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 8, backgroundColor: '#1D2023', borderWidth: 2, borderColor: C.ink, borderBottomWidth: 4 },
   freeze: { position: 'absolute', bottom: -6, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, backgroundColor: C.cyan, borderWidth: 2, borderColor: C.ink },
-  streakRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  streakRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: Space.md },
   streakBadge: {
     width: 76,
     height: 76,
@@ -438,8 +427,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#3A3F43',
   },
-  twoCol: { flexDirection: 'row', gap: Space.sm, marginTop: Space.sm },
-  statRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   insight: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: Space.md },
   trackRow: { flexDirection: 'row', justifyContent: 'space-between' },
   trackDay: { alignItems: 'center', gap: 4, flex: 1 },

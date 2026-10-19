@@ -34,6 +34,11 @@ export default function ArcadeScreen() {
   const [short, setShort] = useState<GameId | null>(null);
 
   const balance = useMemo(() => tokenBalance(game), [game]);
+  // Games you own come first; locked ones follow, cheapest first.
+  const sortedGames = useMemo(
+    () => [...GAMES].sort((a, b) => Number(!isUnlocked(a.id, game.unlocked)) - Number(!isUnlocked(b.id, game.unlocked)) || a.price - b.price),
+    [game.unlocked],
+  );
   const w = useMemo(() => dayWellbeing(entries, todayKey), [entries, todayKey]);
   const earnedToday = game.claims.some((c) => c.day === todayKey && c.questId === ARCADE_CLAIM);
   const onFinish = useCallback(() => actions.finishGame(todayKey), [todayKey]);
@@ -76,11 +81,7 @@ export default function ArcadeScreen() {
           </T>
         </Card>
 
-        <HowItWorks balance={balance} />
-
-        <PowerUps balance={balance} freezes={game.freezes ?? 0} />
-
-        {GAMES.map((g) => (
+        {sortedGames.map((g) => (
           <Cabinet
             key={g.id}
             g={g}
@@ -92,6 +93,10 @@ export default function ArcadeScreen() {
             onUnlock={() => setShort(actions.unlockGame(g.id) ? null : g.id)}
           />
         ))}
+
+        <PowerUps balance={balance} freezes={game.freezes ?? 0} />
+
+        <HowItWorks balance={balance} />
 
       </ScrollView>
 

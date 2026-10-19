@@ -60,19 +60,6 @@ export default function JournalScreen() {
           </View>
         </View>
 
-        <Pressable onPress={() => router.push('/recap')} style={({ pressed }) => [styles.recap, pressed && { transform: [{ translateY: 2 }] }]} accessibilityRole="button">
-          <T size={20}>📰</T>
-          <View style={{ flex: 1 }}>
-            <T size={13} rounded color={C.ink}>
-              YOUR WEEKLY RECAP
-            </T>
-            <T size={11} color={C.ink}>
-              Your last 7 days as a comic page, ready to share
-            </T>
-          </View>
-          <Icon name="chevron" size={14} color={C.ink} />
-        </Pressable>
-
         <Pressable onPress={() => openCoach('voice')} style={({ pressed }) => [styles.prompt, pressed && { transform: [{ translateY: 2 }] }]} accessibilityRole="button">
           <Icon name="mic" size={18} color={C.pink} />
           <T size={13} rounded color={C.pink} style={{ flex: 1 }}>
@@ -93,6 +80,19 @@ export default function JournalScreen() {
         ) : (
           days.map(([k, list]) => <DayPage key={k} dayKey={k} todayKey={todayKey} list={list} units={units} />)
         )}
+        <Pressable onPress={() => router.push('/recap')} style={({ pressed }) => [styles.recap, { marginTop: Space.md }, pressed && { transform: [{ translateY: 2 }] }]} accessibilityRole="button">
+          <T size={20}>📰</T>
+          <View style={{ flex: 1 }}>
+            <T size={13} rounded color={C.ink}>
+              YOUR WEEKLY RECAP
+            </T>
+            <T size={11} color={C.ink}>
+              Your last 7 days as a comic page, ready to share
+            </T>
+          </View>
+          <Icon name="chevron" size={14} color={C.ink} />
+        </Pressable>
+
       </ScrollView>
     </View>
   );

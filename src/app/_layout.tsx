@@ -5,8 +5,9 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { BootScreen } from '@/components/boot-screen';
 import { RewardToast } from '@/components/reward-toast';
 import { C } from '@/constants/theme';
 import { actions, hydrate, useStore } from '@/lib/store';
@@ -33,6 +34,14 @@ export default function RootLayout() {
   }, [ready, entries, game, profile, todayKey]);
   const [fontsLoaded, fontError] = useFonts({ Bangers_400Regular, PermanentMarker_400Regular, RussoOne_400Regular });
 
+  // Swap the static native splash for the animated boot screen as soon as fonts are in.
+  const [booting, setBooting] = useState(true);
+  const fontsDone = fontsLoaded || !!fontError;
+  useEffect(() => {
+    if (fontsDone) SplashScreen.hideAsync();
+  }, [fontsDone]);
+  const endBoot = useCallback(() => setBooting(false), []);
+
   useEffect(() => {
     hydrate()
       .then(() => {
@@ -40,33 +49,38 @@ export default function RootLayout() {
         actions.refreshReminder();
         actions.syncHealth();
       })
-      .finally(() => SplashScreen.hideAsync());
+      .finally(() => {});
   }, []);
 
   // Fall back to system fonts rather than hang if a font fails to load.
-  if (!ready || (!fontsLoaded && !fontError)) return null;
+  if (!fontsDone) return null;
 
   return (
-    <ThemeProvider value={theme}>
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
-        <Stack.Protected guard={onboarded}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="wellbeing" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="day/[key]" />
-          <Stack.Screen name="ranks" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="recap" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="meal-plan" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal' }} />
-          <Stack.Screen name="progress-photos" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="season" options={{ presentation: 'modal' }} />
-        </Stack.Protected>
-        <Stack.Protected guard={!onboarded}>
-          <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-        </Stack.Protected>
-      </Stack>
-      {onboarded && <RewardToast />}
-    </ThemeProvider>
+    <>
+      {ready && (
+        <ThemeProvider value={theme}>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
+            <Stack.Protected guard={onboarded}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="wellbeing" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="day/[key]" />
+              <Stack.Screen name="ranks" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="recap" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="meal-plan" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal' }} />
+              <Stack.Screen name="progress-photos" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="season" options={{ presentation: 'modal' }} />
+            </Stack.Protected>
+            <Stack.Protected guard={!onboarded}>
+              <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+            </Stack.Protected>
+          </Stack>
+          {onboarded && <RewardToast />}
+        </ThemeProvider>
+      )}
+      {booting && <BootScreen ready={ready} onDone={endBoot} />}
+    </>
   );
 }
