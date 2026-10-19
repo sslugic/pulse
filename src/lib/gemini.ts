@@ -1,3 +1,6 @@
+// React Native's fetch can't read a response as it arrives; expo/fetch can.
+import { fetch as streamingFetch } from 'expo/fetch';
+
 import type { ChatMessage, Entry, Goal, Pace, Profile, Targets } from './types';
 import { dayKey, GOAL_INFO, recommendedTargets, summarize, targets as currentTargets } from './nutrition';
 import { dayWellbeing, wellbeingDigest } from './wellbeing';
@@ -103,6 +106,8 @@ const RESPONSE_SCHEMA = {
     removeEntryIds: { type: 'ARRAY', items: { type: 'STRING' } },
     goalUpdate: GOAL_UPDATE_SCHEMA,
   },
+  // reply first, so it streams in (and can be spoken) before the log entries.
+  propertyOrdering: ['reply', 'entries', 'removeEntryIds', 'goalUpdate'],
   required: ['reply', 'entries', 'removeEntryIds'],
 };
 
@@ -169,53 +174,154 @@ RULES
 // Gemini 3 accepts a thinking level; older models reject it, so we drop it on that error.
 let thinkingSupported = true;
 
-/** POST generateContent with a hard timeout and one retry on transient failures. */
-async function generate(apiKey: string, model: string, body: Record<string, unknown>, timeoutMs: number): Promise<string> {
-  const attempt = async () => {
+function requestBody(body: Record<string, unknown>) {
+  const generationConfig = {
+    ...(body.generationConfig as object),
+    ...(thinkingSupported ? { thinkingConfig: { thinkingLevel: 'low' } } : {}),
+  };
+  return JSON.stringify({ ...body, generationConfig });
+}
+
+function requestError(status: number, json: { error?: { message?: string } }) {
+  const msg = json?.error?.message ?? `Request failed (${status})`;
+  if (status === 400 && thinkingSupported && /thinking/i.test(msg)) {
+    thinkingSupported = false;
+    return new AiError('retry-without-thinking');
+  }
+  if (/API key/i.test(msg)) return new AiError('That API key was rejected. Check it in Profile.', false);
+  if (status === 429) return new AiError('Gemini is rate-limiting requests. Try again in a moment.');
+  return new AiError(msg, status >= 500);
+}
+
+function networkError(err: unknown) {
+  if ((err as Error).name === 'AbortError') return new AiError('Gemini took too long to answer.');
+  if (err instanceof AiError) return err;
+  return new AiError('Network problem — check your connection.');
+}
+
+/** Runs a request with a hard timeout and one retry on transient failures. */
+async function withRetry(attempt: (signal: AbortSignal) => Promise<string>, timeoutMs: number, canRetry = () => true) {
+  const run = async () => {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-    const generationConfig = {
-      ...(body.generationConfig as object),
-      ...(thinkingSupported ? { thinkingConfig: { thinkingLevel: 'low' } } : {}),
-    };
     try {
-      const res = await fetch(`${ENDPOINT}/${model}:generateContent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-        body: JSON.stringify({ ...body, generationConfig }),
-        signal: ctrl.signal,
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg: string = json?.error?.message ?? `Request failed (${res.status})`;
-        if (res.status === 400 && thinkingSupported && /thinking/i.test(msg)) {
-          thinkingSupported = false;
-          throw new AiError('retry-without-thinking');
-        }
-        if (/API key/i.test(msg)) throw new AiError('That API key was rejected. Check it in Profile.', false);
-        if (res.status === 429) throw new AiError('Gemini is rate-limiting requests. Try again in a moment.');
-        throw new AiError(msg, res.status >= 500);
-      }
-      const text = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
-      if (!text) throw new AiError('Gemini returned an empty answer.');
-      return text;
+      return await attempt(ctrl.signal);
     } catch (err) {
-      if ((err as Error).name === 'AbortError') throw new AiError('Gemini took too long to answer.');
-      if (err instanceof AiError) throw err;
-      throw new AiError('Network problem — check your connection.');
+      throw networkError(err);
     } finally {
       clearTimeout(timer);
     }
   };
-
   try {
-    return await attempt();
+    return await run();
   } catch (err) {
     const e = err as AiError;
-    if (!e.retryable) throw e;
+    if (!e.retryable || !canRetry()) throw e;
     await new Promise((r) => setTimeout(r, e.message === 'retry-without-thinking' ? 0 : 1200));
-    return attempt();
+    return run();
   }
+}
+
+/** POST generateContent and return the whole text answer. */
+function generate(apiKey: string, model: string, body: Record<string, unknown>, timeoutMs: number): Promise<string> {
+  return withRetry(async (signal) => {
+    const res = await fetch(`${ENDPOINT}/${model}:generateContent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+      body: requestBody(body),
+      signal,
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw requestError(res.status, json);
+    const text = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
+    if (!text) throw new AiError('Gemini returned an empty answer.');
+    return text;
+  }, timeoutMs);
+}
+
+/** Like generate, but streams the answer: onText gets the text so far each time more arrives. */
+function generateStream(
+  apiKey: string,
+  model: string,
+  body: Record<string, unknown>,
+  timeoutMs: number,
+  onText: (text: string) => void,
+): Promise<string> {
+  let started = false;
+  return withRetry(
+    async (signal) => {
+      const res = await streamingFetch(`${ENDPOINT}/${model}:streamGenerateContent?alt=sse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: requestBody(body),
+        signal,
+      });
+      if (!res.ok) throw requestError(res.status, await res.json().catch(() => ({})));
+      const reader = res.body?.getReader();
+      if (!reader) throw new AiError('Streaming is not available.');
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let text = '';
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        // Server-sent events: one "data: {json}" line per chunk of the answer.
+        for (let nl = buffer.indexOf('\n'); nl >= 0; nl = buffer.indexOf('\n')) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!line.startsWith('data:')) continue;
+          let event;
+          try {
+            event = JSON.parse(line.slice(5));
+          } catch {
+            continue;
+          }
+          if (event.error) throw new AiError(event.error.message ?? 'Gemini stopped answering.');
+          const parts: { text?: string; thought?: boolean }[] = event.candidates?.[0]?.content?.parts ?? [];
+          const delta = parts.map((p) => (p.thought ? '' : (p.text ?? ''))).join('');
+          if (!delta) continue;
+          text += delta;
+          started = true;
+          onText(text);
+        }
+      }
+      if (!text) throw new AiError('Gemini returned an empty answer.');
+      return text;
+    },
+    timeoutMs,
+    // Once text has reached the screen, a retry would show the answer twice.
+    () => !started,
+  );
+}
+
+const ESCAPES: Record<string, string> = { n: '\n', t: ' ', r: '', b: '', f: '' };
+
+/** The "reply" string from a JSON answer that is still streaming in. */
+export function partialReply(json: string): { text: string; done: boolean } | undefined {
+  const start = /"reply"\s*:\s*"/.exec(json);
+  if (!start) return;
+  let text = '';
+  for (let i = start.index + start[0].length; i < json.length; i++) {
+    const c = json[i];
+    if (c === '"') return { text, done: true };
+    if (c !== '\\') {
+      text += c;
+      continue;
+    }
+    const next = json[i + 1];
+    if (next === undefined) break; // escape split across chunks: wait for more
+    if (next === 'u') {
+      const hex = json.slice(i + 2, i + 6);
+      if (hex.length < 4) break;
+      text += String.fromCharCode(parseInt(hex, 16));
+      i += 5;
+    } else {
+      text += ESCAPES[next] ?? next;
+      i++;
+    }
+  }
+  return { text, done: false };
 }
 
 export async function askCoach(opts: {
@@ -227,8 +333,10 @@ export async function askCoach(opts: {
   text?: string;
   image?: Media;
   audio?: Media;
+  /** Called with the reply so far while it streams in. */
+  onReply?: (reply: string, done: boolean) => void;
 }): Promise<CoachResult> {
-  const { apiKey, model, profile, entries, history, text, image, audio } = opts;
+  const { apiKey, model, profile, entries, history, text, image, audio, onReply } = opts;
   if (!apiKey) throw new AiError('Add your Google AI API key in Profile to start logging.', false);
 
   const contents = history
@@ -246,16 +354,23 @@ export async function askCoach(opts: {
   });
   contents.push({ role: 'user', parts: parts as { text: string }[] });
 
-  const raw = await generate(
-    apiKey,
-    model,
-    {
-      systemInstruction: { parts: [{ text: systemPrompt(profile, entries) }] },
-      contents,
-      generationConfig: { temperature: 0.4, responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA },
-    },
-    audio || image ? 45_000 : 30_000,
-  );
+  const body = {
+    systemInstruction: { parts: [{ text: systemPrompt(profile, entries) }] },
+    contents,
+    generationConfig: { temperature: 0.4, responseMimeType: 'application/json', responseSchema: RESPONSE_SCHEMA },
+  };
+  const timeoutMs = audio || image ? 45_000 : 30_000;
+  let lastReply = '';
+  let replyDone = false;
+  const raw = onReply
+    ? await generateStream(apiKey, model, body, timeoutMs, (json) => {
+        const r = partialReply(json);
+        if (!r || replyDone || (r.text === lastReply && !r.done)) return;
+        lastReply = r.text;
+        replyDone = r.done;
+        onReply(r.text, r.done);
+      })
+    : await generate(apiKey, model, body, timeoutMs);
   try {
     const parsed = JSON.parse(raw) as CoachResult;
     const g = parsed.goalUpdate;
