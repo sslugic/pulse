@@ -14,7 +14,11 @@ const KEY = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '';
 /** True when this build has a Supabase project configured. */
 export const cloudConfigured = !!URL && !!KEY;
 
-export const supabase = cloudConfigured
+// Release exports also render routes on a server (no `window`), where the auth client's storage
+// can't run; only start the client in the app itself.
+const inApp = Platform.OS !== 'web' || typeof window !== 'undefined';
+
+export const supabase = cloudConfigured && inApp
   ? createClient(URL, KEY, {
       auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
     })
