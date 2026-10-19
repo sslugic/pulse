@@ -21,8 +21,14 @@ const setSpeaking = (id: string | null) => {
 };
 
 /** Replies are written for the screen; drop emoji and markdown so they read naturally. */
+// Backstop for the Coach prompt: never speak a self-introduction or greeting before the answer.
+const INTRO = /^\s*(?:(?:hi|hey|hello|hiya|yo)\b[^.!?\n]{0,25}[.!?]+|(?:i'm|i am|this is|it's)\s+(?:pulse|your (?:pulse |ai )?(?:fitness )?coach)\b[^.!?\n]*[.!?]+|(?:sure|absolutely|of course|great question|good question)\b[^.!?\n]{0,20}[.!?]+)\s*/i;
+
 function forSpeech(text: string) {
-  return text
+  let rest = text;
+  // Only strip while something is left to say.
+  for (let m = rest.match(INTRO); m && rest.length > m[0].length; m = rest.match(INTRO)) rest = rest.slice(m[0].length);
+  return rest
     .replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|️|‍/gu, '')
     .replace(/^\s*[-•]\s+(.*?)[.!?]?\s*$/gm, '$1.')
     .replace(/(\d)\s?[-–]\s?(\d)/g, '$1 to $2')
