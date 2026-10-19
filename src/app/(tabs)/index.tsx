@@ -108,6 +108,33 @@ export default function Today() {
           </Pressable>
         </View>
 
+        {/* Streak */}
+        <View style={styles.streakRow}>
+          <View style={styles.streakBadge}>
+            <Icon name="flame" size={16} color={C.orange} />
+            <Comic size={days >= 10 ? 15 : 18} color={C.yellow}>
+              {`${days}-DAY`}
+            </Comic>
+            <Comic size={10} color={C.text}>
+              STREAK
+            </Comic>
+            {!!game.freezes && (
+              <View style={styles.freeze}>
+                <T size={10} rounded color={C.ink}>
+                  🧊×{game.freezes}
+                </T>
+              </View>
+            )}
+          </View>
+          <View style={styles.week}>
+            {week.map((d, i) => (
+              <Pressable key={i} onPress={() => openDay(d.key)} accessibilityLabel={`Open ${d.key}`} hitSlop={4}>
+                <DripLetter letter={d.letter} on={d.on} color={d.today ? C.orange : C.lime} />
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
         {/* Today's numbers first: calories left, eaten, burned and macros in one card */}
         <Card style={{ gap: 12, marginTop: Space.xs }} accent={remaining < 0 ? C.danger : C.orange + '99'} onPress={() => openDay(todayKey)}>
           <View style={styles.todayRow}>
@@ -199,33 +226,6 @@ export default function Today() {
             ))}
           </View>
         )}
-
-        {/* Streak */}
-        <View style={styles.streakRow}>
-          <View style={styles.streakBadge}>
-            <Icon name="flame" size={16} color={C.orange} />
-            <Comic size={days >= 10 ? 15 : 18} color={C.yellow}>
-              {`${days}-DAY`}
-            </Comic>
-            <Comic size={10} color={C.text}>
-              STREAK
-            </Comic>
-            {!!game.freezes && (
-              <View style={styles.freeze}>
-                <T size={10} rounded color={C.ink}>
-                  🧊×{game.freezes}
-                </T>
-              </View>
-            )}
-          </View>
-          <View style={styles.week}>
-            {week.map((d, i) => (
-              <Pressable key={i} onPress={() => openDay(d.key)} accessibilityLabel={`Open ${d.key}`} hitSlop={4}>
-                <DripLetter letter={d.letter} on={d.on} color={d.today ? C.orange : C.lime} />
-              </Pressable>
-            ))}
-          </View>
-        </View>
 
         {/* Mind & recovery, tied to today's food */}
         <View style={{ marginTop: Space.sm }}>

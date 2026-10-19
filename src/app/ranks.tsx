@@ -77,7 +77,7 @@ export default function RanksScreen() {
           The ladder
         </SectionTitle>
         <T size={12} color={C.textDim} style={{ lineHeight: 17, marginTop: -4 }}>
-          Every couple of ranks unlocks a new wall for the whole app. Tap an unlocked wall to use it.
+          Every rank unlocks a new wall for the whole app. Tap an unlocked wall to use it.
         </T>
         <View style={{ gap: 8 }}>
           {RANKS.map((r, i) => {
