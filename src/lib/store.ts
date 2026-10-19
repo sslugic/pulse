@@ -113,7 +113,7 @@ export async function hydrate() {
         voiceReplies: data.voiceReplies ?? true,
         coachVoice: data.coachVoice || DEFAULT_VOICE,
       },
-      game: { claims: data.game?.claims ?? [], unlocked: data.game?.unlocked ?? [] },
+      game: { claims: data.game?.claims ?? [], unlocked: data.game?.unlocked ?? [], wall: data.game?.wall },
     };
   } catch {
     // corrupt storage: start fresh rather than crash
@@ -310,6 +310,10 @@ export const actions = {
     set((s) => ({ game: { ...s.game, claims: [...s.game.claims, { day, questId: ARCADE_CLAIM, xp: ARCADE_XP, tokens: 0, at: Date.now() }] } }));
     pushReward(ARCADE_XP, 0, 'CHILLED OUT');
     celebrate();
+  },
+  /** Picks a rank wall as the app background; undefined goes back to following the current rank. */
+  setWall(level: number | undefined) {
+    set((s) => ({ game: { ...s.game, wall: level } }));
   },
   clearReward(id: string) {
     if (state.reward?.id === id) set({ reward: null });

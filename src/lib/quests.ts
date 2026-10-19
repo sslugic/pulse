@@ -133,6 +133,8 @@ export interface GameState {
   claims: Claim[];
   /** Arcade games bought with tokens. */
   unlocked: string[];
+  /** Rank wall the player picked (1-based level); unset follows their current rank. */
+  wall?: number;
 }
 
 // Clamped so a later price change can never leave a negative balance.

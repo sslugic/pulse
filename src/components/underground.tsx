@@ -1,122 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
-import Svg, { Circle, Defs, Ellipse, G, Line, LinearGradient as SvgLinearGradient, Pattern, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
+import Svg, { Circle, Defs, Line, Pattern, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { C, Display } from '@/constants/theme';
 import { tap } from '@/lib/haptics';
 
-type Piece = { text: string; x: number; y: number; size: number; fill: string; rot: number };
-
-/** One graffiti "throw-up": dark outline, colour fill, highlight and paint drips. */
-function GraffitiPiece({ p }: { p: Piece }) {
-  const drips = [0.18, 0.42, 0.7].map((f, i) => ({ dx: p.size * p.text.length * 0.55 * f, len: p.size * (0.35 + ((i * 37) % 5) * 0.12) }));
-  return (
-    <G rotation={p.rot} originX={p.x} originY={p.y}>
-      <SvgText x={p.x + 4} y={p.y + 5} fontSize={p.size} fontFamily={Display.tag} fill="#000" opacity={0.55}>
-        {p.text}
-      </SvgText>
-      <SvgText x={p.x} y={p.y} fontSize={p.size} fontFamily={Display.tag} fill={p.fill} stroke="#0B0C0D" strokeWidth={p.size / 8} strokeLinejoin="round">
-        {p.text}
-      </SvgText>
-      <SvgText x={p.x - 2} y={p.y - 3} fontSize={p.size} fontFamily={Display.tag} fill="#fff" opacity={0.18}>
-        {p.text}
-      </SvgText>
-      {drips.map((d, i) => (
-        <G key={i}>
-          <Line x1={p.x + d.dx} y1={p.y + 2} x2={p.x + d.dx} y2={p.y + d.len} stroke={p.fill} strokeWidth={p.size / 14} strokeLinecap="round" />
-          <Circle cx={p.x + d.dx} cy={p.y + d.len + 2} r={p.size / 18} fill={p.fill} />
-        </G>
-      ))}
-    </G>
-  );
-}
-
-/**
- * Subway-station wall behind every screen: grimy cream tiles, a mosaic station band,
- * and faded graffiti pieces. Kept dim so the steel panels stay readable on top.
- */
-export function Backdrop({ tags = ['NYC', 'PULSE'], station = 'PULSE ST' }: { tags?: string[]; station?: string }) {
-  const { width: w, height: h } = useWindowDimensions();
-  const bandY = Math.round(h * 0.47);
-  const pieces: Piece[] = [
-    { text: tags[0] ?? 'NYC', x: w * 0.05, y: h * 0.11, size: 54, fill: C.violet, rot: -10 },
-    { text: tags[1] ?? 'PULSE', x: w * 0.42, y: h * 0.56, size: 66, fill: C.lime, rot: -6 },
-    { text: 'CREW', x: w * 0.04, y: h * 0.8, size: 46, fill: C.orange, rot: 8 },
-    { text: 'GO!', x: w * 0.66, y: h * 0.22, size: 40, fill: C.pink, rot: 12 },
-  ];
-  return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <LinearGradient colors={['#4A4F4C', '#3A3E3C', '#2A2D2C']} style={StyleSheet.absoluteFill} />
-      <Svg width={w} height={h} style={StyleSheet.absoluteFill}>
-        <Defs>
-          {/* glazed subway tile with dark grout */}
-          <Pattern id="tile" width="44" height="22" patternUnits="userSpaceOnUse">
-            <Rect width="44" height="22" fill="#141616" />
-            <Rect x="1.5" y="1.5" width="41" height="19" rx="2.5" fill="#8C918A" />
-            <Rect x="3" y="3" width="38" height="5" rx="2" fill="#fff" opacity={0.12} />
-          </Pattern>
-          <Pattern id="mosaic" width="12" height="12" patternUnits="userSpaceOnUse">
-            <Rect width="12" height="12" fill="#101211" />
-            <Rect x="1" y="1" width="10" height="10" fill="#3F8F3A" />
-          </Pattern>
-          <Pattern id="mosaic2" width="12" height="12" patternUnits="userSpaceOnUse">
-            <Rect width="12" height="12" fill="#101211" />
-            <Rect x="1" y="1" width="10" height="10" fill="#C9A227" />
-          </Pattern>
-          <SvgLinearGradient id="grimeV" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor="#000" stopOpacity="0.15" />
-            <Stop offset="0.6" stopColor="#000" stopOpacity="0.35" />
-            <Stop offset="1" stopColor="#000" stopOpacity="0.8" />
-          </SvgLinearGradient>
-          <RadialGradient id="stain" cx="50%" cy="50%" r="50%">
-            <Stop offset="0" stopColor="#3B2A12" stopOpacity="0.5" />
-            <Stop offset="1" stopColor="#3B2A12" stopOpacity="0" />
-          </RadialGradient>
-          <RadialGradient id="vignette" cx="50%" cy="40%" r="80%">
-            <Stop offset="0.5" stopColor="#000" stopOpacity="0" />
-            <Stop offset="1" stopColor="#000" stopOpacity="0.75" />
-          </RadialGradient>
-        </Defs>
-
-        <Rect width={w} height={h} fill="url(#tile)" opacity={0.55} />
-
-        {/* station mosaic band */}
-        <Rect x={0} y={bandY} width={w} height={10} fill="url(#mosaic2)" opacity={0.7} />
-        <Rect x={0} y={bandY + 10} width={w} height={44} fill="url(#mosaic)" opacity={0.75} />
-        <Rect x={0} y={bandY + 54} width={w} height={10} fill="url(#mosaic2)" opacity={0.7} />
-        <Rect x={w / 2 - 78} y={bandY + 14} width={156} height={36} fill="#0E100F" opacity={0.85} />
-        <SvgText x={w / 2} y={bandY + 40} fontSize={22} fontFamily={Display.block} fill="#E8E2CC" textAnchor="middle" letterSpacing={3} opacity={0.85}>
-          {station}
-        </SvgText>
-
-        {/* water stains and grime */}
-        <Ellipse cx={w * 0.18} cy={h * 0.47} rx={90} ry={160} fill="url(#stain)" />
-        <Ellipse cx={w * 0.86} cy={h * 0.72} rx={110} ry={190} fill="url(#stain)" />
-
-        {/* graffiti */}
-        <G opacity={0.55}>
-          {pieces.map((p) => (
-            <GraffitiPiece key={p.text} p={p} />
-          ))}
-          {/* tags, arrow and spray mist */}
-          <SvgText x={w * 0.62} y={h * 0.93} fontSize={30} fontFamily={Display.tag} fill="#E8E2CC" rotation={-8} originX={w * 0.62} originY={h * 0.93}>
-            skrap 99
-          </SvgText>
-          <Line x1={w * 0.72} y1={h * 0.44} x2={w * 0.9} y2={h * 0.41} stroke={C.yellow} strokeWidth={6} strokeLinecap="round" />
-          <Line x1={w * 0.9} y1={h * 0.41} x2={w * 0.86} y2={h * 0.385} stroke={C.yellow} strokeWidth={6} strokeLinecap="round" />
-          <Line x1={w * 0.9} y1={h * 0.41} x2={w * 0.865} y2={h * 0.435} stroke={C.yellow} strokeWidth={6} strokeLinecap="round" />
-          {Array.from({ length: 26 }).map((_, i) => (
-            <Circle key={i} cx={(w * ((i * 53) % 97)) / 97} cy={(h * ((i * 71) % 89)) / 89} r={1 + (i % 3)} fill={[C.lime, C.violet, C.orange, C.pink][i % 4]} opacity={0.6} />
-          ))}
-        </G>
-
-        <Rect width={w} height={h} fill="url(#grimeV)" />
-        <Rect width={w} height={h} fill="url(#vignette)" />
-      </Svg>
-    </View>
-  );
-}
+export { Backdrop } from './backdrops';
 
 function Rivet({ style }: { style: StyleProp<ViewStyle> }) {
   return (
