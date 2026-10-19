@@ -54,6 +54,43 @@
           "cameraPermission": "Pulse uses the camera to snap meals and workouts so AI can log them.",
           "photosPermission": "Pulse reads photos you pick to log meals and workouts."
         }
+      ],
+      "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Pulse uses the camera to snap meals and scan food barcodes.",
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-widgets",
+        {
+          "widgets": [
+            {
+              "name": "PulseWidget",
+              "displayName": "Pulse",
+              "description": "Your streak, calories left and today's quests.",
+              "ios": {
+                "supportedFamilies": [
+                  "systemSmall",
+                  "systemMedium",
+                  "accessoryRectangular",
+                  "accessoryCircular"
+                ],
+                "initialLayout": "./src/widgets/pulse-widget.tsx"
+              }
+            }
+          ]
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Pulse reads your steps, workouts, sleep and weight so they log themselves and earn XP.",
+          "NSHealthUpdateUsageDescription": false
+        }
       ]
     ],
     "experiments": {

@@ -485,7 +485,8 @@ export function useWallLevel() {
   const entries = useStore((s) => s.entries);
   const claims = useStore((s) => s.game.claims);
   const picked = useStore((s) => s.game.wall);
-  const level = useMemo(() => crewRank(entries, questXp(claims)).level, [entries, claims]);
+  const frozen = useStore((s) => s.game.frozenDays);
+  const level = useMemo(() => crewRank(entries, questXp(claims), frozen).level, [entries, claims, frozen]);
   return { level, wall: picked && picked <= level ? picked : level };
 }
 

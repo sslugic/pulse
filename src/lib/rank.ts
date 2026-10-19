@@ -24,6 +24,7 @@ export const XP_SOURCES = [
   { label: 'Daily quests', xp: '+20 to +60' },
   { label: 'Perfect day (all 3 quests)', xp: '+30' },
   { label: 'Arcade minute (once a day)', xp: '+15' },
+  { label: 'Streak freezes keep your streak bonus alive', xp: '🧊' },
 ] as const;
 
 const ENTRY_XP: Record<Entry['kind'], number> = { meal: 10, exercise: 15, journal: 15, weight: 10, water: 3 };
@@ -31,7 +32,7 @@ const ENTRY_XP: Record<Entry['kind'], number> = { meal: 10, exercise: 15, journa
 const WATER_XP_PER_DAY = 15;
 
 /** XP from logging alone: per-entry XP plus a bonus for each day logged and the current streak. */
-export function logXp(entries: Entry[]) {
+export function logXp(entries: Entry[], frozen: string[] = []) {
   const water = new Map<string, number>();
   let xp = 0;
   for (const e of entries) {
@@ -43,11 +44,11 @@ export function logXp(entries: Entry[]) {
     } else xp += ENTRY_XP[e.kind];
   }
   const days = new Set(entries.map((e) => dayKey(e.createdAt))).size;
-  return xp + days * 20 + streak(entries) * 25;
+  return xp + days * 20 + streak(entries, frozen) * 25;
 }
 
-export function crewRank(entries: Entry[], bonusXp = 0) {
-  const xp = logXp(entries) + bonusXp;
+export function crewRank(entries: Entry[], bonusXp = 0, frozen: string[] = []) {
+  const xp = logXp(entries, frozen) + bonusXp;
   let i = 0;
   while (i < RANKS.length - 1 && xp >= RANKS[i + 1].xp) i++;
   const cur = RANKS[i];

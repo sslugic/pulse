@@ -9,7 +9,7 @@ import { TokenCoin, TokenCount } from '@/components/quests-card';
 import { Bar, Card, T } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Space } from '@/constants/theme';
-import { ARCADE_CLAIM, ARCADE_XP, GAMES, gameById, isUnlocked, type GameDef, type GameId } from '@/lib/arcade';
+import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, GAMES, MAX_FREEZES, gameById, isUnlocked, type GameDef, type GameId } from '@/lib/arcade';
 import { tokenBalance } from '@/lib/quests';
 import { actions, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
@@ -78,6 +78,8 @@ export default function ArcadeScreen() {
 
         <HowItWorks balance={balance} />
 
+        <PowerUps balance={balance} freezes={game.freezes ?? 0} />
+
         {GAMES.map((g) => (
           <Cabinet
             key={g.id}
@@ -107,6 +109,47 @@ export default function ArcadeScreen() {
         )}
       </Modal>
     </View>
+  );
+}
+
+/** Token shop for things that aren't games: right now, streak freezes. */
+function PowerUps({ balance, freezes }: { balance: number; freezes: number }) {
+  const full = freezes >= MAX_FREEZES;
+  const afford = balance >= FREEZE_PRICE;
+  return (
+    <Card style={{ gap: 10, marginTop: Space.sm }} accent={C.cyan + '99'}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={styles.freezeIcon}>
+          <T size={26}>🧊</T>
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Comic size={20}>STREAK FREEZE</Comic>
+          <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
+            Miss a day and a freeze is used automatically so your streak survives. Hold up to {MAX_FREEZES}.
+          </T>
+        </View>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <T size={13} rounded color={C.cyan} style={{ flex: 1 }}>
+          OWNED {freezes}/{MAX_FREEZES}
+        </T>
+        <ArcadeButton
+          label={full ? 'FULL' : `BUY · ${FREEZE_PRICE}`}
+          size="md"
+          disabled={full || !afford}
+          colors={['#5FE2FF', '#1E8FE0']}
+          textColor="#fff"
+          icon={full ? undefined : <TokenCoin size={20} />}
+          onPress={() => actions.buyFreeze()}
+          style={{ minWidth: 150 }}
+        />
+      </View>
+      {!full && !afford && (
+        <T size={11} color={C.textMute} weight="700">
+          NEED {FREEZE_PRICE - balance} MORE TOKENS
+        </T>
+      )}
+    </Card>
   );
 }
 
@@ -223,6 +266,7 @@ const styles = StyleSheet.create({
   play: { flex: 1, paddingHorizontal: Space.md, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: Space.sm },
   tag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  freezeIcon: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: '#12303A', borderWidth: 2, borderColor: C.cyan },
   step: { width: 22, height: 22, borderRadius: 11, backgroundColor: C.yellow, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 8, borderWidth: 2, borderColor: C.yellow + '88', backgroundColor: '#2A2410' },
 });

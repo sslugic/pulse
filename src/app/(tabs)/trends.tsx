@@ -19,6 +19,7 @@ export default function Trends() {
   const insets = useSafeAreaInsets();
   const entries = useStore((s) => s.entries);
   const profile = useStore((s) => s.profile);
+  const frozen = useStore((s) => s.game.frozenDays);
   const [range, setRange] = useState<keyof typeof RANGES>('7D');
   const todayKey = useTodayKey();
 
@@ -63,7 +64,7 @@ export default function Trends() {
         <Kpi label="Avg eaten" value={avg((d) => d.eaten).toLocaleString()} unit="kcal" color={C.eaten} />
         <Kpi label="Avg burned" value={avg((d) => d.burned, days).toLocaleString()} unit="kcal" color={C.burned} />
         <Kpi label="Avg protein" value={String(avg((d) => d.protein))} unit="g" color={C.protein} />
-        <Kpi label="Streak" value={String(streak(entries))} unit="days" color={C.lime} />
+        <Kpi label="Streak" value={String(streak(entries, frozen))} unit="days" color={C.lime} />
       </View>
 
       {/* Weight */}

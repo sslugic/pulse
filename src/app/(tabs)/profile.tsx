@@ -4,6 +4,7 @@ import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, IconBadge } from '@/components/icon';
+import { PersonaPicker } from '@/components/persona-picker';
 import { Field, inputStyle, ProfileFields } from '@/components/profile-form';
 import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic, MetalPanel } from '@/components/underground';
@@ -102,6 +103,68 @@ export default function ProfileScreen() {
               </T>
             </Pressable>
           </View>
+        </Card>
+
+        <SectionTitle>Your coach</SectionTitle>
+        <PersonaPicker />
+
+        <SectionTitle>Apple Health</SectionTitle>
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <IconBadge name="heart" color={C.pink} size={36} />
+            <View style={{ flex: 1 }}>
+              <T size={14} rounded color={C.text}>
+                {settings.health?.on ? 'CONNECTED' : 'NOT CONNECTED'}
+              </T>
+              <T size={12} color={C.textDim}>
+                {settings.health?.lastSync ? `Last synced ${new Date(settings.health.lastSync).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}` : 'Workouts, sleep, weight and steps log themselves.'}
+              </T>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {settings.health?.on ? (
+              <>
+                <Chip
+                  label="Sync now"
+                  onPress={async () => {
+                    const n = await actions.syncHealth();
+                    Alert.alert('Apple Health', n ? `Imported ${n} new ${n === 1 ? 'entry' : 'entries'}.` : 'Everything is up to date.');
+                  }}
+                />
+                <Chip label="Disconnect" onPress={() => actions.disconnectHealth()} />
+              </>
+            ) : (
+              <Chip
+                label="Connect Apple Health"
+                active
+                onPress={async () => {
+                  if (!(await actions.connectHealth())) Alert.alert('Apple Health', 'Health isn’t available on this device, or access was declined. You can allow it in the Health app under Sharing.');
+                }}
+              />
+            )}
+          </View>
+          <T size={12} color={C.textMute}>
+            Pulse only reads from Health and never writes to it. Imported workouts and weigh-ins earn XP like any other log.
+          </T>
+        </Card>
+
+        <SectionTitle>Streak reminder</SectionTitle>
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {[undefined, 18, 20, 21].map((h) => (
+              <Chip
+                key={String(h)}
+                label={h == null ? 'Off' : `${h - 12} pm`}
+                active={settings.reminderHour === h}
+                onPress={async () => {
+                  if (!(await actions.setReminder(h))) Alert.alert('Notifications are off', 'Allow notifications for Pulse in iPhone Settings to get streak reminders.');
+                }}
+              />
+            ))}
+          </View>
+          <T size={12} color={C.textMute}>
+            One nudge in the evening, only on days you haven’t logged anything yet.
+          </T>
         </Card>
 
         <SectionTitle>Coach voice</SectionTitle>

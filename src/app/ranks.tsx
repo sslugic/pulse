@@ -20,7 +20,8 @@ export default function RanksScreen() {
   const insets = useSafeAreaInsets();
   const entries = useStore((s) => s.entries);
   const claims = useStore((s) => s.game.claims);
-  const crew = useMemo(() => crewRank(entries, questXp(claims)), [entries, claims]);
+  const frozen = useStore((s) => s.game.frozenDays);
+  const crew = useMemo(() => crewRank(entries, questXp(claims), frozen), [entries, claims, frozen]);
   const { wall } = useWallLevel();
   const following = useStore((s) => s.game.wall == null);
 
