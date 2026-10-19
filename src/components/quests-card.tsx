@@ -36,9 +36,10 @@ export function TokenCount({ value, size = 16 }: { value: number; size?: number 
 export function QuestsCard({ todayKey }: { todayKey: string }) {
   const entries = useStore((s) => s.entries);
   const profile = useStore((s) => s.profile);
-  const claims = useStore((s) => s.game.claims);
+  const game = useStore((s) => s.game);
+  const claims = game.claims;
   const quests = useMemo(() => dailyQuests(entries, macroTargets(profile), todayKey, claims), [entries, profile, todayKey, claims]);
-  const balance = useMemo(() => tokenBalance(claims), [claims]);
+  const balance = useMemo(() => tokenBalance(game), [game]);
   const cleared = quests.filter((q) => q.claimed).length;
   const perfect = claims.some((c) => c.day === todayKey && c.questId === PERFECT_DAY);
 

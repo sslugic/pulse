@@ -38,6 +38,8 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
           <Stack.Screen name="wellbeing" options={{ presentation: 'modal' }} />
+          {/* Full screen so drawing and popping can't swipe the sheet away. */}
+          <Stack.Screen name="arcade" options={{ presentation: 'fullScreenModal' }} />
         </Stack.Protected>
         <Stack.Protected guard={!onboarded}>
           <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />

@@ -1,6 +1,7 @@
 import type { IconName } from '@/components/icon';
 import { C } from '@/constants/theme';
 
+import { spentTokens } from './arcade';
 import { dayKey, summarize, type DaySummary } from './nutrition';
 import type { Entry, Targets } from './types';
 
@@ -128,5 +129,12 @@ export function dailyQuests(entries: Entry[], targets: Targets, day: string, cla
   });
 }
 
-export const tokenBalance = (claims: Claim[]) => claims.reduce((n, c) => n + c.tokens, 0);
+export interface GameState {
+  claims: Claim[];
+  /** Arcade games bought with tokens. */
+  unlocked: string[];
+}
+
+// Clamped so a later price change can never leave a negative balance.
+export const tokenBalance = (g: GameState) => Math.max(0, g.claims.reduce((n, c) => n + c.tokens, 0) - spentTokens(g.unlocked));
 export const questXp = (claims: Claim[]) => claims.reduce((n, c) => n + c.xp, 0);

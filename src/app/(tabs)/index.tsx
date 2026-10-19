@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
+import { ArcadePrompt, isStressHigh } from '@/components/arcade-prompt';
 import { EntryRow } from '@/components/entry-row';
 import { Icon, IconBadge } from '@/components/icon';
 import { QuestsCard, TokenCount } from '@/components/quests-card';
@@ -18,6 +19,7 @@ import { questXp, tokenBalance } from '@/lib/quests';
 import { crewRank, weekDots } from '@/lib/rank';
 import { actions, getState, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
+import { dayWellbeing } from '@/lib/wellbeing';
 
 function greeting() {
   const h = new Date().getHours();
@@ -29,7 +31,8 @@ export default function Today() {
   const profile = useStore((s) => s.profile);
   const entries = useStore((s) => s.entries);
   const settings = useStore((s) => s.settings);
-  const claims = useStore((s) => s.game.claims);
+  const game = useStore((s) => s.game);
+  const claims = game.claims;
 
   const todayKey = useTodayKey();
   const today = useMemo(() => summarize(entries, todayKey), [entries, todayKey]);
@@ -37,7 +40,8 @@ export default function Today() {
   const todays = useMemo(() => entries.filter((e) => dayKey(e.createdAt) === today.key), [entries, today.key]);
   const days = useMemo(() => streak(entries), [entries]);
   const crew = useMemo(() => crewRank(entries, questXp(claims)), [entries, claims]);
-  const tokens = useMemo(() => tokenBalance(claims), [claims]);
+  const tokens = useMemo(() => tokenBalance(game), [game]);
+  const mind = useMemo(() => dayWellbeing(entries, todayKey), [entries, todayKey]);
   const week = useMemo(() => weekDots(entries, new Date(todayKey + 'T12:00')), [entries, todayKey]);
   const onTrack = useMemo(
     () =>
@@ -107,6 +111,8 @@ export default function Today() {
             ))}
           </View>
         </View>
+
+        {isStressHigh(mind) && <ArcadePrompt w={mind} />}
 
         {/* Daily quests */}
         <QuestsCard todayKey={todayKey} />
@@ -213,6 +219,7 @@ export default function Today() {
         <View style={{ marginTop: Space.sm }}>
           <WellbeingCard todayKey={todayKey} onTalk={() => openCoach('voice')} />
         </View>
+        {!isStressHigh(mind) && <ArcadePrompt w={mind} />}
 
         {/* Water */}
         <Card style={{ gap: 10, marginTop: Space.sm }}>
