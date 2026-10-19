@@ -43,7 +43,8 @@ export interface CreditOffer {
 export async function loadOffers(): Promise<CreditOffer[]> {
   if (!ensureConfigured()) return [];
   const offerings = await Purchases.getOfferings();
-  const pkgs = offerings.current?.availablePackages ?? [];
+  if (!offerings.current) throw new Error('No current offering is set in RevenueCat.');
+  const pkgs = offerings.current.availablePackages;
   return pkgs.map((p) => ({
     id: p.product.identifier,
     title: p.product.title,
