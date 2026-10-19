@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { RewardToast } from '@/components/reward-toast';
 import { C } from '@/constants/theme';
 import { hydrate, useStore } from '@/lib/store';
 
@@ -42,6 +43,7 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
         </Stack.Protected>
       </Stack>
+      {onboarded && <RewardToast />}
     </ThemeProvider>
   );
 }
