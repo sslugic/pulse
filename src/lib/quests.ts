@@ -1,7 +1,8 @@
 import type { IconName } from '@/components/icon';
 import { C } from '@/constants/theme';
 
-import { spentTokens } from './arcade';
+import { spentTokens, type BrainId } from './arcade';
+import type { Chest } from './brain';
 import { dayKey, summarize, type DaySummary } from './nutrition';
 import type { Entry, Targets } from './types';
 
@@ -139,6 +140,14 @@ export interface GameState {
   freezes?: number;
   /** Days a freeze covered, so the streak survives them. */
   frozenDays?: string[];
+  /** Unopened arcade chests. */
+  chests?: Chest[];
+  /** Brain Gym wins left that pay double tokens. */
+  doubler?: number;
+  /** Best score per Brain Gym game. */
+  bests?: Partial<Record<BrainId, number>>;
+  /** Last day any arcade game was finished; unlocks that day's free chest. */
+  playedDay?: string;
 }
 
 // Clamped so a later price change can never leave a negative balance.
