@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EntryRow } from '@/components/entry-row';
+import { QuestsCard } from '@/components/quests-card';
 import { GlassButton, Icon } from '@/components/icon';
 import { Bar, Card, SectionTitle, T, tap } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
@@ -127,20 +128,29 @@ export default function DayScreen() {
           </View>
         </Card>
 
-        {/* Quests */}
-        <SectionTitle right={<T size={12} rounded color={C.textMute}>{quests.filter((q) => q.claimed).length}/3 CLAIMED</T>}>Quests</SectionTitle>
-        <Card style={{ gap: 10 }}>
-          {quests.map((q) => (
-            <View key={q.id} style={styles.between}>
-              <T size={14} rounded color={q.done ? C.text : C.textMute}>
-                {q.title}
-              </T>
-              <T size={12} rounded color={q.claimed ? C.lime : q.done ? C.yellow : C.textMute}>
-                {q.claimed ? 'CLAIMED' : q.done ? 'DONE' : 'MISSED'}
-              </T>
-            </View>
-          ))}
-        </Card>
+        {/* Quests: today is live (same card as HQ, with Claim); past days show how they ended */}
+        {isToday ? (
+          <>
+            <SectionTitle>Quests</SectionTitle>
+            <QuestsCard todayKey={key} />
+          </>
+        ) : (
+          <>
+            <SectionTitle right={<T size={12} rounded color={C.textMute}>{quests.filter((q) => q.claimed).length}/3 CLAIMED</T>}>Quests</SectionTitle>
+            <Card style={{ gap: 10 }}>
+              {quests.map((q) => (
+                <View key={q.id} style={styles.between}>
+                  <T size={14} rounded color={q.done ? C.text : C.textMute}>
+                    {q.title}
+                  </T>
+                  <T size={12} rounded color={q.claimed ? C.lime : q.done ? C.yellow : C.textMute}>
+                    {q.claimed ? 'CLAIMED' : q.done ? 'DONE' : 'MISSED'}
+                  </T>
+                </View>
+              ))}
+            </Card>
+          </>
+        )}
 
         {/* Log */}
         <SectionTitle right={<T size={12} rounded color={C.textMute}>{list.length} ENTRIES</T>}>Log</SectionTitle>
