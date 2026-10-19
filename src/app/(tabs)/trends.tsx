@@ -2,14 +2,14 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { EntryRow } from '@/components/entry-row';
 import { Icon } from '@/components/icon';
+import { WeightCard } from '@/components/weight-card';
 import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Radius, Space } from '@/constants/theme';
-import { dayKey, fmtKg, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
+import { dayKey, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
 import { useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 
@@ -66,6 +66,10 @@ export default function Trends() {
         <Kpi label="Streak" value={String(streak(entries))} unit="days" color={C.lime} />
       </View>
 
+      {/* Weight */}
+      <SectionTitle>Weight</SectionTitle>
+      <WeightCard weighIns={weights} profile={profile} />
+
       {/* Calories in vs out */}
       <SectionTitle right={<Legend />}>Calories in vs out</SectionTitle>
       <Card>
@@ -99,18 +103,6 @@ export default function Trends() {
       <SectionTitle>Average macro split</SectionTitle>
       <Card>
         <MacroSplit p={avg((d) => d.protein)} c={avg((d) => d.carbs)} f={avg((d) => d.fat)} />
-      </Card>
-
-      {/* Weight */}
-      <SectionTitle right={<T size={12} color={C.textDim}>{fmtKg(profile.weightKg, profile.units)} now</T>}>Weight</SectionTitle>
-      <Card>
-        {weights.length >= 2 ? (
-          <WeightLine points={weights.map((w) => w.weightKg!)} />
-        ) : (
-          <T size={13} color={C.textDim}>
-            Say “I weigh {profile.units === 'imperial' ? '172 lb' : '78 kg'}” to the Coach to start tracking your weight trend.
-          </T>
-        )}
       </Card>
 
       {/* History */}
@@ -206,28 +198,6 @@ function MacroSplit({ p, c, f }: { p: number; c: number; f: number }) {
           </View>
         ))}
       </View>
-    </View>
-  );
-}
-
-function WeightLine({ points }: { points: number[] }) {
-  const W = 320, H = 120, pad = 10;
-  const min = Math.min(...points) - 0.5, max = Math.max(...points) + 0.5;
-  const xy = points.map((v, i) => [pad + (i / (points.length - 1)) * (W - pad * 2), pad + (1 - (v - min) / (max - min)) * (H - pad * 2)]);
-  const d = xy.map(([x, y], i) => `${i ? 'L' : 'M'}${x},${y}`).join(' ');
-  const delta = points[points.length - 1] - points[0];
-  return (
-    <View style={{ gap: 8 }}>
-      <Svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`}>
-        <Line x1={0} x2={W} y1={H / 2} y2={H / 2} stroke={C.border} strokeDasharray="4 6" />
-        <Path d={d} stroke={C.violet} strokeWidth={3} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        {xy.map(([x, y], i) => (
-          <Circle key={i} cx={x} cy={y} r={i === xy.length - 1 ? 5 : 3} fill={i === xy.length - 1 ? C.lime : C.violet} />
-        ))}
-      </Svg>
-      <T size={12} color={C.textDim}>
-        {delta === 0 ? 'Holding steady' : `${delta > 0 ? '+' : ''}${delta.toFixed(1)} kg`} across {points.length} weigh-ins
-      </T>
     </View>
   );
 }
