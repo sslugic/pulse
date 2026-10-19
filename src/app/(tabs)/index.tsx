@@ -6,6 +6,7 @@ import Svg, { Path } from 'react-native-svg';
 
 import { EntryRow } from '@/components/entry-row';
 import { Icon, IconBadge } from '@/components/icon';
+import { QuestsCard, TokenCount } from '@/components/quests-card';
 import { TagAvatar } from '@/components/tag-avatar';
 import { ArcadeButton, Backdrop, Chain, Comic, DripLetter, Sticker } from '@/components/underground';
 import { WellbeingCard } from '@/components/wellbeing-card';
@@ -13,6 +14,7 @@ import { Bar, Card, SectionTitle, T, tap } from '@/components/ui';
 import { C, Display, Gradients, MaxContentWidth, Space } from '@/constants/theme';
 import { dailyInsight } from '@/lib/gemini';
 import { dayKey, fmtWater, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
+import { questXp, tokenBalance } from '@/lib/quests';
 import { crewRank, weekDots } from '@/lib/rank';
 import { actions, getState, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
@@ -27,13 +29,15 @@ export default function Today() {
   const profile = useStore((s) => s.profile);
   const entries = useStore((s) => s.entries);
   const settings = useStore((s) => s.settings);
+  const claims = useStore((s) => s.game.claims);
 
   const todayKey = useTodayKey();
   const today = useMemo(() => summarize(entries, todayKey), [entries, todayKey]);
   const targets = useMemo(() => macroTargets(profile), [profile]);
   const todays = useMemo(() => entries.filter((e) => dayKey(e.createdAt) === today.key), [entries, today.key]);
   const days = useMemo(() => streak(entries), [entries]);
-  const crew = useMemo(() => crewRank(entries), [entries]);
+  const crew = useMemo(() => crewRank(entries, questXp(claims)), [entries, claims]);
+  const tokens = useMemo(() => tokenBalance(claims), [claims]);
   const week = useMemo(() => weekDots(entries, new Date(todayKey + 'T12:00')), [entries, todayKey]);
   const onTrack = useMemo(
     () =>
@@ -80,6 +84,7 @@ export default function Today() {
             <T size={12} rounded color={C.text}>
               {(profile.name || 'Player').toUpperCase().slice(0, 10)}_{crew.level}
             </T>
+            <TokenCount value={tokens} size={13} />
           </Pressable>
         </View>
 
@@ -102,6 +107,9 @@ export default function Today() {
             ))}
           </View>
         </View>
+
+        {/* Daily quests */}
+        <QuestsCard todayKey={todayKey} />
 
         {/* Stat plates */}
         <View style={styles.twoCol}>

@@ -5,7 +5,10 @@ import { Platform } from 'react-native';
 
 import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, type Media, type PlanResult } from './gemini';
 import { deleteJournalPhoto, saveJournalPhoto } from './media';
-import { recommendedTargets } from './nutrition';
+import { celebrate } from './haptics';
+import { macroTargets, recommendedTargets } from './nutrition';
+import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, type Claim } from './quests';
+import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
 import { speak, stopSpeaking } from './voice';
 
@@ -17,6 +20,17 @@ interface State {
   messages: ChatMessage[]; // oldest first
   settings: Settings;
   thinking: boolean;
+  game: { claims: Claim[] };
+  /** Latest "+XP" pop-up; not persisted. */
+  reward: Reward | null;
+}
+
+export interface Reward {
+  id: string;
+  xp: number;
+  tokens: number;
+  label: string;
+  at: number;
 }
 
 const DATA_KEY = 'pulse:data:v1';
@@ -42,6 +56,8 @@ let state: State = {
   messages: [],
   settings: { apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '', model: DEFAULT_MODEL, voiceReplies: true, coachVoice: DEFAULT_VOICE },
   thinking: false,
+  game: { claims: [] },
+  reward: null,
 };
 
 const listeners = new Set<() => void>();
@@ -58,7 +74,7 @@ function schedulePersist() {
   if (!state.ready) return;
   clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
-    const { onboarded, profile, entries, messages, settings } = state;
+    const { onboarded, profile, entries, messages, settings, game } = state;
     const data = {
       onboarded,
       profile,
@@ -68,6 +84,7 @@ function schedulePersist() {
       model: settings.model,
       voiceReplies: settings.voiceReplies,
       coachVoice: settings.coachVoice,
+      game,
     };
     AsyncStorage.setItem(DATA_KEY, JSON.stringify(data)).catch(() => {});
   }, 250);
@@ -95,6 +112,7 @@ export async function hydrate() {
         voiceReplies: data.voiceReplies ?? true,
         coachVoice: data.coachVoice || DEFAULT_VOICE,
       },
+      game: { claims: data.game?.claims ?? [] },
     };
   } catch {
     // corrupt storage: start fresh rather than crash
@@ -139,6 +157,18 @@ export const getState = () => state;
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
+// Logs that land together (one Coach reply can add several) share one pop-up.
+function pushReward(xp: number, tokens: number, label: string) {
+  if (xp <= 0 && tokens <= 0) return;
+  const prev = state.reward;
+  const now = Date.now();
+  if (prev && now - prev.at < 1500 && prev.label === label) {
+    set({ reward: { ...prev, xp: prev.xp + xp, tokens: prev.tokens + tokens, at: now } });
+  } else {
+    set({ reward: { id: uid(), xp, tokens, label, at: now } });
+  }
+}
+
 export const actions = {
   completeOnboarding(profile: Partial<Profile>, apiKey?: string) {
     set((s) => ({ onboarded: true, profile: { ...s.profile, ...profile } }));
@@ -167,7 +197,9 @@ export const actions = {
   },
   addEntry(e: Omit<Entry, 'id' | 'createdAt'> & { createdAt?: number }) {
     const entry: Entry = { ...e, id: uid(), createdAt: e.createdAt ?? Date.now() };
+    const before = logXp(state.entries);
     set((s) => ({ entries: [entry, ...s.entries].sort((a, b) => b.createdAt - a.createdAt) }));
+    pushReward(logXp(state.entries) - before, 0, 'LOGGED');
     // A weigh-in keeps the profile weight current so calorie math follows.
     if (entry.kind === 'weight' && entry.weightKg) actions.updateProfile({ weightKg: entry.weightKg });
     return entry;
@@ -206,6 +238,25 @@ export const actions = {
   resetTargets() {
     actions.updateProfile({ custom: undefined, planNote: undefined });
   },
+  /** Collects a finished quest; clearing all three also pays the perfect-day bonus. */
+  claimQuest(day: string, questId: string) {
+    const { entries, profile, game } = state;
+    const quests = dailyQuests(entries, macroTargets(profile), day, game.claims);
+    const q = quests.find((x) => x.id === questId);
+    if (!q || !q.done || q.claimed) return;
+    const now = Date.now();
+    const claims: Claim[] = [{ day, questId, xp: q.xp, tokens: q.tokens, at: now }];
+    const perfect = quests.every((x) => x.claimed || x.id === questId);
+    if (perfect) claims.push({ day, questId: PERFECT_DAY, ...PERFECT_REWARD, at: now });
+    set((s) => ({ game: { ...s.game, claims: [...s.game.claims, ...claims] } }));
+    const xp = claims.reduce((n, c) => n + c.xp, 0);
+    const tokens = claims.reduce((n, c) => n + c.tokens, 0);
+    pushReward(xp, tokens, perfect ? 'PERFECT DAY' : q.title);
+    celebrate();
+  },
+  clearReward(id: string) {
+    if (state.reward?.id === id) set({ reward: null });
+  },
   retry(aiMsgId: string) {
     const input = retryInputs.get(aiMsgId);
     if (!input) return;
@@ -222,7 +273,7 @@ export const actions = {
     set({ messages: [] });
   },
   resetAll() {
-    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile });
+    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [] }, reward: null });
   },
 
   async sendToCoach(input: CoachInput) {
