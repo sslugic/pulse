@@ -236,6 +236,19 @@ export const actions = {
       if (prev?.weightKg) actions.updateProfile({ weightKg: prev.weightKg });
     }
   },
+  /** Moves an entry by whole days (e.g. a weigh-in logged on the wrong day), keeping its time of day. */
+  moveEntryDays(id: string, days: number) {
+    const e = state.entries.find((x) => x.id === id);
+    if (!e) return;
+    const d = new Date(e.createdAt);
+    d.setDate(d.getDate() + days);
+    if (dayKey(d) > dayKey(Date.now())) return;
+    // Moving onto today from a later time of day lands at "now", never in the future.
+    const at = Math.min(d.getTime(), Date.now());
+    set((s) => ({ entries: s.entries.map((x) => (x.id === id ? { ...x, createdAt: at } : x)).sort((a, b) => b.createdAt - a.createdAt) }));
+    const latest = latestWeight(state.entries);
+    if (e.kind === 'weight' && latest?.weightKg) actions.updateProfile({ weightKg: latest.weightKg });
+  },
   updateEntry(id: string, patch: Partial<Entry>) {
     set((s) => ({ entries: s.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
   },

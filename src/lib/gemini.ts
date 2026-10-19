@@ -131,7 +131,9 @@ function userContext(profile: Profile, entries: Entry[]) {
         : e.kind === 'exercise' ? `-${e.caloriesBurned ?? 0} kcal, ${e.durationMin ?? 0} min`
         : e.kind === 'water' ? `${e.waterMl} ml`
         : `${e.weightKg} kg`;
-      return `- id=${e.id} [${new Date(e.createdAt).toLocaleString()}] ${e.kind}: ${e.title} (${what})`;
+      // Name the day outright so the model never has to work out today vs yesterday from timestamps.
+      const day = dayKey(e.createdAt) === dayKey(Date.now()) ? 'TODAY' : 'YESTERDAY';
+      return `- id=${e.id} [${day} ${new Date(e.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}] ${e.kind}: ${e.title} (${what})`;
     })
     .join('\n');
 
@@ -158,7 +160,7 @@ RULES
 - Weigh-ins -> weight entry in kg (convert from lb). Weights for different days are separate entries, each with its own daysAgo ("245 yesterday and 247 today" -> 245 with daysAgo 1, 247 with daysAgo 0).
 - Several things in one message -> several entries.
 - Corrections like "actually it was 2 slices" or "delete that" -> put the old entry id in removeEntryIds and add the corrected entry with replacesId set to that id, so it keeps its original date. If the user says which day it belongs to, also set daysAgo.
-- Dates: "yesterday" and other named days use daysAgo, never hoursAgo. Each RECENT ENTRY shows its date and time; match it against NOW to tell today from yesterday.
+- Dates: "yesterday" and other named days use daysAgo, never hoursAgo. Each RECENT ENTRY is labelled TODAY or YESTERDAY. When fixing which day a value belongs to, set daysAgo from what the user says the value should be ("245 yesterday" -> the 245 entry gets daysAgo 1), not from the old entry's day. Before replying, check that each entry's daysAgo matches the day you say in the reply.
 - The user states a new goal ("I want to build muscle and lose weight", "time to bulk") -> set goalUpdate (lose = fat loss, recomp = build muscle AND lose fat, maintain, gain = build muscle/bulk) and explain the new targets in the reply. Otherwise omit goalUpdate.
 - Mood, sleep, energy, or what happened in their day ("slept 5 hours", "rough day at work", "feeling great", "had a fight with my partner", "legs are sore") -> one "journal" entry. ALWAYS set sleepHours as a number when any amount of sleep is mentioned ("5 and a half hours" -> 5.5, "barely slept" -> 4); ALWAYS set mood (1-5) from their tone; set energy, stress (1-10) and sleepQuality when implied, tags with the key factors, summary in their words, and a short supportive note. A message can contain a journal entry AND meals/exercise. Sleep "last night" belongs to today.
 - When today's stress is high or sleep was short, adapt: suggest a lighter session or a maintenance-calorie day, and mention how stress and poor sleep raise cravings and water retention.
