@@ -36,6 +36,7 @@ export interface Entry {
   tags?: string[]; // e.g. "work deadline", "sore legs", "travel"
   summary?: string; // the journal note in the user's words, lightly cleaned up
   photo?: string; // journal photo, path relative to the documents directory
+  scene?: string[]; // journal: elements to illustrate the moment, from SCENE_NAMES
   note?: string;
   confidence?: number; // 0..1 from the AI
   source: 'text' | 'voice' | 'photo' | 'quick';

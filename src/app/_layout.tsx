@@ -39,6 +39,7 @@ export default function RootLayout() {
           <Stack.Screen name="goals" options={{ presentation: 'modal' }} />
           <Stack.Screen name="wellbeing" options={{ presentation: 'modal' }} />
           <Stack.Screen name="day/[key]" />
+          <Stack.Screen name="ranks" options={{ presentation: 'modal' }} />
         </Stack.Protected>
         <Stack.Protected guard={!onboarded}>
           <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />

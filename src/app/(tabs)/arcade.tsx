@@ -1,12 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BreatheGame, BubbleGame, FidgetGame, GameShell, MemoryGame, ShredderGame, SprayGame } from '@/components/arcade-games';
-import { IconBadge } from '@/components/icon';
+import { Icon, IconBadge } from '@/components/icon';
 import { TokenCoin, TokenCount } from '@/components/quests-card';
-import { Card, T } from '@/components/ui';
+import { Bar, Card, T } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Space } from '@/constants/theme';
 import { ARCADE_CLAIM, ARCADE_XP, GAMES, gameById, isUnlocked, type GameDef, type GameId } from '@/lib/arcade';
@@ -70,19 +70,20 @@ export default function ArcadeScreen() {
                     : 'Tell the Coach how you slept and feel to get a stress score.'}
               </T>
             </View>
-            <TokenCount value={balance} />
           </View>
           <T size={11} color={earnedToday ? C.lime : C.textMute} weight="700">
             {earnedToday ? 'TODAY’S ARCADE XP COLLECTED' : `FINISH A FULL MINUTE FOR +${ARCADE_XP} XP TODAY`}
           </T>
         </Card>
 
+        <HowItWorks balance={balance} />
+
         {GAMES.map((g) => (
           <Cabinet
             key={g.id}
             g={g}
             open={isUnlocked(g.id, game.unlocked)}
-            afford={balance >= g.price}
+            balance={balance}
             short={short === g.id}
             suggested={high && g.id === 'breathe'}
             onPlay={() => setPicked(g.id)}
@@ -90,9 +91,6 @@ export default function ArcadeScreen() {
           />
         ))}
 
-        <T size={12} color={C.textMute} style={{ textAlign: 'center', marginTop: Space.sm }}>
-          Earn tokens by clearing daily quests on HQ.
-        </T>
       </ScrollView>
 
       {/* Games run full screen, over the tab bar and the quick-log button. */}
@@ -112,10 +110,48 @@ export default function ArcadeScreen() {
   );
 }
 
+/** Plain-language explainer: tokens come from HQ quests, and each game is bought once. */
+function HowItWorks({ balance }: { balance: number }) {
+  const steps = [
+    { n: '1', text: 'Clear daily quests on HQ. Each pays tokens: easy +5, medium +10, hard +20.' },
+    { n: '2', text: 'Clear all 3 in a day for a Perfect Day bonus: +15 more.' },
+    { n: '3', text: 'Spend tokens here to unlock a game. You pay once and keep it forever.' },
+  ];
+  return (
+    <Card style={{ gap: 10, marginTop: Space.sm }} accent={C.yellow + '99'}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <T size={13} rounded color={C.text} style={{ flex: 1 }}>
+          HOW TO UNLOCK GAMES
+        </T>
+        <TokenCount value={balance} />
+      </View>
+      {steps.map((st) => (
+        <View key={st.n} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+          <View style={styles.step}>
+            <T size={12} rounded color={C.ink}>
+              {st.n}
+            </T>
+          </View>
+          <T size={13} color={C.textDim} style={{ flex: 1, lineHeight: 18 }}>
+            {st.text}
+          </T>
+        </View>
+      ))}
+      <Pressable onPress={() => router.navigate('/')} style={styles.cta} accessibilityRole="button">
+        <Icon name="target" size={14} color={C.yellow} />
+        <T size={12} rounded color={C.yellow}>
+          GO TO TODAY’S QUESTS
+        </T>
+        <Icon name="chevron" size={12} color={C.yellow} />
+      </Pressable>
+    </Card>
+  );
+}
+
 function Cabinet({
   g,
   open,
-  afford,
+  balance,
   short,
   suggested,
   onPlay,
@@ -123,7 +159,7 @@ function Cabinet({
 }: {
   g: GameDef;
   open: boolean;
-  afford: boolean;
+  balance: number;
   short: boolean;
   suggested: boolean;
   onPlay: () => void;
@@ -154,18 +190,27 @@ function Cabinet({
       {open ? (
         <ArcadeButton label="PLAY 1 MIN" size="md" colors={Gradients.brand} textColor="#fff" onPress={onPlay} />
       ) : (
-        <View style={{ gap: 6 }}>
-          <ArcadeButton
-            label={`UNLOCK · ${g.price}`}
-            size="md"
-            disabled={!afford}
-            onPress={onUnlock}
-            icon={<TokenCoin size={22} />}
-          />
-          {(short || !afford) && (
-            <T size={11} color={C.textMute} weight="700" style={{ textAlign: 'center' }}>
-              NEED {g.price} TOKENS · CLEAR QUESTS TO EARN MORE
-            </T>
+        <View style={{ gap: 8 }}>
+          {balance >= g.price ? (
+            <ArcadeButton label={`UNLOCK FOR ${g.price}`} size="md" onPress={onUnlock} icon={<TokenCoin size={22} />} />
+          ) : (
+            <>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Icon name="lock" size={14} color={C.textMute} />
+                <View style={{ flex: 1 }}>
+                  <Bar value={balance} max={g.price} color={C.yellow} height={6} />
+                </View>
+                <T size={12} rounded color={C.yellow}>
+                  {balance}/{g.price}
+                </T>
+                <TokenCoin size={14} />
+              </View>
+              <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
+                {short ? 'Not enough tokens yet. ' : ''}
+                {g.price - balance} more tokens to unlock. That’s about {Math.max(1, Math.ceil((g.price - balance) / 10))} medium quest
+                {Math.ceil((g.price - balance) / 10) === 1 ? '' : 's'} on HQ.
+              </T>
+            </>
           )}
         </View>
       )}
@@ -178,4 +223,6 @@ const styles = StyleSheet.create({
   play: { flex: 1, paddingHorizontal: Space.md, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: Space.sm },
   tag: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  step: { width: 22, height: 22, borderRadius: 11, backgroundColor: C.yellow, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 8, borderWidth: 2, borderColor: C.yellow + '88', backgroundColor: '#2A2410' },
 });

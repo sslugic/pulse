@@ -81,7 +81,12 @@ export default function Today() {
             <Comic size={34} color={C.text}>
               PULSE HQ
             </Comic>
-            <CrewBar label={crew.rank} progress={crew.progress} />
+            <Pressable onPress={() => router.push('/ranks')} accessibilityRole="button" accessibilityLabel={`${crew.rank}, see all ranks`} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+              <CrewBar label={crew.rank} progress={crew.progress} />
+              <T size={10} rounded color={C.textMute} style={{ marginTop: 3, marginLeft: 4 }}>
+                {crew.next ? `${crew.toNext} XP TO ${crew.next.toUpperCase()} · TAP FOR RANKS` : 'MAX RANK · TAP FOR RANKS'}
+              </T>
+            </Pressable>
           </View>
           <Pressable onPress={() => router.navigate('/profile')} style={{ alignItems: 'center', gap: 4 }}>
             <TagAvatar size={60} band={C.orange} letter={(profile.name || 'P')[0]} />
