@@ -2,14 +2,24 @@ import { dayKey, streak } from './nutrition';
 import type { Entry } from './types';
 
 // Arcade-style progression: logging earns XP, streaks multiply it, quests add on top.
+// 15 ranks on a gentle curve: a few days to the first, roughly a year of steady logging
+// (about 100 XP a day) to the last. `scene` is the backdrop wall each rank unlocks.
 export const RANKS = [
-  { name: 'Rookie', xp: 0, blurb: 'Fresh off the train. Log anything to start earning XP.' },
-  { name: 'Street Crew', xp: 150, blurb: 'You’ve got a routine going. A few solid days of logging.' },
-  { name: 'Block Boss', xp: 450, blurb: 'Consistent all week. Quests are part of your day.' },
-  { name: 'Subway King', xp: 1000, blurb: 'Weeks of streaks. The habits are sticking.' },
-  { name: 'Legend', xp: 2000, blurb: 'A month or more of showing up. People ask how you do it.' },
-  { name: 'Underground Icon', xp: 3500, blurb: 'Months in. Tracking is second nature.' },
-  { name: 'Hall of Fame', xp: 6000, blurb: 'The top of the board. Your name is on the wall.' },
+  { name: 'Rookie', xp: 0, scene: 0, blurb: 'Fresh off the train. Log anything to start earning XP.' },
+  { name: 'Tagger', xp: 150, scene: 0, blurb: 'First marks on the wall. You’ve started showing up.' },
+  { name: 'Street Crew', xp: 400, scene: 1, blurb: 'You’ve got a routine going. A few solid days of logging.' },
+  { name: 'Corner Captain', xp: 800, scene: 1, blurb: 'A full week in. People on the block know your name.' },
+  { name: 'Block Boss', xp: 1400, scene: 2, blurb: 'Quests are part of your day now.' },
+  { name: 'Skyline Runner', xp: 2200, scene: 2, blurb: 'Weeks of streaks. You see the whole city from up here.' },
+  { name: 'Subway Rider', xp: 3300, scene: 3, blurb: 'A month of habits that stick.' },
+  { name: 'Subway King', xp: 4700, scene: 3, blurb: 'You run these tunnels. Consistency is your thing.' },
+  { name: 'Yard Bomber', xp: 6500, scene: 4, blurb: 'Two months in. Your name is painted on trains.' },
+  { name: 'Legend', xp: 8800, scene: 4, blurb: 'People ask how you do it.' },
+  { name: 'Neon Ace', xp: 11700, scene: 5, blurb: 'Half a year of showing up. You light up the room.' },
+  { name: 'Underground Icon', xp: 15300, scene: 5, blurb: 'Tracking is second nature.' },
+  { name: 'City Myth', xp: 19800, scene: 6, blurb: 'Stories get told about your streaks.' },
+  { name: 'Hall of Famer', xp: 25500, scene: 6, blurb: 'Your name is on the wall for good.' },
+  { name: 'Pulse Immortal', xp: 32000, scene: 6, blurb: 'A year of work. The top of the board.' },
 ] as const;
 
 /** How XP is earned, for the rank ladder screen. */
@@ -24,6 +34,9 @@ export const XP_SOURCES = [
   { label: 'Daily quests', xp: '+20 to +60' },
   { label: 'Perfect day (all 3 quests)', xp: '+30' },
   { label: 'Arcade minute (once a day)', xp: '+15' },
+  { label: 'Finish a planned workout', xp: '+25' },
+  { label: 'Eat a planned meal', xp: '+5' },
+  { label: 'Season challenge', xp: '+50' },
   { label: 'Streak freezes keep your streak bonus alive', xp: '🧊' },
 ] as const;
 

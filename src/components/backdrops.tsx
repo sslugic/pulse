@@ -496,7 +496,8 @@ export function useWallLevel() {
  */
 export function RankScene({ level, width, height, tags = ['NYC', 'PULSE'], station = 'PULSE ST' }: { level: number; width: number; height: number; tags?: string[]; station?: string }) {
   const screen = useWindowDimensions();
-  const i = Math.max(1, Math.min(level, RANKS.length)) - 1;
+  // Several ranks share a wall; each rank names the scene it unlocks.
+  const i = RANKS[Math.max(1, Math.min(level, RANKS.length)) - 1].scene;
   const Scene = SCENES[i];
   return (
     <View style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]} pointerEvents="none">

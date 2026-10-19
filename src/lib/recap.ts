@@ -58,7 +58,7 @@ export function weekStats(entries: Entry[], profile: Profile, claims: Claim[], e
     waterDays: days.filter((d) => d.water >= t.waterMl).length,
     avgSleep: avg(minds.flatMap((m) => (m.sleepHours != null ? [m.sleepHours] : []))),
     avgMood: avg(minds.flatMap((m) => (m.mood != null ? [m.mood] : []))),
-    questsCleared: weekClaims.filter((c) => c.questId !== 'perfect-day' && c.questId !== 'arcade' && !c.questId.startsWith('season:')).length,
+    questsCleared: weekClaims.filter((c) => c.questId !== 'perfect-day' && c.questId !== 'arcade' && !c.questId.startsWith('season:') && !c.questId.startsWith('plan-')).length,
     perfectDays: weekClaims.filter((c) => c.questId === 'perfect-day').length,
     tokensEarned: weekClaims.reduce((n, c) => n + c.tokens, 0),
     xpFromQuests: weekClaims.reduce((n, c) => n + c.xp, 0),

@@ -8,6 +8,7 @@ import { EntryRow } from '@/components/entry-row';
 import { Icon } from '@/components/icon';
 import { openCoach } from '@/components/quick-fab';
 import { QuickLog } from '@/components/quick-log';
+import { TodayPlanCard } from '@/components/today-plan-card';
 import { QuestsCard, TokenCount } from '@/components/quests-card';
 import { TagAvatar } from '@/components/tag-avatar';
 import { Backdrop, Comic, DripLetter, Sticker } from '@/components/underground';
@@ -67,6 +68,7 @@ export default function Today() {
   useEffect(() => {
     actions.applyStreakFreezes();
     actions.syncHealth();
+    actions.ensurePlans();
   }, [todayKey]);
   const steps = useSteps(!!settings.health?.on);
 
@@ -151,10 +153,10 @@ export default function Today() {
             <MiniMacro label="FAT" value={today.fat} target={targets.fat} color={C.fat} />
           </View>
           <View style={styles.fuelActions}>
-            <Pressable onPress={() => router.push('/meal-plan')} style={styles.fuelBtn} accessibilityRole="button">
+            <Pressable onPress={() => router.push('/plans')} style={styles.fuelBtn} accessibilityRole="button">
               <Icon name="fork" size={14} color={C.orange} />
               <T size={12} rounded color={C.orange}>
-                MEAL PLAN
+                PLANS
               </T>
             </Pressable>
             <Pressable onPress={() => router.push('/scan')} style={styles.fuelBtn} accessibilityRole="button">
@@ -165,6 +167,9 @@ export default function Today() {
             </Pressable>
           </View>
         </Card>
+
+        {/* Today's planned meals and workout */}
+        <TodayPlanCard todayKey={todayKey} />
 
         {/* Stress alert only when today's score is high */}
         {isStressHigh(mind) && <ArcadePrompt w={mind} />}
