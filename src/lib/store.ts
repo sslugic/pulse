@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
 import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, type Media, type PlanResult } from './gemini';
 import { deleteJournalPhoto, saveJournalPhoto } from './media';
 import { celebrate } from './haptics';
-import { macroTargets, recommendedTargets } from './nutrition';
+import { dayKey, macroTargets, recommendedTargets } from './nutrition';
 import { ARCADE_CLAIM, ARCADE_XP, gameById, isUnlocked, type GameId } from './arcade';
 import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, type GameState } from './quests';
 import { logXp } from './rank';
@@ -139,6 +139,24 @@ function fillJournal<T extends Partial<Entry>>(e: T): T {
   return n > 0 && n <= 14 && /sleep|slept|night/.test(text) ? { ...e, sleepHours: n } : e;
 }
 
+/**
+ * When a Coach entry happened. A named day ("yesterday") moves the entry back whole days, keeping the
+ * replaced entry's time of day if there is one; a plain correction keeps the replaced entry's time.
+ */
+function entryTime(hoursAgo?: number, daysAgo?: number, replaced?: number) {
+  const now = Date.now();
+  if (daysAgo != null && daysAgo > 0) {
+    const d = new Date(replaced ?? now - Math.max(0, Math.min(hoursAgo ?? 0, 12)) * 3600_000);
+    const target = new Date(now);
+    target.setDate(target.getDate() - Math.min(Math.round(daysAgo), 14));
+    target.setHours(d.getHours(), d.getMinutes(), d.getSeconds(), 0);
+    return target.getTime();
+  }
+  if (daysAgo === 0 && replaced != null && dayKey(replaced) !== dayKey(now)) return now;
+  if (replaced != null) return replaced;
+  return now - Math.max(0, Math.min(hoursAgo ?? 0, 48)) * 3600_000;
+}
+
 type CoachInput = { text?: string; image?: Media & { uri: string }; audio?: Media };
 // Failed sends keep their payload in memory so the user can retry with one tap.
 const retryInputs = new Map<string, CoachInput>();
@@ -155,6 +173,9 @@ export function useStore<T>(select: (s: State) => T): T {
 }
 
 export const getState = () => state;
+
+/** Newest weigh-in by date (entries are kept newest first). */
+const latestWeight = (entries: Entry[]) => entries.find((e) => e.kind === 'weight' && e.weightKg);
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
@@ -201,14 +222,19 @@ export const actions = {
     const before = logXp(state.entries);
     set((s) => ({ entries: [entry, ...s.entries].sort((a, b) => b.createdAt - a.createdAt) }));
     pushReward(logXp(state.entries) - before, 0, 'LOGGED');
-    // A weigh-in keeps the profile weight current so calorie math follows.
-    if (entry.kind === 'weight' && entry.weightKg) actions.updateProfile({ weightKg: entry.weightKg });
+    // The latest weigh-in keeps the profile weight current so calorie math follows; a back-dated one doesn't.
+    if (entry.kind === 'weight' && entry.weightKg && latestWeight(state.entries)?.id === entry.id) actions.updateProfile({ weightKg: entry.weightKg });
     return entry;
   },
   removeEntry(id: string) {
-    const photo = state.entries.find((e) => e.id === id)?.photo;
-    if (photo) deleteJournalPhoto(photo);
+    const removed = state.entries.find((e) => e.id === id);
+    if (removed?.photo) deleteJournalPhoto(removed.photo);
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
+    // Deleting the latest weigh-in falls back to the one before it.
+    if (removed?.kind === 'weight') {
+      const prev = latestWeight(state.entries);
+      if (prev?.weightKg) actions.updateProfile({ weightKg: prev.weightKg });
+    }
   },
   updateEntry(id: string, patch: Partial<Entry>) {
     set((s) => ({ entries: s.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
@@ -334,15 +360,17 @@ export const actions = {
           voice?.update(reply);
         },
       });
+      // Remember when replaced entries happened before they're removed, so corrections keep their date.
+      const replacedAt = new Map(s.entries.map((e) => [e.id, e.createdAt]));
       result.removeEntryIds.forEach(actions.removeEntry);
       if (result.goalUpdate) actions.setGoal(result.goalUpdate.goal, result.goalUpdate.pace, result.goalUpdate.note);
       const source: Entry['source'] = input.audio ? 'voice' : input.image ? 'photo' : 'text';
-      const added = result.entries.map(fillJournal).map(({ hoursAgo, ...e }) =>
+      const added = result.entries.map(fillJournal).map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
         actions.addEntry({
           ...e,
           source,
           hasPhoto: !!input.image,
-          createdAt: Date.now() - Math.max(0, Math.min(hoursAgo ?? 0, 48)) * 3600_000,
+          createdAt: entryTime(hoursAgo, daysAgo, replacesId ? replacedAt.get(replacesId) : undefined),
         }),
       );
       // Keep the photo with journal moments so the timeline can show it later.
