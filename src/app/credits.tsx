@@ -128,7 +128,7 @@ export default function CreditsScreen() {
                     </T>
                   </View>
                   <ArcadeButton
-                    label={account.subscription?.active ? 'SUBSCRIBED' : busy === pro.id ? 'WORKING…' : `SUBSCRIBE · ${pro.price}/MONTH`}
+                    label={account.subscription?.active ? 'SUBSCRIBED' : busy === pro.id ? 'WORKING…' : 'SUBSCRIBE'}
                     size="md"
                     colors={['#B8FF4A', '#5BE01E']}
                     textColor={C.ink}
