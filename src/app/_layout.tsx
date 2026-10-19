@@ -49,6 +49,7 @@ export default function RootLayout() {
         actions.refreshReminder();
         actions.syncHealth();
         actions.repairMeals();
+        actions.ensurePlans();
       })
       .finally(() => {});
   }, []);
@@ -69,7 +70,7 @@ export default function RootLayout() {
               <Stack.Screen name="day/[key]" />
               <Stack.Screen name="ranks" options={{ presentation: 'modal' }} />
               <Stack.Screen name="recap" options={{ presentation: 'modal' }} />
-              <Stack.Screen name="meal-plan" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="plans" options={{ presentation: 'modal' }} />
               <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal' }} />
               <Stack.Screen name="progress-photos" options={{ presentation: 'modal' }} />
               <Stack.Screen name="season" options={{ presentation: 'modal' }} />

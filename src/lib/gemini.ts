@@ -747,3 +747,90 @@ export async function estimateMeal(opts: { apiKey: string; model: string; descri
   const n = (v: unknown) => (typeof v === 'number' && isFinite(v) && v >= 0 ? Math.round(v * 10) / 10 : 0);
   return { calories: n(j.calories), protein: n(j.protein), carbs: n(j.carbs), fat: n(j.fat), fiber: n(j.fiber), sugar: n(j.sugar) };
 }
+
+export interface PlannedExercise {
+  name: string;
+  sets: string; // "4" or "1" for cardio
+  reps: string; // "8-10", "30 min", "45 s"
+  rest: string; // "90 s"
+  notes: string;
+}
+export interface WorkoutDay {
+  title: string; // "Push: chest & triceps", "Zone 2 run"
+  focus: string; // "Strength", "Cardio", "Mobility", "Rest"
+  emoji: string;
+  rest: boolean;
+  durationMin: number;
+  estKcal: number;
+  exercises: PlannedExercise[];
+}
+
+// How each goal shapes the week: lifting-heavy to build, cardio-led to lose, both for recomp.
+const GOAL_TRAINING: Record<Profile['goal'], string> = {
+  gain: 'Build muscle: mostly resistance training (4-5 lifting days, a push/pull/legs or upper/lower split), compound lifts first, 6-12 reps, progressive overload, at most one short low-intensity cardio session, and rest days.',
+  lose: 'Fat loss: cardio-led (3-4 sessions mixing zone-2 steady cardio and one interval session) plus 2 full-body strength days to keep muscle, a daily steps habit, and one rest or mobility day.',
+  recomp: 'Recomposition: 3-4 strength days (full-body or upper/lower) with progressive overload, plus 2 moderate cardio sessions, and rest days.',
+  maintain: 'Maintenance: balanced week with 3 strength days, 2 cardio or sport days, mobility, and rest.',
+};
+
+/** A goal-specific workout plan for 1, 3 or 7 days starting today. */
+export async function makeWorkoutPlan(opts: { apiKey: string; model: string; profile: Profile; entries: Entry[]; days: number; prefs: string }): Promise<{ summary: string; days: WorkoutDay[] }> {
+  const { apiKey, model, profile, entries, days, prefs } = opts;
+  const persona = personaById(profile.persona);
+  const raw = await generate(
+    apiKey,
+    model,
+    {
+      systemInstruction: {
+        parts: [
+          {
+            text: `You are ${persona.name}, a certified strength and conditioning coach. Personality: ${persona.style}
+${userContext(profile, entries)}
+GOAL: ${GOAL_INFO[profile.goal].label}. ${GOAL_TRAINING[profile.goal]}
+Activity level: ${profile.activity}. Create exactly ${days} day${days > 1 ? 's' : ''} of training starting today, in order. Look at RECENT ENTRIES so you don't repeat yesterday's muscle groups, and if today's stress is high or sleep was short, make today lighter.
+Per day: title, focus (Strength / Cardio / HIIT / Mobility / Rest), one emoji, rest (true for a rest day, with a short mobility or walk suggestion as its only exercise), durationMin, estKcal (calories burned for this person's ${profile.weightKg} kg body weight), and exercises (name, sets, reps or time, rest between sets, one short coaching note on form or intensity). Typical session 30-60 min, 4-7 exercises with a warm-up first.
+summary: one or two sentences in character on how this plan serves the goal. Use ${profile.units} units for any loads or distances.${prefs.trim() ? `\nUSER PREFERENCES (must follow, e.g. equipment, injuries, time): ${prefs.trim()}` : ''}`,
+          },
+        ],
+      },
+      contents: [{ role: 'user', parts: [{ text: days === 1 ? "Plan today's workout." : `Plan my next ${days} days of training.` }] }],
+      generationConfig: {
+        temperature: 0.7,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            summary: { type: 'STRING' },
+            days: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  title: { type: 'STRING' },
+                  focus: { type: 'STRING' },
+                  emoji: { type: 'STRING' },
+                  rest: { type: 'BOOLEAN' },
+                  durationMin: { type: 'NUMBER' },
+                  estKcal: { type: 'NUMBER' },
+                  exercises: {
+                    type: 'ARRAY',
+                    items: {
+                      type: 'OBJECT',
+                      properties: { name: { type: 'STRING' }, sets: { type: 'STRING' }, reps: { type: 'STRING' }, rest: { type: 'STRING' }, notes: { type: 'STRING' } },
+                      required: ['name', 'sets', 'reps', 'rest', 'notes'],
+                    },
+                  },
+                },
+                required: ['title', 'focus', 'emoji', 'rest', 'durationMin', 'estKcal', 'exercises'],
+              },
+            },
+          },
+          required: ['summary', 'days'],
+        },
+      },
+    },
+    60_000,
+  );
+  const j = JSON.parse(raw);
+  return { summary: String(j.summary ?? ''), days: (j.days ?? []).slice(0, days) };
+}

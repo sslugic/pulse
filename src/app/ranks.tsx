@@ -13,7 +13,7 @@ import { crewRank, RANKS, XP_SOURCES } from '@/lib/rank';
 import { actions, useStore } from '@/lib/store';
 import { tap } from '@/lib/haptics';
 
-const RANK_COLORS = [C.textDim, C.orange, C.yellow, C.lime, C.cyan, C.violet, C.pink];
+const RANK_COLORS = [C.textDim, C.steelHi, C.orange, C.orange, C.yellow, C.yellow, C.lime, C.lime, C.cyan, C.cyan, C.blue, C.violet, C.pink, C.pink, '#E8B830'];
 
 /** The full rank ladder: where you are, what's next, and how XP is earned. */
 export default function RanksScreen() {
@@ -77,7 +77,7 @@ export default function RanksScreen() {
           The ladder
         </SectionTitle>
         <T size={12} color={C.textDim} style={{ lineHeight: 17, marginTop: -4 }}>
-          Every rank unlocks a new wall for the whole app. Tap an unlocked wall to use it.
+          Every couple of ranks unlocks a new wall for the whole app. Tap an unlocked wall to use it.
         </T>
         <View style={{ gap: 8 }}>
           {RANKS.map((r, i) => {
@@ -108,7 +108,10 @@ export default function RanksScreen() {
                   <T size={12} color={current || done ? C.textDim : C.textMute} style={{ lineHeight: 17 }}>
                     {r.blurb}
                   </T>
-                  <WallThumb level={i + 1} unlocked={done || current} inUse={wall === i + 1} color={color} />
+                  {/* Only ranks that unlock a new wall show one */}
+                  {(i === 0 || RANKS[i - 1].scene !== r.scene) && (
+                    <WallThumb level={i + 1} unlocked={done || current} inUse={RANKS[wall - 1].scene === r.scene} color={color} />
+                  )}
                 </Card>
               </View>
             );
@@ -145,7 +148,7 @@ function WallThumb({ level, unlocked, inUse, color }: { level: number; unlocked:
       }}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessibilityRole="button"
-      accessibilityLabel={`${WALL_NAMES[level - 1]} wall${unlocked ? '' : ', locked'}`}
+      accessibilityLabel={`${WALL_NAMES[RANKS[level - 1].scene]} wall${unlocked ? '' : ', locked'}`}
       style={[styles.thumb, { borderColor: inUse ? color : C.ink }]}>
       {width > 0 && <RankScene level={level} width={width} height={130} />}
       {!unlocked && (
@@ -155,7 +158,7 @@ function WallThumb({ level, unlocked, inUse, color }: { level: number; unlocked:
       )}
       <View style={styles.thumbLabel}>
         <T size={10} rounded color={C.text}>
-          {WALL_NAMES[level - 1]}
+          {WALL_NAMES[RANKS[level - 1].scene]}
         </T>
         {(inUse || unlocked) && (
           <T size={10} rounded color={inUse ? color : C.cyan}>

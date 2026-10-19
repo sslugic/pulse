@@ -10,6 +10,7 @@ import { Bar, Card, SectionTitle, T, tap } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { dayKey, fmtWater, macroTargets, summarize } from '@/lib/nutrition';
+import { resultFor } from '@/lib/plans';
 import { dailyQuests } from '@/lib/quests';
 import { useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
@@ -36,6 +37,10 @@ export default function DayScreen() {
   const day = useMemo(() => summarize(entries, key), [entries, key]);
   const list = useMemo(() => entries.filter((e) => dayKey(e.createdAt) === key), [entries, key]);
   const mind = useMemo(() => dayWellbeing(entries, key), [entries, key]);
+  const mealPlan = useStore((s) => s.mealPlan);
+  const workoutPlan = useStore((s) => s.workoutPlan);
+  const history = useStore((s) => s.planHistory);
+  const planResult = useMemo(() => resultFor(key, mealPlan, workoutPlan) ?? history[key], [key, mealPlan, workoutPlan, history]);
   const quests = useMemo(() => dailyQuests(entries, t, key, claims), [entries, t, key, claims]);
 
   const net = day.eaten - day.burned;
@@ -127,6 +132,33 @@ export default function DayScreen() {
             <Stat label="ENERGY" value={mind.energy ? `${mind.energy.toFixed(0)}/5` : '—'} color={C.lime} />
           </View>
         </Card>
+
+        {/* How the day went against its plan */}
+        {planResult && (
+          <Card style={{ gap: 6, marginTop: Space.sm }} accent={C.violet + '88'}>
+            <T size={12} rounded color={C.violet}>
+              PLAN
+            </T>
+            <View style={styles.between}>
+              <T size={14} color={C.text}>
+                Planned meals eaten
+              </T>
+              <T size={14} rounded color={planResult.mealsEaten >= planResult.mealsPlanned && planResult.mealsPlanned ? C.lime : C.text}>
+                {planResult.mealsEaten}/{planResult.mealsPlanned}
+              </T>
+            </View>
+            {planResult.workout && (
+              <View style={styles.between}>
+                <T size={14} color={C.text}>
+                  Planned workout
+                </T>
+                <T size={14} rounded color={planResult.workout === 'done' ? C.lime : planResult.workout === 'rest' ? C.cyan : isToday ? C.textDim : C.textMute}>
+                  {planResult.workout === 'done' ? 'DONE' : planResult.workout === 'rest' ? 'REST DAY' : isToday ? 'TO DO' : 'MISSED'}
+                </T>
+              </View>
+            )}
+          </Card>
+        )}
 
         {/* Quests: today is live (same card as HQ, with Claim); past days show how they ended */}
         {isToday ? (

@@ -100,4 +100,6 @@ export interface Settings {
   reminderHour?: number;
   /** Apple Health sync on, and when it last pulled. */
   health?: { on: boolean; lastSync?: number };
+  /** Generate today's meal and workout plans automatically each day (default on). */
+  autoPlans?: boolean;
 }

@@ -3,7 +3,8 @@ import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
-import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, estimateMeal, makeMealPlan, type Media, type MealPlan, type PlanResult } from './gemini';
+import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, estimateMeal, makeMealPlan, makeWorkoutPlan, type Media, type PlanResult } from './gemini';
+import { matchMeal, mealKey, nextDays, resultFor, spanDays, type MealPlanState, type MealSpan, type PlanResult as PlanDayResult, type WorkoutPlanState, type WorkoutSpan } from './plans';
 import { deleteJournalPhoto, pickImage, saveJournalPhoto, saveProgressPhoto } from './media';
 import { celebrate } from './haptics';
 import { connectHealth, healthAvailable, pullHealth } from './health';
@@ -29,7 +30,10 @@ interface State {
   /** Private body-progress photos (paths relative to documents), oldest first. */
   photos: { id: string; path: string; at: number; weightKg?: number }[];
   /** Last AI meal plan and which grocery items are ticked; persisted. */
-  mealPlan?: { plan: MealPlan; span: 'today' | '3days'; at: number; checked: string[]; logged: string[] };
+  mealPlan?: MealPlanState;
+  workoutPlan?: WorkoutPlanState;
+  /** How each finished planned day went, kept after the plan is cleared. */
+  planHistory: Record<string, PlanDayResult>;
   /** Latest "+XP" pop-up; not persisted. */
   reward: Reward | null;
 }
@@ -67,6 +71,7 @@ let state: State = {
   thinking: false,
   game: { claims: [], unlocked: [] },
   photos: [],
+  planHistory: {},
   reward: null,
 };
 
@@ -84,7 +89,7 @@ function schedulePersist() {
   if (!state.ready) return;
   clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
-    const { onboarded, profile, entries, messages, settings, game, mealPlan, photos } = state;
+    const { onboarded, profile, entries, messages, settings, game, mealPlan, workoutPlan, planHistory, photos } = state;
     const data = {
       onboarded,
       profile,
@@ -96,8 +101,11 @@ function schedulePersist() {
       coachVoice: settings.coachVoice,
       reminderHour: settings.reminderHour,
       health: settings.health,
+      autoPlans: settings.autoPlans,
       game,
       mealPlan,
+      workoutPlan,
+      planHistory,
       photos,
     };
     AsyncStorage.setItem(DATA_KEY, JSON.stringify(data)).catch(() => {});
@@ -127,8 +135,12 @@ export async function hydrate() {
         coachVoice: data.coachVoice || DEFAULT_VOICE,
         reminderHour: data.reminderHour,
         health: data.health,
+        autoPlans: data.autoPlans,
       },
-      mealPlan: data.mealPlan,
+      // Plans from before per-day dates are dropped.
+      mealPlan: data.mealPlan?.days?.[0]?.day ? data.mealPlan : undefined,
+      workoutPlan: data.workoutPlan,
+      planHistory: data.planHistory ?? {},
       photos: data.photos ?? [],
       game: { claims: data.game?.claims ?? [], unlocked: data.game?.unlocked ?? [], wall: data.game?.wall, freezes: data.game?.freezes ?? 0, frozenDays: data.game?.frozenDays ?? [] },
     };
@@ -218,6 +230,45 @@ export const getState = () => state;
 
 /** Newest weigh-in by date (entries are kept newest first). */
 const latestWeight = (entries: Entry[]) => entries.find((e) => e.kind === 'weight' && e.weightKg);
+
+let planning = false;
+
+export const PLAN_MEAL_XP = 5;
+export const PLAN_WORKOUT_XP = 25;
+
+function markMealEaten(day: string, index: number, entryId: string) {
+  const key = mealKey(day, index);
+  if (!state.mealPlan || state.mealPlan.eaten[key]) return;
+  set((s) => (s.mealPlan ? { mealPlan: { ...s.mealPlan, eaten: { ...s.mealPlan.eaten, [key]: entryId } } } : {}));
+  set((s) => ({ game: { ...s.game, claims: [...s.game.claims, { day, questId: `plan-meal:${key}`, xp: PLAN_MEAL_XP, tokens: 0, at: Date.now() }] } }));
+}
+
+function markWorkoutDone(day: string, entryId: string) {
+  if (!state.workoutPlan || state.workoutPlan.done[day]) return;
+  set((s) => (s.workoutPlan ? { workoutPlan: { ...s.workoutPlan, done: { ...s.workoutPlan.done, [day]: entryId } } } : {}));
+  set((s) => ({ game: { ...s.game, claims: [...s.game.claims, { day, questId: `plan-workout:${day}`, xp: PLAN_WORKOUT_XP, tokens: 0, at: Date.now() }] } }));
+  pushReward(PLAN_WORKOUT_XP, 0, 'WORKOUT PLAN DONE');
+  celebrate();
+}
+
+/** Ticks a logged meal or workout off today's plan when it matches. */
+function matchToPlans(entry: Entry, announce: boolean) {
+  const day = dayKey(entry.createdAt);
+  if (entry.kind === 'meal' && state.mealPlan) {
+    const d = state.mealPlan.days.find((x) => x.day === day);
+    if (!d) return;
+    const taken = new Set(d.meals.flatMap((_, i) => (state.mealPlan!.eaten[mealKey(day, i)] ? [i] : [])));
+    const i = matchMeal(entry, d.meals, taken);
+    if (i >= 0) {
+      markMealEaten(day, i, entry.id);
+      if (announce) pushReward(PLAN_MEAL_XP, 0, `PLAN: ${d.meals[i].when.toUpperCase()} ✓`);
+    }
+  } else if (entry.kind === 'exercise' && state.workoutPlan) {
+    const w = state.workoutPlan.days.find((x) => x.day === day);
+    // Any real session (10+ min) on a planned training day counts.
+    if (w && !w.rest && (entry.durationMin ?? 0) >= 10) markWorkoutDone(day, entry.id);
+  }
+}
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
@@ -316,7 +367,7 @@ export const actions = {
     const { apiKey, coachVoice } = state.settings;
     return speak(id, text, { apiKey, voice: coachVoice });
   },
-  addEntry(e: Omit<Entry, 'id' | 'createdAt'> & { createdAt?: number }) {
+  addEntry(e: Omit<Entry, 'id' | 'createdAt'> & { createdAt?: number }, opts: { skipPlanMatch?: boolean } = {}) {
     const entry: Entry = { ...e, id: uid(), createdAt: e.createdAt ?? Date.now() };
     const before = logXp(state.entries);
     set((s) => ({ entries: [entry, ...s.entries].sort((a, b) => b.createdAt - a.createdAt) }));
@@ -325,6 +376,7 @@ export const actions = {
     actions.refreshReminder();
     // The latest weigh-in keeps the profile weight current so calorie math follows; a back-dated one doesn't.
     if (entry.kind === 'weight' && entry.weightKg && latestWeight(state.entries)?.id === entry.id) actions.updateProfile({ weightKg: entry.weightKg });
+    if (!opts.skipPlanMatch) matchToPlans(entry, true);
     return entry;
   },
   removeEntry(id: string) {
@@ -472,11 +524,64 @@ export const actions = {
     if (p) deleteJournalPhoto(p.path);
     set((s) => ({ photos: s.photos.filter((x) => x.id !== id) }));
   },
-  async generateMealPlan(span: 'today' | '3days', prefs: string) {
+  async generateMealPlan(span: MealSpan, prefs: string, auto = false) {
     const s = state;
     const plan = await makeMealPlan({ apiKey: s.settings.apiKey, model: s.settings.model, profile: s.profile, entries: s.entries, span, prefs });
-    set({ mealPlan: { plan, span, at: Date.now(), checked: [], logged: [] } });
+    const keys = nextDays(spanDays(span));
+    const days = plan.days.slice(0, keys.length).map((d, i) => ({ day: keys[i], meals: d.meals }));
+    set({ mealPlan: { days, grocery: plan.grocery, summary: plan.summary, checked: [], eaten: {}, auto, at: Date.now() } });
+    // Meals already logged today count toward the new plan.
+    state.entries.filter((e) => e.kind === 'meal' && dayKey(e.createdAt) === keys[0]).reverse().forEach((e) => matchToPlans(e, false));
     return plan;
+  },
+  async generateWorkoutPlan(span: WorkoutSpan, prefs: string, auto = false) {
+    const s = state;
+    const n = spanDays(span);
+    const plan = await makeWorkoutPlan({ apiKey: s.settings.apiKey, model: s.settings.model, profile: s.profile, entries: s.entries, days: n, prefs });
+    const keys = nextDays(n);
+    const days = plan.days.slice(0, keys.length).map((d, i) => ({ ...d, day: keys[i] }));
+    set({ workoutPlan: { days, summary: plan.summary, done: {}, auto, at: Date.now() } });
+    state.entries.filter((e) => e.kind === 'exercise' && dayKey(e.createdAt) === keys[0]).forEach((e) => matchToPlans(e, false));
+    return plan;
+  },
+  clearMealPlan() {
+    set({ mealPlan: undefined });
+  },
+  clearWorkoutPlan() {
+    set({ workoutPlan: undefined });
+  },
+  setAutoPlans(on: boolean) {
+    set((s) => ({ settings: { ...s.settings, autoPlans: on } }));
+    if (on) actions.ensurePlans();
+  },
+  /**
+   * Once a day: finished days are scored against what was logged and dropped from the plans, then
+   * today's meal and workout plans are generated if none cover today (unless auto-plans is off).
+   */
+  async ensurePlans() {
+    if (planning) return;
+    planning = true;
+    try {
+      const today = dayKey(Date.now());
+      const { mealPlan, workoutPlan } = state;
+      const pastDays = new Set([...(mealPlan?.days ?? []), ...(workoutPlan?.days ?? [])].map((d) => d.day).filter((d) => d < today));
+      if (pastDays.size) {
+        const history = { ...state.planHistory };
+        for (const d of pastDays) {
+          const r = resultFor(d, mealPlan, workoutPlan);
+          if (r) history[d] = r;
+        }
+        const meals = mealPlan && { ...mealPlan, days: mealPlan.days.filter((d) => d.day >= today) };
+        const workouts = workoutPlan && { ...workoutPlan, days: workoutPlan.days.filter((d) => d.day >= today) };
+        set({ planHistory: history, mealPlan: meals?.days.length ? meals : undefined, workoutPlan: workouts?.days.length ? workouts : undefined });
+      }
+      const { settings } = state;
+      if (!settings.apiKey || settings.autoPlans === false || !state.onboarded) return;
+      if (!state.mealPlan?.days.some((d) => d.day === today)) await actions.generateMealPlan('today', '', true).catch((e) => console.warn('[plans] meal', e));
+      if (!state.workoutPlan?.days.some((d) => d.day === today)) await actions.generateWorkoutPlan('today', '', true).catch((e) => console.warn('[plans] workout', e));
+    } finally {
+      planning = false;
+    }
   },
   toggleGrocery(item: string) {
     set((s) => {
@@ -485,10 +590,25 @@ export const actions = {
       return { mealPlan: { ...s.mealPlan, checked } };
     });
   },
-  /** Logs a planned meal as eaten now, with its planned nutrition. */
-  logPlannedMeal(key: string, m: { name: string; emoji: string; calories: number; protein: number; carbs: number; fat: number }) {
-    actions.addEntry({ kind: 'meal', title: m.name, emoji: m.emoji, nutrition: { calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat }, source: 'quick', note: 'From your meal plan' });
-    set((s) => (s.mealPlan ? { mealPlan: { ...s.mealPlan, logged: [...s.mealPlan.logged, key] } } : {}));
+  /** Logs a planned meal as eaten now, with its planned nutrition, and ticks it off the plan. */
+  logPlannedMeal(day: string, index: number) {
+    const m = state.mealPlan?.days.find((d) => d.day === day)?.meals[index];
+    if (!m) return;
+    const entry = actions.addEntry(
+      { kind: 'meal', title: m.name, emoji: m.emoji, nutrition: { calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat }, source: 'quick', note: 'From your meal plan' },
+      { skipPlanMatch: true },
+    );
+    markMealEaten(day, index, entry.id);
+  },
+  /** Logs today's planned workout as done (its duration and estimated burn) and ticks it off. */
+  completeWorkout(day: string) {
+    const w = state.workoutPlan?.days.find((d) => d.day === day);
+    if (!w || w.rest || state.workoutPlan?.done[day]) return;
+    const entry = actions.addEntry(
+      { kind: 'exercise', title: w.title, emoji: w.emoji || '💪', durationMin: w.durationMin, caloriesBurned: w.estKcal, intensity: w.focus === 'HIIT' ? 'high' : 'moderate', source: 'quick', note: 'From your workout plan' },
+      { skipPlanMatch: true },
+    );
+    markWorkoutDone(day, entry.id);
   },
   /** Meals saved without calories (an incomplete Coach reply) get estimated in the background. */
   async repairMeals() {
@@ -528,7 +648,7 @@ export const actions = {
     set({ messages: [] });
   },
   resetAll() {
-    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [], unlocked: [], freezes: 0, frozenDays: [] }, photos: [], mealPlan: undefined, reward: null });
+    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [], unlocked: [], freezes: 0, frozenDays: [] }, photos: [], mealPlan: undefined, workoutPlan: undefined, planHistory: {}, reward: null });
   },
 
   async sendToCoach(input: CoachInput) {
