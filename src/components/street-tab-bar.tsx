@@ -8,7 +8,6 @@ import { C, Display } from '@/constants/theme';
 import { tap } from '@/lib/haptics';
 
 import { Icon, type IconName } from './icon';
-import { Hazard } from './underground';
 
 export const TABS: Record<string, { label: string; icon: IconName; color: string }> = {
   index: { label: 'HQ', icon: 'flame', color: C.orange },
@@ -39,7 +38,6 @@ export function StreetTabBar({ state, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   return (
     <View>
-      <Hazard height={9} />
       <LinearGradient colors={['#4A4F53', '#2C3034', '#1D2023']} style={[styles.bar, { paddingBottom: Math.max(insets.bottom - 6, 8) }]}>
         <View style={styles.inner}>
           {state.routes.map((route, i) => {
