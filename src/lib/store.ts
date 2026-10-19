@@ -3,11 +3,15 @@ import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
-import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, type Media, type PlanResult } from './gemini';
-import { deleteJournalPhoto, saveJournalPhoto } from './media';
+import { AiError, askCoach, DEFAULT_MODEL, DEFAULT_VOICE, makeMealPlan, type Media, type MealPlan, type PlanResult } from './gemini';
+import { deleteJournalPhoto, pickImage, saveJournalPhoto, saveProgressPhoto } from './media';
 import { celebrate } from './haptics';
+import { connectHealth, healthAvailable, pullHealth } from './health';
+import { cancelReminders, enableReminders, scheduleReminder } from './reminders';
 import { dayKey, macroTargets, recommendedTargets } from './nutrition';
-import { ARCADE_CLAIM, ARCADE_XP, gameById, isUnlocked, type GameId } from './arcade';
+import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, MAX_FREEZES, gameById, isUnlocked, type GameId } from './arcade';
+import { season, SEASON_BADGE_REWARD, SEASON_REWARD } from './seasons';
+import { isPersonaUnlocked, personaById, personaUnlockId, type PersonaId } from './personas';
 import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, type GameState } from './quests';
 import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
@@ -22,6 +26,10 @@ interface State {
   settings: Settings;
   thinking: boolean;
   game: GameState;
+  /** Private body-progress photos (paths relative to documents), oldest first. */
+  photos: { id: string; path: string; at: number; weightKg?: number }[];
+  /** Last AI meal plan and which grocery items are ticked; persisted. */
+  mealPlan?: { plan: MealPlan; span: 'today' | '3days'; at: number; checked: string[]; logged: string[] };
   /** Latest "+XP" pop-up; not persisted. */
   reward: Reward | null;
 }
@@ -58,6 +66,7 @@ let state: State = {
   settings: { apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '', model: DEFAULT_MODEL, voiceReplies: true, coachVoice: DEFAULT_VOICE },
   thinking: false,
   game: { claims: [], unlocked: [] },
+  photos: [],
   reward: null,
 };
 
@@ -75,7 +84,7 @@ function schedulePersist() {
   if (!state.ready) return;
   clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
-    const { onboarded, profile, entries, messages, settings, game } = state;
+    const { onboarded, profile, entries, messages, settings, game, mealPlan, photos } = state;
     const data = {
       onboarded,
       profile,
@@ -85,7 +94,11 @@ function schedulePersist() {
       model: settings.model,
       voiceReplies: settings.voiceReplies,
       coachVoice: settings.coachVoice,
+      reminderHour: settings.reminderHour,
+      health: settings.health,
       game,
+      mealPlan,
+      photos,
     };
     AsyncStorage.setItem(DATA_KEY, JSON.stringify(data)).catch(() => {});
   }, 250);
@@ -112,8 +125,12 @@ export async function hydrate() {
         model: data.model || DEFAULT_MODEL,
         voiceReplies: data.voiceReplies ?? true,
         coachVoice: data.coachVoice || DEFAULT_VOICE,
+        reminderHour: data.reminderHour,
+        health: data.health,
       },
-      game: { claims: data.game?.claims ?? [], unlocked: data.game?.unlocked ?? [], wall: data.game?.wall },
+      mealPlan: data.mealPlan,
+      photos: data.photos ?? [],
+      game: { claims: data.game?.claims ?? [], unlocked: data.game?.unlocked ?? [], wall: data.game?.wall, freezes: data.game?.freezes ?? 0, frozenDays: data.game?.frozenDays ?? [] },
     };
   } catch {
     // corrupt storage: start fresh rather than crash
@@ -180,8 +197,8 @@ const latestWeight = (entries: Entry[]) => entries.find((e) => e.kind === 'weigh
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 // Logs that land together (one Coach reply can add several) share one pop-up.
-function pushReward(xp: number, tokens: number, label: string) {
-  if (xp <= 0 && tokens <= 0) return;
+function pushReward(xp: number, tokens: number, label: string, always = false) {
+  if (xp <= 0 && tokens <= 0 && !always) return;
   const prev = state.reward;
   const now = Date.now();
   if (prev && now - prev.at < 1500 && prev.label === label) {
@@ -210,6 +227,63 @@ export const actions = {
     set((s) => ({ settings: { ...s.settings, voiceReplies } }));
     if (!voiceReplies) stopSpeaking();
   },
+  /** Switches coach personality and its matching voice (unless the offline voice is chosen). Buys it with tokens if needed. */
+  choosePersona(id: PersonaId) {
+    const p = personaById(id);
+    const { game } = state;
+    if (!isPersonaUnlocked(id, game.unlocked)) {
+      if (tokenBalance(game) < p.price) return false;
+      set((s) => ({ game: { ...s.game, unlocked: [...s.game.unlocked, personaUnlockId(id)] } }));
+      celebrate();
+    }
+    actions.updateProfile({ persona: id });
+    if (state.settings.coachVoice !== 'device') actions.setCoachVoice(p.voice);
+    actions.speakMessage('voice-preview', p.sample);
+    return true;
+  },
+  /** Turns the evening streak reminder on at `hour`, or off with undefined. Asks for permission first. */
+  async setReminder(hour: number | undefined) {
+    if (hour == null) {
+      set((s) => ({ settings: { ...s.settings, reminderHour: undefined } }));
+      await cancelReminders();
+      return true;
+    }
+    if (!(await enableReminders())) return false;
+    set((s) => ({ settings: { ...s.settings, reminderHour: hour } }));
+    await actions.refreshReminder();
+    return true;
+  },
+  refreshReminder() {
+    const { settings, entries, game } = state;
+    if (settings.reminderHour == null) return Promise.resolve();
+    return scheduleReminder(entries, settings.reminderHour, game.frozenDays).catch(() => {});
+  },
+  /** Turns Apple Health sync on (asking permission) and pulls the last 7 days. */
+  async connectHealth() {
+    if (!(await connectHealth())) return false;
+    set((s) => ({ settings: { ...s.settings, health: { on: true, lastSync: s.settings.health?.lastSync } } }));
+    await actions.syncHealth();
+    return true;
+  },
+  disconnectHealth() {
+    set((s) => ({ settings: { ...s.settings, health: { on: false, lastSync: s.settings.health?.lastSync } } }));
+  },
+  /** Imports new Health workouts, weigh-ins and sleep since the last sync (first sync: 7 days). Returns how many. */
+  async syncHealth() {
+    const h = state.settings.health;
+    if (!h?.on || !healthAvailable()) return 0;
+    const since = new Date(h.lastSync ? h.lastSync - 6 * 3600_000 : Date.now() - 7 * 86400_000);
+    const known = new Set(state.entries.flatMap((e) => (e.healthId ? [e.healthId] : [])));
+    try {
+      const fresh = await pullHealth(since, known);
+      fresh.sort((a, b) => a.createdAt - b.createdAt).forEach((e) => actions.addEntry(e));
+      set((s) => ({ settings: { ...s.settings, health: { on: true, lastSync: Date.now() } } }));
+      return fresh.length;
+    } catch (err) {
+      console.warn('[health] sync failed', err);
+      return 0;
+    }
+  },
   setCoachVoice(coachVoice: string) {
     set((s) => ({ settings: { ...s.settings, coachVoice } }));
   },
@@ -222,6 +296,8 @@ export const actions = {
     const before = logXp(state.entries);
     set((s) => ({ entries: [entry, ...s.entries].sort((a, b) => b.createdAt - a.createdAt) }));
     pushReward(logXp(state.entries) - before, 0, 'LOGGED');
+    // Today's logged now, so tonight's reminder moves to tomorrow.
+    actions.refreshReminder();
     // The latest weigh-in keeps the profile weight current so calorie math follows; a back-dated one doesn't.
     if (entry.kind === 'weight' && entry.weightKg && latestWeight(state.entries)?.id === entry.id) actions.updateProfile({ weightKg: entry.weightKg });
     return entry;
@@ -311,6 +387,84 @@ export const actions = {
     pushReward(ARCADE_XP, 0, 'CHILLED OUT');
     celebrate();
   },
+  /** Claims a finished season challenge; the last one also pays the season badge. */
+  claimSeason(challengeId: string) {
+    const s = season(state.entries, state.profile, state.game.claims);
+    const c = s.challenges.find((x) => x.id === challengeId);
+    if (!c || !c.done || c.claimed) return;
+    const now = Date.now();
+    const day = `${s.month}-01`;
+    const claims: Claim[] = [{ day, questId: `season:${s.month}:${c.id}`, ...SEASON_REWARD, at: now }];
+    const allDone = s.challenges.every((x) => x.claimed || x.id === c.id);
+    if (allDone && !s.badge) claims.push({ day, questId: `season:${s.month}:badge`, ...SEASON_BADGE_REWARD, at: now });
+    set((st) => ({ game: { ...st.game, claims: [...st.game.claims, ...claims] } }));
+    pushReward(
+      claims.reduce((n, x) => n + x.xp, 0),
+      claims.reduce((n, x) => n + x.tokens, 0),
+      allDone ? `${s.theme.emoji} SEASON BADGE` : c.title.toUpperCase(),
+    );
+    celebrate();
+  },
+  /** Buys one streak freeze with tokens (hold at most MAX_FREEZES). */
+  buyFreeze() {
+    const { game } = state;
+    if ((game.freezes ?? 0) >= MAX_FREEZES || tokenBalance(game) < FREEZE_PRICE) return false;
+    set((s) => ({ game: { ...s.game, freezes: (s.game.freezes ?? 0) + 1, unlocked: [...s.game.unlocked, `freeze:${Date.now()}`] } }));
+    celebrate();
+    return true;
+  },
+  /**
+   * Spends owned freezes on days missed since the last log, so a streak survives a skipped day.
+   * Runs on launch and when the day changes. Only gaps ending yesterday are covered, never today.
+   */
+  applyStreakFreezes() {
+    const { game, entries } = state;
+    let freezes = game.freezes ?? 0;
+    if (!freezes || !entries.length) return;
+    const logged = new Set([...entries.map((e) => dayKey(e.createdAt)), ...(game.frozenDays ?? [])]);
+    const gap: string[] = [];
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    while (!logged.has(dayKey(d)) && gap.length < 7) {
+      gap.push(dayKey(d));
+      d.setDate(d.getDate() - 1);
+    }
+    // Only worth it if there's a streak to save behind the gap and enough freezes to bridge it.
+    if (!gap.length || !logged.has(dayKey(d)) || gap.length > freezes) return;
+    freezes -= gap.length;
+    set((s) => ({ game: { ...s.game, freezes, frozenDays: [...(s.game.frozenDays ?? []), ...gap] } }));
+    pushReward(0, 0, `🧊 STREAK SAVED · ${gap.length} FREEZE${gap.length > 1 ? 'S' : ''} USED`, true);
+  },
+  async addProgressPhoto(from: 'camera' | 'library') {
+    const img = await pickImage(from);
+    if (!img) return;
+    const id = uid();
+    const path = await saveProgressPhoto(img.uri, id);
+    set((s) => ({ photos: [...s.photos, { id, path, at: Date.now(), weightKg: s.profile.weightKg }].sort((a, b) => a.at - b.at) }));
+  },
+  removeProgressPhoto(id: string) {
+    const p = state.photos.find((x) => x.id === id);
+    if (p) deleteJournalPhoto(p.path);
+    set((s) => ({ photos: s.photos.filter((x) => x.id !== id) }));
+  },
+  async generateMealPlan(span: 'today' | '3days', prefs: string) {
+    const s = state;
+    const plan = await makeMealPlan({ apiKey: s.settings.apiKey, model: s.settings.model, profile: s.profile, entries: s.entries, span, prefs });
+    set({ mealPlan: { plan, span, at: Date.now(), checked: [], logged: [] } });
+    return plan;
+  },
+  toggleGrocery(item: string) {
+    set((s) => {
+      if (!s.mealPlan) return {};
+      const checked = s.mealPlan.checked.includes(item) ? s.mealPlan.checked.filter((x) => x !== item) : [...s.mealPlan.checked, item];
+      return { mealPlan: { ...s.mealPlan, checked } };
+    });
+  },
+  /** Logs a planned meal as eaten now, with its planned nutrition. */
+  logPlannedMeal(key: string, m: { name: string; emoji: string; calories: number; protein: number; carbs: number; fat: number }) {
+    actions.addEntry({ kind: 'meal', title: m.name, emoji: m.emoji, nutrition: { calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat }, source: 'quick', note: 'From your meal plan' });
+    set((s) => (s.mealPlan ? { mealPlan: { ...s.mealPlan, logged: [...s.mealPlan.logged, key] } } : {}));
+  },
   /** Picks a rank wall as the app background; undefined goes back to following the current rank. */
   setWall(level: number | undefined) {
     set((s) => ({ game: { ...s.game, wall: level } }));
@@ -334,7 +488,7 @@ export const actions = {
     set({ messages: [] });
   },
   resetAll() {
-    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [], unlocked: [] }, reward: null });
+    set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [], unlocked: [], freezes: 0, frozenDays: [] }, photos: [], mealPlan: undefined, reward: null });
   },
 
   async sendToCoach(input: CoachInput) {

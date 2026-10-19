@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-native-svg';
 
@@ -65,6 +66,14 @@ export function WeightCard({ weighIns, profile }: { weighIns: Entry[]; profile: 
       ) : null}
 
       {weighIns.length > 0 && <WeighInList weighIns={weighIns} fmt={fmt} unit={unit} />}
+
+      <Pressable onPress={() => router.push('/progress-photos')} style={styles.photos} accessibilityRole="button">
+        <Icon name="camera" size={14} color={C.violet} />
+        <T size={12} rounded color={C.violet} style={{ flex: 1 }}>
+          PROGRESS PHOTOS · BEFORE & NOW
+        </T>
+        <Icon name="chevron" size={12} color={C.violet} />
+      </Pressable>
 
       <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
         {points.length < 2
@@ -190,6 +199,7 @@ const styles = StyleSheet.create({
   big: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   side: { gap: 6, alignItems: 'flex-end', justifyContent: 'center' },
   stat: { alignItems: 'flex-end' },
+  photos: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderRadius: 8, borderWidth: 2, borderColor: C.violet + '66', backgroundColor: '#1D1A2A' },
   list: { gap: 6, paddingTop: 4, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   arrow: { width: 30, height: 28, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: C.surfaceHi, borderWidth: 2, borderColor: C.ink },

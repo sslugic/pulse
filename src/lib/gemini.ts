@@ -2,6 +2,8 @@
 import { fetch as streamingFetch } from 'expo/fetch';
 
 import type { ChatMessage, Entry, Goal, Pace, Profile, Targets } from './types';
+import { personaById } from './personas';
+import type { RecapCaptions } from './recap';
 import { SCENE_NAMES } from './scene';
 import { dayKey, GOAL_INFO, recommendedTargets, summarize, targets as currentTargets } from './nutrition';
 import { dayWellbeing, wellbeingDigest } from './wellbeing';
@@ -150,7 +152,8 @@ ${recent || '(none)'}`;
 }
 
 function systemPrompt(profile: Profile, entries: Entry[]) {
-  return `You are Pulse, an upbeat, knowledgeable AI fitness and nutrition coach inside a mobile app. Your replies are shown in a chat and read out loud, so write the way a good coach talks.
+  const persona = personaById(profile.persona);
+  return `You are ${persona.name}, an AI fitness and nutrition coach inside a mobile app. Your personality: ${persona.style} Stay fully in character in every reply. Your replies are shown in a chat and read out loud, so write the way this coach talks.
 The user logs by talking, typing, or sending photos, and also asks you questions. Your job: turn whatever they log into structured log entries with realistic estimates, and answer their fitness questions like a real coach who knows their numbers.
 
 ${userContext(profile, entries)}
@@ -471,7 +474,7 @@ export async function dailyInsight(opts: { apiKey: string; model: string; profil
       systemInstruction: {
         parts: [
           {
-            text: `You are Pulse, a friendly fitness coach. Write one motivating, specific insight about the user's day so far in under 22 words, using their numbers. Use ${profile.units} units. No greetings.\n\n${userContext(profile, entries)}`,
+            text: `You are ${personaById(profile.persona).name}, a fitness coach whose personality is ${personaById(profile.persona).style} Write one motivating, specific insight about the user's day so far in under 22 words, using their numbers. Use ${profile.units} units. No greetings.\n\n${userContext(profile, entries)}`,
           },
         ],
       },
@@ -588,4 +591,133 @@ export async function synthesizeSpeech(opts: { apiKey: string; text: string; voi
   }
   ttsModel = 0; // try again from the top next time, e.g. after the key changes
   throw new AiError('No Gemini speech model is available for this key.', false);
+}
+
+/** Comic-book captions for the weekly recap, in the user's coach persona voice. */
+export async function weeklyRecapCaptions(opts: { apiKey: string; model: string; profile: Profile; digest: string }): Promise<RecapCaptions> {
+  const { apiKey, model, profile, digest } = opts;
+  const persona = personaById(profile.persona);
+  const raw = await generate(
+    apiKey,
+    model,
+    {
+      systemInstruction: {
+        parts: [
+          {
+            text: `You are ${persona.name}, a fitness coach whose personality is ${persona.style}
+You are writing captions for a comic-book page that recaps the user's last 7 days. Goal: ${GOAL_INFO[profile.goal].label}. Use ${profile.units} units.
+THE WEEK:
+${digest}
+Write: title (3-6 words, ALL CAPS, comic headline), training, fuel, mind (one punchy caption each, max 16 words, citing their numbers), verdict (max 22 words: honest, encouraging, one thing to do next week). Stay in character. If a part has no data, say so playfully.`,
+          },
+        ],
+      },
+      contents: [{ role: 'user', parts: [{ text: 'Recap my week.' }] }],
+      generationConfig: {
+        temperature: 0.8,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: { title: { type: 'STRING' }, training: { type: 'STRING' }, fuel: { type: 'STRING' }, mind: { type: 'STRING' }, verdict: { type: 'STRING' } },
+          required: ['title', 'training', 'fuel', 'mind', 'verdict'],
+        },
+      },
+    },
+    30_000,
+  );
+  const j = JSON.parse(raw);
+  return { title: String(j.title ?? ''), training: String(j.training ?? ''), fuel: String(j.fuel ?? ''), mind: String(j.mind ?? ''), verdict: String(j.verdict ?? '') };
+}
+
+export interface PlannedMeal {
+  name: string;
+  when: string; // "Breakfast", "Lunch", "Snack", "Dinner"
+  emoji: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  ingredients: string[];
+  steps: string;
+}
+export interface MealPlan {
+  summary: string;
+  days: { label: string; meals: PlannedMeal[] }[];
+  grocery: { item: string; qty: string; aisle: string }[];
+}
+
+/** A meal plan that fits what's left today ("today") or the full targets for 3 days, plus a grocery list. */
+export async function makeMealPlan(opts: { apiKey: string; model: string; profile: Profile; entries: Entry[]; span: 'today' | '3days'; prefs: string }): Promise<MealPlan> {
+  const { apiKey, model, profile, entries, span, prefs } = opts;
+  const persona = personaById(profile.persona);
+  const raw = await generate(
+    apiKey,
+    model,
+    {
+      systemInstruction: {
+        parts: [
+          {
+            text: `You are ${persona.name}, a fitness coach and practical nutritionist. Personality: ${persona.style}
+${userContext(profile, entries)}
+Build a meal plan. ${
+              span === 'today'
+                ? 'Plan only the REST OF TODAY: meals that together fit the REMAINING calories and protein above (skip meals already eaten given the time of day; at least one meal).'
+                : 'Plan the next 3 days ("Day 1", "Day 2", "Day 3"), each day hitting the daily calorie and macro targets within ~5%.'
+            }
+Use simple, realistic home cooking with common supermarket ingredients; reuse ingredients across meals to keep the grocery list short. Per meal: name, when (Breakfast/Lunch/Snack/Dinner), one emoji, calories, protein, carbs, fat (grams), ingredients with amounts, steps (1-2 short sentences).
+grocery: a combined shopping list for all meals with quantity and aisle (Produce, Meat & Fish, Dairy & Eggs, Pantry, Bakery, Frozen, Other).
+summary: one or two sentences in character on why this plan works for their goal (${GOAL_INFO[profile.goal].label}).
+Use ${profile.units} units for ingredient amounts.${prefs.trim() ? `\nUSER PREFERENCES (must follow): ${prefs.trim()}` : ''}`,
+          },
+        ],
+      },
+      contents: [{ role: 'user', parts: [{ text: span === 'today' ? 'Plan the rest of my day.' : 'Plan my next 3 days.' }] }],
+      generationConfig: {
+        temperature: 0.7,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            summary: { type: 'STRING' },
+            days: {
+              type: 'ARRAY',
+              items: {
+                type: 'OBJECT',
+                properties: {
+                  label: { type: 'STRING' },
+                  meals: {
+                    type: 'ARRAY',
+                    items: {
+                      type: 'OBJECT',
+                      properties: {
+                        name: { type: 'STRING' },
+                        when: { type: 'STRING' },
+                        emoji: { type: 'STRING' },
+                        calories: { type: 'NUMBER' },
+                        protein: { type: 'NUMBER' },
+                        carbs: { type: 'NUMBER' },
+                        fat: { type: 'NUMBER' },
+                        ingredients: { type: 'ARRAY', items: { type: 'STRING' } },
+                        steps: { type: 'STRING' },
+                      },
+                      required: ['name', 'when', 'emoji', 'calories', 'protein', 'carbs', 'fat', 'ingredients', 'steps'],
+                    },
+                  },
+                },
+                required: ['label', 'meals'],
+              },
+            },
+            grocery: {
+              type: 'ARRAY',
+              items: { type: 'OBJECT', properties: { item: { type: 'STRING' }, qty: { type: 'STRING' }, aisle: { type: 'STRING' } }, required: ['item', 'qty', 'aisle'] },
+            },
+          },
+          required: ['summary', 'days', 'grocery'],
+        },
+      },
+    },
+    60_000,
+  );
+  const j = JSON.parse(raw) as MealPlan;
+  return { summary: j.summary ?? '', days: j.days ?? [], grocery: j.grocery ?? [] };
 }

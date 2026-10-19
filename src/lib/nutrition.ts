@@ -113,8 +113,9 @@ export function lastNDays(n: number, from = new Date()) {
   return out;
 }
 
-export function streak(entries: Entry[]) {
-  const days = new Set(entries.map((e) => dayKey(e.createdAt)));
+/** Consecutive logged days up to today (or yesterday). Days covered by a streak freeze count as logged. */
+export function streak(entries: Entry[], frozen: string[] = []) {
+  const days = new Set([...entries.map((e) => dayKey(e.createdAt)), ...frozen]);
   let n = 0;
   const d = new Date();
   if (!days.has(dayKey(d))) d.setDate(d.getDate() - 1); // today not logged yet doesn't break it

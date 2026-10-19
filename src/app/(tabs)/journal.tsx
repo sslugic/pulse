@@ -60,6 +60,19 @@ export default function JournalScreen() {
           </View>
         </View>
 
+        <Pressable onPress={() => router.push('/recap')} style={({ pressed }) => [styles.recap, pressed && { transform: [{ translateY: 2 }] }]} accessibilityRole="button">
+          <T size={20}>📰</T>
+          <View style={{ flex: 1 }}>
+            <T size={13} rounded color={C.ink}>
+              YOUR WEEKLY RECAP
+            </T>
+            <T size={11} color={C.ink}>
+              Your last 7 days as a comic page, ready to share
+            </T>
+          </View>
+          <Icon name="chevron" size={14} color={C.ink} />
+        </Pressable>
+
         <Pressable onPress={() => openCoach('voice')} style={({ pressed }) => [styles.prompt, pressed && { transform: [{ translateY: 2 }] }]} accessibilityRole="button">
           <Icon name="mic" size={18} color={C.pink} />
           <T size={13} rounded color={C.pink} style={{ flex: 1 }}>
@@ -189,6 +202,7 @@ function DayPage({ dayKey: k, todayKey, list, units }: { dayKey: string; todayKe
 const styles = StyleSheet.create({
   content: { paddingHorizontal: Space.md, gap: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
+  recap: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12, borderRadius: 10, backgroundColor: C.yellow, borderWidth: 2, borderColor: C.ink, borderBottomWidth: 4 },
   prompt: {
     flexDirection: 'row',
     alignItems: 'center',

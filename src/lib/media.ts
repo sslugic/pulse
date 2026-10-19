@@ -82,6 +82,16 @@ export async function saveJournalPhoto(uri: string, id: string): Promise<string>
   return name;
 }
 
+/** Progress photos live in documents/progress and never leave the device. */
+export async function saveProgressPhoto(uri: string, id: string): Promise<string> {
+  if (Platform.OS === 'web') return uri;
+  const dir = new Directory(Paths.document, 'progress');
+  if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
+  const name = `progress/${id}.jpg`;
+  await new File(uri).copy(new File(Paths.document, name));
+  return name;
+}
+
 export function journalPhotoUri(photo: string) {
   if (Platform.OS === 'web' || /^[a-z]+:/i.test(photo)) return photo;
   return new File(Paths.document, photo).uri;

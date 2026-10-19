@@ -19,8 +19,10 @@ import { dailyInsight } from '@/lib/gemini';
 import { dayKey, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
 import { questXp, tokenBalance } from '@/lib/quests';
 import { crewRank, weekDots } from '@/lib/rank';
-import { getState, useStore } from '@/lib/store';
+import { actions, getState, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
+import { useSteps } from '@/lib/health';
+import { season } from '@/lib/seasons';
 import { dayWellbeing } from '@/lib/wellbeing';
 
 function greeting() {
@@ -40,10 +42,11 @@ export default function Today() {
   const today = useMemo(() => summarize(entries, todayKey), [entries, todayKey]);
   const targets = useMemo(() => macroTargets(profile), [profile]);
   const todays = useMemo(() => entries.filter((e) => dayKey(e.createdAt) === today.key), [entries, today.key]);
-  const days = useMemo(() => streak(entries), [entries]);
-  const crew = useMemo(() => crewRank(entries, questXp(claims)), [entries, claims]);
+  const days = useMemo(() => streak(entries, game.frozenDays), [entries, game.frozenDays]);
+  const crew = useMemo(() => crewRank(entries, questXp(claims), game.frozenDays), [entries, claims, game.frozenDays]);
   const tokens = useMemo(() => tokenBalance(game), [game]);
   const mind = useMemo(() => dayWellbeing(entries, todayKey), [entries, todayKey]);
+  const seasonNow = useMemo(() => season(entries, profile, claims, new Date(todayKey + 'T12:00')), [entries, profile, claims, todayKey]);
   const week = useMemo(() => weekDots(entries, new Date(todayKey + 'T12:00')), [entries, todayKey]);
   // Last 7 days for the subway track: nothing logged, logged, or on calorie target (net within 12%).
   const track = useMemo(
@@ -61,6 +64,12 @@ export default function Today() {
   const remaining = budget - today.eaten;
 
   const insight = useInsight(todays.length);
+  // A new day may have opened a gap in the streak; owned freezes cover it. Health catches up too.
+  useEffect(() => {
+    actions.applyStreakFreezes();
+    actions.syncHealth();
+  }, [todayKey]);
+  const steps = useSteps(!!settings.health?.on);
 
   const openDay = (key: string) => {
     tap();
@@ -107,6 +116,13 @@ export default function Today() {
             <Comic size={10} color={C.text}>
               STREAK
             </Comic>
+            {!!game.freezes && (
+              <View style={styles.freeze}>
+                <T size={10} rounded color={C.ink}>
+                  🧊×{game.freezes}
+                </T>
+              </View>
+            )}
           </View>
           <View style={styles.week}>
             {week.map((d, i) => (
@@ -124,6 +140,28 @@ export default function Today() {
 
         {/* Daily quests */}
         <QuestsCard todayKey={todayKey} />
+
+        {/* This month's season */}
+        <Pressable onPress={() => router.push('/season')} accessibilityRole="button">
+          <Card style={{ gap: 6, marginTop: Space.sm }} accent={seasonNow.theme.color + '99'}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <T size={26}>{seasonNow.theme.emoji}</T>
+              <View style={{ flex: 1 }}>
+                <T size={10} rounded color={C.textMute}>
+                  SEASON · {seasonNow.daysLeft} DAYS LEFT
+                </T>
+                <Comic size={20} color={seasonNow.theme.color}>
+                  {seasonNow.theme.name}
+                </Comic>
+              </View>
+              <T size={13} rounded color={C.text}>
+                {seasonNow.cleared}/5
+              </T>
+              <Icon name="chevron" size={14} color={C.textMute} />
+            </View>
+            <Bar value={seasonNow.challenges.reduce((n, c) => n + c.value / c.goal, 0)} max={5} color={seasonNow.theme.color} height={6} />
+          </Card>
+        </Pressable>
 
         {/* Stat plates */}
         <View style={styles.twoCol}>
@@ -152,6 +190,7 @@ export default function Today() {
               <Pulseline />
             </View>
             <T size={11} color={C.textMute} weight="700">
+              {steps != null ? `${steps.toLocaleString()} STEPS · ` : ''}
               {today.activeMin} MIN · {today.workouts} WORKOUT{today.workouts === 1 ? '' : 'S'}
             </T>
           </Card>
@@ -173,6 +212,20 @@ export default function Today() {
           <Macro label="Protein" value={today.protein} target={targets.protein} color={C.protein} />
           <Macro label="Carbs" value={today.carbs} target={targets.carbs} color={C.carbs} />
           <Macro label="Fat" value={today.fat} target={targets.fat} color={C.fat} />
+          <View style={styles.fuelActions}>
+            <Pressable onPress={() => router.push('/meal-plan')} style={styles.fuelBtn} accessibilityRole="button">
+              <Icon name="fork" size={14} color={C.orange} />
+              <T size={12} rounded color={C.orange}>
+                MEAL PLAN
+              </T>
+            </Pressable>
+            <Pressable onPress={() => router.push('/scan')} style={styles.fuelBtn} accessibilityRole="button">
+              <Icon name="viewfinder" size={14} color={C.cyan} />
+              <T size={12} rounded color={C.cyan}>
+                SCAN BARCODE
+              </T>
+            </Pressable>
+          </View>
         </Card>
 
         {/* Weekly subway track */}
@@ -356,6 +409,9 @@ const styles = StyleSheet.create({
   },
   cells: { flexDirection: 'row', gap: 3, padding: 3, backgroundColor: '#0B0C0D', borderRadius: 4 },
   cell: { width: 11, height: 18, borderRadius: 2 },
+  fuelActions: { flexDirection: 'row', gap: 8, marginTop: 2 },
+  fuelBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 8, backgroundColor: '#1D2023', borderWidth: 2, borderColor: C.ink, borderBottomWidth: 4 },
+  freeze: { position: 'absolute', bottom: -6, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, backgroundColor: C.cyan, borderWidth: 2, borderColor: C.ink },
   streakRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   streakBadge: {
     width: 76,

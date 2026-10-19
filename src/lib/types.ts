@@ -37,6 +37,7 @@ export interface Entry {
   summary?: string; // the journal note in the user's words, lightly cleaned up
   photo?: string; // journal photo, path relative to the documents directory
   scene?: string[]; // journal: elements to illustrate the moment, from SCENE_NAMES
+  healthId?: string; // set when imported from Apple Health, so syncs don't duplicate
   note?: string;
   confidence?: number; // 0..1 from the AI
   source: 'text' | 'voice' | 'photo' | 'quick';
@@ -70,6 +71,8 @@ export interface Profile {
   custom?: Partial<Targets>;
   /** Short AI rationale for the current plan. */
   planNote?: string;
+  /** Coach personality; see lib/personas. */
+  persona?: string;
 }
 
 export interface ChatMessage {
@@ -93,4 +96,8 @@ export interface Settings {
   voiceReplies: boolean;
   /** Gemini voice name for the Coach, or 'device' for the built-in offline voice. */
   coachVoice: string;
+  /** Hour (0-23) for the evening streak reminder; undefined = reminders off. */
+  reminderHour?: number;
+  /** Apple Health sync on, and when it last pulled. */
+  health?: { on: boolean; lastSync?: number };
 }

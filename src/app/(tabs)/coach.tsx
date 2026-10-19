@@ -15,6 +15,7 @@ import { Chip, T, tap } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { audioMime, pickImage, readBase64, VOICE_PRESET } from '@/lib/media';
+import { personaById } from '@/lib/personas';
 import { actions, useStore } from '@/lib/store';
 import type { ChatMessage, Entry } from '@/lib/types';
 import { stopSpeaking, useSpeakingId } from '@/lib/voice';
@@ -40,6 +41,7 @@ const SUGGESTIONS = [
 const MAX_RECORDING_S = 90;
 
 export default function Coach() {
+  const persona = personaById(useStore((s) => s.profile.persona));
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ mode?: string; t?: string }>();
   const messages = useStore((s) => s.messages);
@@ -165,9 +167,9 @@ export default function Coach() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Backdrop />
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TagAvatar size={48} band={C.violet} online={!thinking} letter="C" />
+        <TagAvatar size={48} band={C.violet} online={!thinking} letter={persona.name[0]} />
         <View style={{ flex: 1 }}>
-          <Comic size={30}>COACH</Comic>
+          <Comic size={30}>{`${persona.name.toUpperCase()} ${persona.emoji}`}</Comic>
           <T size={12} rounded color={thinking ? C.lime : C.textDim}>
             {thinking ? 'ANALYZING…' : speakingId ? 'TALKING…' : 'LOG IT OR ASK ME ANYTHING.'}
           </T>

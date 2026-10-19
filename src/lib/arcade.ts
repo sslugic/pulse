@@ -1,6 +1,8 @@
 import type { IconName } from '@/components/icon';
 import { C } from '@/constants/theme';
 
+import { personaPrice } from './personas';
+
 // Stress Arcade: one-minute games bought once with quest tokens.
 
 export type GameId = 'breathe' | 'fidget' | 'bubbles' | 'shredder' | 'memory' | 'spray';
@@ -32,4 +34,9 @@ export const gameById = (id: string) => GAMES.find((g) => g.id === id);
 
 export const isUnlocked = (id: GameId, unlocked: string[]) => (gameById(id)?.price ?? 0) === 0 || unlocked.includes(id);
 
-export const spentTokens = (unlocked: string[]) => unlocked.reduce((n, id) => n + (gameById(id)?.price ?? 0), 0);
+/** Streak freezes are bought with tokens; each purchase is logged in `unlocked` as freeze:<time>. */
+export const FREEZE_PRICE = 20;
+export const MAX_FREEZES = 2;
+
+const priceOf = (id: string) => gameById(id)?.price ?? personaPrice(id) ?? (id.startsWith('freeze:') ? FREEZE_PRICE : 0);
+export const spentTokens = (unlocked: string[]) => unlocked.reduce((n, id) => n + priceOf(id), 0);

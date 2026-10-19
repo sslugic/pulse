@@ -135,6 +135,10 @@ export interface GameState {
   unlocked: string[];
   /** Rank wall the player picked (1-based level); unset follows their current rank. */
   wall?: number;
+  /** Streak freezes owned (max 2). */
+  freezes?: number;
+  /** Days a freeze covered, so the streak survives them. */
+  frozenDays?: string[];
 }
 
 // Clamped so a later price change can never leave a negative balance.
