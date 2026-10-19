@@ -1,9 +1,11 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Line, Path } from 'react-native-svg';
 
 import { EntryRow } from '@/components/entry-row';
+import { Icon } from '@/components/icon';
 import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Radius, Space } from '@/constants/theme';
@@ -117,14 +119,20 @@ export default function Trends() {
         const s = summarize(list, k);
         return (
           <View key={k} style={{ gap: 6, marginBottom: Space.sm }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 }}>
+            <Pressable
+              onPress={() => router.push({ pathname: '/day/[key]', params: { key: k } })}
+              accessibilityRole="button"
+              style={({ pressed }) => [{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }, pressed && { opacity: 0.6 }]}>
               <T size={14} weight="700">
                 {new Date(k + 'T12:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
               </T>
-              <T size={12} color={C.textDim}>
-                {s.eaten} in · {s.burned} out
-              </T>
-            </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <T size={12} color={C.textDim}>
+                  {Math.round(s.eaten)} in · {Math.round(s.burned)} out
+                </T>
+                <Icon name="chevron" size={12} color={C.textMute} />
+              </View>
+            </Pressable>
             {list.map((e) => (
               <EntryRow key={e.id} entry={e} />
             ))}

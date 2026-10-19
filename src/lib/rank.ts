@@ -48,6 +48,6 @@ export function weekDots(entries: Entry[], now = new Date()) {
   return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((letter, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    return { letter, on: logged.has(dayKey(d)), today: dayKey(d) === dayKey(now) };
+    return { letter, key: dayKey(d), on: logged.has(dayKey(d)), today: dayKey(d) === dayKey(now) };
   });
 }

@@ -13,6 +13,7 @@ import { Hazard } from './underground';
 export const TABS: Record<string, { label: string; icon: IconName; color: string }> = {
   index: { label: 'HQ', icon: 'flame', color: C.orange },
   coach: { label: 'Coach', icon: 'sparkles', color: C.violet },
+  arcade: { label: 'Arcade', icon: 'game', color: C.pink },
   trends: { label: 'Stats', icon: 'chart', color: C.lime },
   profile: { label: 'Crew', icon: 'person', color: C.cyan },
 };
@@ -73,6 +74,6 @@ const styles = StyleSheet.create({
   bar: { borderTopWidth: 2, borderTopColor: '#0B0C0D', paddingTop: 6 },
   inner: { flexDirection: 'row', justifyContent: 'space-around', paddingHorizontal: 8 },
   item: { alignItems: 'center', flex: 1, gap: 2 },
-  iconWrap: { width: 62, height: 50, alignItems: 'center', justifyContent: 'center' },
-  label: { fontFamily: Display.comic, fontSize: 17, letterSpacing: 1, textShadowColor: '#000', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 0 },
+  iconWrap: { width: 58, height: 50, alignItems: 'center', justifyContent: 'center' },
+  label: { fontFamily: Display.comic, fontSize: 15, letterSpacing: 1, textShadowColor: '#000', textShadowOffset: { width: 1, height: 1 }, textShadowRadius: 0 },
 });

@@ -52,6 +52,12 @@ const ICONS = {
   speaker: ['speaker.wave.2.fill', 'volume_up'],
   speakerOff: ['speaker.slash.fill', 'volume_off'],
   stop: ['stop.fill', 'stop'],
+  game: ['gamecontroller.fill', 'sports_esports'],
+  calendar: ['calendar', 'calendar_month'],
+  back: ['chevron.left', 'chevron_left'],
+  grid: ['square.grid.3x3.fill', 'apps'],
+  cards: ['rectangle.on.rectangle.angled', 'style'],
+  shred: ['scissors', 'content_cut'],
 } as const;
 
 export type IconName = keyof typeof ICONS;
