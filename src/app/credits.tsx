@@ -31,12 +31,16 @@ export default function CreditsScreen() {
   const account = useStore((s) => s.account);
   const [offers, setOffers] = useState<CreditOffer[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     actions.refreshAccount();
     loadOffers()
       .then(setOffers)
-      .catch(() => setOffers([]));
+      .catch((e) => {
+        setLoadError((e as Error).message);
+        setOffers([]);
+      });
   }, []);
 
   const purchase = async (o: CreditOffer) => {
@@ -172,6 +176,7 @@ export default function CreditsScreen() {
               {packs.length === 0 && !pro && (
                 <T size={13} color={C.textDim}>
                   No products available right now. Try again later.
+                  {loadError ? `\n\n${loadError}` : ''}
                 </T>
               )}
             </View>
