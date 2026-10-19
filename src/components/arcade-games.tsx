@@ -46,6 +46,14 @@ export function GameShell({ game, onExit, onFinish, children }: { game: GameDef;
         <GlassButton icon="close" onPress={onExit} />
       </View>
       <Bar value={GAME_SECONDS - left} max={GAME_SECONDS} color={game.color} height={6} />
+      {!done && (
+        <View style={styles.howTo}>
+          <Icon name={game.icon} size={14} color={game.color} />
+          <T size={13} color={C.textDim} style={{ flex: 1, lineHeight: 18 }}>
+            {game.howTo}
+          </T>
+        </View>
+      )}
       {done ? (
         <View style={styles.done}>
           <Card style={{ alignItems: 'center', gap: 18, alignSelf: 'stretch' }} accent={C.lime + '99'}>
@@ -308,7 +316,7 @@ export function FidgetGame() {
   return (
     <View style={[styles.center, { gap: 18 }]}>
       <T size={13} rounded color={C.textDim}>
-        {on} LIT
+        {on === 16 ? 'ALL 16 LIT! NOW SWITCH THEM OFF' : `${on} / 16 LIT`}
       </T>
       <View style={styles.board}>
         {lit.map((v, i) => {
@@ -486,6 +494,7 @@ export function MemoryGame() {
 const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   stage: { flex: 1 },
+  howTo: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: '#00000066' },
   done: { flex: 1, justifyContent: 'center' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 28 },
   breathBox: { width: 280, height: 280, alignItems: 'center', justifyContent: 'center' },
