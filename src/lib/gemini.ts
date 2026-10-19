@@ -409,8 +409,9 @@ Write: headline (max 8 words), body (2-3 sentences linking THEIR stress/sleep/mo
   return { headline: String(j.headline ?? ''), body: String(j.body ?? ''), tips: (j.tips ?? []).slice(0, 3).map(String) };
 }
 
-// Newest first; a model this key can't use falls through to the next one.
-const TTS_MODELS = ['gemini-3.8-flash-tts', 'gemini-3.8-flash-lite-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
+// Fastest first, since the user is waiting to hear the answer; a model this key can't use falls
+// through to the next one.
+const TTS_MODELS = ['gemini-3.8-flash-lite-tts', 'gemini-3.8-flash-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
 let ttsModel = 0;
 
 /** Gemini prebuilt voices offered for the Coach. */
@@ -429,13 +430,15 @@ export async function synthesizeSpeech(opts: { apiKey: string; text: string; voi
   if (!apiKey) throw new AiError('No API key', false);
   for (; ttsModel < TTS_MODELS.length; ttsModel++) {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 30_000);
+    const timer = setTimeout(() => ctrl.abort(), 15_000);
     try {
       const res = await fetch(`${ENDPOINT}/${TTS_MODELS[ttsModel]}:generateContent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: `Say in a warm, upbeat, encouraging personal-trainer voice, at a natural conversational pace: ${text}` }] }],
+          // Only the words to say: TTS models read any style instruction in the text out loud.
+          // The tone comes from the chosen voice.
+          contents: [{ role: 'user', parts: [{ text }] }],
           generationConfig: {
             responseModalities: ['AUDIO'],
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },

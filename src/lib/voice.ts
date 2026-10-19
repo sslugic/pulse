@@ -24,7 +24,8 @@ const setSpeaking = (id: string | null) => {
 function forSpeech(text: string) {
   return text
     .replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|️|‍/gu, '')
-    .replace(/^\s*[-•]\s+/gm, '. ')
+    .replace(/^\s*[-•]\s+(.*?)[.!?]?\s*$/gm, '$1.')
+    .replace(/(\d)\s?[-–]\s?(\d)/g, '$1 to $2')
     .replace(/[*_#`>~]/g, '')
     .replace(/(\d)\s?x\s?(\d)/g, '$1 sets of $2')
     .replace(/\bkcal\b/gi, 'calories')
@@ -40,6 +41,8 @@ function forSpeech(text: string) {
 // Every speak/stop bumps this, so a slow speech request can't start talking over a newer one.
 let turn = 0;
 let player: ReturnType<typeof createAudioPlayer> | null = null;
+// Resolves the clip that's playing, so stopping also ends the wait for it.
+let endClip: (() => void) | null = null;
 
 function releasePlayer() {
   try {
@@ -49,11 +52,50 @@ function releasePlayer() {
     // already released
   }
   player = null;
+  endClip?.();
+  endClip = null;
+}
+
+function playClip(uri: string) {
+  return new Promise<void>((resolve) => {
+    releasePlayer();
+    endClip = resolve;
+    player = createAudioPlayer({ uri });
+    player.addListener('playbackStatusUpdate', (s) => {
+      if (s.didJustFinish) resolve();
+    });
+    player.play();
+  });
+}
+
+/**
+ * Speech is generated a few sentences at a time. The first chunk is one sentence so the Coach
+ * starts talking quickly; the rest are generated while it speaks.
+ */
+function chunks(text: string) {
+  // Split after . ! ? followed by a space, so decimals like "1.6" stay whole.
+  const sentences = text
+    .replace(/([.!?]+["')\]]*)\s+/g, '$1\n')
+    .split('\n')
+    .map((x) => x.trim())
+    .filter((x) => /\w/.test(x));
+  const out: string[] = [];
+  let cur = '';
+  for (const sentence of sentences) {
+    // Grow chunk sizes so each one is ready before the previous one finishes playing.
+    const limit = [0, 120][out.length] ?? 260;
+    if (cur && cur.length + sentence.length > limit) {
+      out.push(cur);
+      cur = sentence;
+    } else cur = cur ? `${cur} ${sentence}` : sentence;
+  }
+  if (cur) out.push(cur);
+  return out;
 }
 
 // Generated audio per message and voice, so Listen replays instantly and costs nothing.
 const clips = new Map<string, string>();
-const MAX_CLIPS = 30;
+const MAX_CLIPS = 60;
 
 function remember(key: string, uri: string) {
   clips.set(key, uri);
@@ -133,6 +175,16 @@ function bestDeviceVoice() {
   return deviceVoice;
 }
 
+function speakOnDevice(text: string, my: number) {
+  return new Promise<void>((resolve) => {
+    if (!Speech) return resolve();
+    bestDeviceVoice().then((voice) => {
+      if (my !== turn) return resolve();
+      Speech.speak(text.slice(0, Speech.maxSpeechInputLength), { voice, onDone: resolve, onStopped: resolve, onError: () => resolve() });
+    });
+  });
+}
+
 export async function speak(id: string, text: string, opts: { apiKey: string; voice: string }) {
   const my = ++turn;
   releasePlayer();
@@ -140,39 +192,45 @@ export async function speak(id: string, text: string, opts: { apiKey: string; vo
   const say = forSpeech(text);
   if (!say) return setSpeaking(null);
   setSpeaking(id);
-  const finish = () => {
-    if (my !== turn) return;
-    releasePlayer();
-    setSpeaking(null);
-  };
 
   try {
     // Talk back even with the ringer switch off, like a voice note would.
     await setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
-
-    if (opts.voice !== 'device' && opts.apiKey) {
-      try {
-        const uri = await naturalClip(`${opts.voice}-${id}`, say, opts.apiKey, opts.voice);
-        if (my !== turn) return;
-        player = createAudioPlayer({ uri });
-        player.addListener('playbackStatusUpdate', (s) => {
-          if (s.didJustFinish) finish();
-        });
-        player.play();
-        return;
-      } catch (err) {
-        if (my !== turn) return;
-        console.warn('[voice] Gemini speech failed, using the device voice', err);
+    const parts = opts.voice !== 'device' && opts.apiKey ? chunks(say) : [];
+    const clipsFor: Promise<string>[] = [];
+    const clip = (i: number) => {
+      if (i >= parts.length) return;
+      if (!clipsFor[i]) {
+        clipsFor[i] = naturalClip(`${opts.voice}-${id}-${i}`, parts[i], opts.apiKey, opts.voice);
+        clipsFor[i].catch(() => {}); // awaited below; don't report prefetches as unhandled
       }
-    }
+      return clipsFor[i];
+    };
 
-    if (!Speech) return finish();
-    const voice = await bestDeviceVoice();
-    if (my !== turn) return;
-    Speech.speak(say.slice(0, Speech.maxSpeechInputLength), { voice, onDone: finish, onStopped: finish, onError: finish });
+    let spoken = 0;
+    try {
+      for (; spoken < parts.length; spoken++) {
+        // Keep the next two chunks generating while this one plays.
+        clip(spoken + 1);
+        clip(spoken + 2);
+        const uri = await clip(spoken)!;
+        if (my !== turn) return;
+        await playClip(uri);
+        if (my !== turn) return;
+      }
+    } catch (err) {
+      if (my !== turn) return;
+      console.warn('[voice] Gemini speech failed, using the device voice', err);
+    }
+    // Whatever Gemini couldn't voice (or everything, for the Offline voice) uses the device voice.
+    const rest = parts.length ? parts.slice(spoken).join(' ') : say;
+    if (rest) await speakOnDevice(rest, my);
   } catch (err) {
     console.warn('[voice] speak failed', err);
-    finish();
+  }
+  if (my === turn) {
+    releasePlayer();
+    setSpeaking(null);
   }
 }
 
