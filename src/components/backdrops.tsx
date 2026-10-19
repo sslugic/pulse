@@ -8,10 +8,25 @@ import { questXp } from '@/lib/quests';
 import { crewRank, RANKS } from '@/lib/rank';
 import { useStore } from '@/lib/store';
 
-// One backdrop scene per crew rank, so the app's walls change as the player levels up:
-// back alley → night street → rooftop → subway station → train yard → neon club → hall of fame.
+// One backdrop scene per crew rank, so the app's walls change every time the player ranks up.
 
-export const WALL_NAMES = ['BACK ALLEY', 'NIGHT STREET', 'ROOFTOP', 'SUBWAY STATION', 'TRAIN YARD', 'NEON CLUB', 'HALL OF FAME'] as const;
+export const WALL_NAMES = [
+  'BACK ALLEY',
+  'HANDBALL COURT',
+  'NIGHT STREET',
+  'BODEGA CORNER',
+  'BASKETBALL COURT',
+  'ROOFTOP',
+  'SUBWAY STATION',
+  'SUBWAY TUNNEL',
+  'TRAIN YARD',
+  'BRIDGE UNDERPASS',
+  'NEON CLUB',
+  'BLOCK PARTY',
+  'BILLBOARD SQUARE',
+  'HALL OF FAME',
+  'PULSE TOWER',
+] as const;
 
 type Piece = { text: string; x: number; y: number; size: number; fill: string; rot: number };
 type SceneProps = { w: number; h: number; tags: string[]; station: string };
@@ -121,7 +136,7 @@ function Glow({ cx, cy, r, color, id, strength = 0.55 }: { cx: number; cy: numbe
   );
 }
 
-// ---------- 1. Rookie: back alley ----------
+// ---------- Rookie: back alley ----------
 
 function BackAlley({ w, h, tags }: SceneProps) {
   return (
@@ -162,7 +177,7 @@ function BackAlley({ w, h, tags }: SceneProps) {
   );
 }
 
-// ---------- 2. Street Crew: night street ----------
+// ---------- Street Crew: night street ----------
 
 function NightStreet({ w, h, tags }: SceneProps) {
   const wallTop = h * 0.3;
@@ -210,7 +225,7 @@ function NightStreet({ w, h, tags }: SceneProps) {
   );
 }
 
-// ---------- 3. Block Boss: rooftop ----------
+// ---------- Skyline Runner: rooftop ----------
 
 function Rooftop({ w, h, tags }: SceneProps) {
   const r = rng(31);
@@ -245,7 +260,7 @@ function Rooftop({ w, h, tags }: SceneProps) {
       <Rect y={roof} width={w} height={h - roof} fill="#2B2E31" />
       <Rect y={roof} width={w} height={8} fill="#45494D" />
       <G opacity={0.65}>
-        <GraffitiPiece p={{ text: 'BOSS', x: w * 0.08, y: roof + 70, size: 60, fill: C.yellow, rot: -5 }} />
+        <GraffitiPiece p={{ text: 'SKY', x: w * 0.08, y: roof + 70, size: 60, fill: C.yellow, rot: -5 }} />
         <GraffitiPiece p={{ text: tags[1] ?? 'PULSE', x: w * 0.52, y: roof + 110, size: 42, fill: C.cyan, rot: 6 }} />
       </G>
       <Mist w={w} h={h} n={14} seed={34} colors={[C.yellow, C.cyan]} />
@@ -254,7 +269,7 @@ function Rooftop({ w, h, tags }: SceneProps) {
   );
 }
 
-// ---------- 4. Subway King: subway station ----------
+// ---------- Subway Rider: subway station ----------
 
 function SubwayStation({ w, h, tags, station }: SceneProps) {
   const bandY = Math.round(h * 0.47);
@@ -309,7 +324,7 @@ function SubwayStation({ w, h, tags, station }: SceneProps) {
   );
 }
 
-// ---------- 5. Legend: train yard ----------
+// ---------- Yard Bomber: train yard ----------
 
 function TrainYard({ w, h, tags }: SceneProps) {
   const carTop = h * 0.3;
@@ -345,7 +360,7 @@ function TrainYard({ w, h, tags }: SceneProps) {
       <Rect x={w * 0.72} y={carTop + 10} width={w * 0.08} height={carBottom - carTop - 20} fill="none" stroke="#0B0C0D" strokeWidth={3} />
       {/* whole-car burner */}
       <G opacity={0.78}>
-        <GraffitiPiece p={{ text: 'LEGEND', x: w * 0.03, y: carTop + h * 0.25, size: 76, fill: C.orange, rot: -4 }} />
+        <GraffitiPiece p={{ text: 'BOMBER', x: w * 0.03, y: carTop + h * 0.25, size: 76, fill: C.orange, rot: -4 }} />
         <GraffitiPiece p={{ text: tags[1] ?? 'PULSE', x: w * 0.4, y: carTop + h * 0.4, size: 48, fill: C.cyan, rot: 3 }} />
       </G>
       {/* wheels and rails */}
@@ -363,7 +378,7 @@ function TrainYard({ w, h, tags }: SceneProps) {
   );
 }
 
-// ---------- 6. Underground Icon: neon club ----------
+// ---------- Neon Ace: neon club ----------
 
 function NeonTube({ d, color }: { d: string; color: string }) {
   return (
@@ -408,10 +423,10 @@ function NeonClub({ w, h }: SceneProps) {
       </G>
       <G>
         <SvgText x={w / 2} y={h * 0.46} fontSize={64} fontFamily={Display.comic} textAnchor="middle" fill="none" stroke={C.pink} strokeOpacity={0.35} strokeWidth={10}>
-          ICON
+          ACE
         </SvgText>
         <SvgText x={w / 2} y={h * 0.46} fontSize={64} fontFamily={Display.comic} textAnchor="middle" fill="none" stroke="#FFD1EA" strokeWidth={2}>
-          ICON
+          ACE
         </SvgText>
       </G>
       <Mist w={w} h={h} n={30} seed={61} colors={[C.pink, C.cyan, C.violet]} />
@@ -420,7 +435,7 @@ function NeonClub({ w, h }: SceneProps) {
   );
 }
 
-// ---------- 7. Hall of Fame ----------
+// ---------- Hall of Famer: hall of fame ----------
 
 function HallOfFame({ w, h, tags }: SceneProps) {
   const gold = '#E8B830';
@@ -469,15 +484,428 @@ function HallOfFame({ w, h, tags }: SceneProps) {
   );
 }
 
-const SCENES = [BackAlley, NightStreet, Rooftop, SubwayStation, TrainYard, NeonClub, HallOfFame];
+// ---------- Tagger: handball court ----------
+
+function HandballCourt({ w, h, tags }: SceneProps) {
+  const top = h * 0.16;
+  const floor = h * 0.84;
+  return (
+    <>
+      <Defs>
+        <Pattern id="fenceH" width="16" height="16" patternUnits="userSpaceOnUse">
+          <Path d="M0 0 L16 16 M16 0 L0 16" stroke="#6A7076" strokeWidth={1.2} />
+        </Pattern>
+        <SvgLinearGradient id="wallH" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#5A6068" />
+          <Stop offset="1" stopColor="#3A3F46" />
+        </SvgLinearGradient>
+      </Defs>
+      <Rect width={w} height={top} fill="#0E1118" />
+      <Rect width={w} height={top} fill="url(#fenceH)" opacity={0.5} />
+      <Glow cx={w * 0.85} cy={top * 0.6} r={w * 0.6} color="#CFE3FF" id="floodH" strength={0.3} />
+      {/* the handball wall: painted panel with the service line */}
+      <Rect y={top} width={w} height={floor - top} fill="url(#wallH)" />
+      <Rect x={w * 0.06} y={top + 20} width={w * 0.88} height={floor - top - 40} fill="#2F5E8C" opacity={0.55} stroke="#E8E2CC" strokeWidth={3} strokeOpacity={0.5} />
+      <Line x1={w * 0.06} y1={h * 0.62} x2={w * 0.94} y2={h * 0.62} stroke="#E8E2CC" strokeWidth={4} opacity={0.6} />
+      {/* court floor */}
+      <Rect y={floor} width={w} height={h - floor} fill="#3B4A5A" />
+      <Line x1={0} y1={floor + 26} x2={w} y2={floor + 26} stroke="#E8E2CC" strokeWidth={3} opacity={0.5} />
+      <Circle cx={w * 0.72} cy={floor + 14} r={9} fill="#2F6FE0" stroke="#0B0C0D" strokeWidth={2} />
+      <G opacity={0.6}>
+        <GraffitiPiece p={{ text: 'TAG', x: w * 0.1, y: h * 0.4, size: 64, fill: C.yellow, rot: -7 }} />
+        <GraffitiPiece p={{ text: tags[0] ?? 'NYC', x: w * 0.5, y: h * 0.54, size: 40, fill: C.pink, rot: 5 }} />
+        <SvgText x={w * 0.2} y={h * 0.76} fontSize={26} fontFamily={Display.tag} fill="#E8E2CC" rotation={-5} originX={w * 0.2} originY={h * 0.76}>
+          was here
+        </SvgText>
+      </G>
+      <Mist w={w} h={h} n={14} seed={81} colors={[C.yellow, C.pink, '#E8E2CC']} />
+      <Finish w={w} h={h} id="H" />
+    </>
+  );
+}
+
+// ---------- Corner Captain: bodega corner ----------
+
+function BodegaCorner({ w, h, tags }: SceneProps) {
+  const awning = h * 0.3;
+  const floor = h * 0.88;
+  const stripes = 9;
+  return (
+    <>
+      <Defs>
+        <Pattern id="brickI" width="44" height="22" patternUnits="userSpaceOnUse">
+          <Rect width="44" height="22" fill="#140C0A" />
+          <Rect x="1" y="1" width="42" height="9" rx="1" fill="#5A2E22" />
+          <Rect x="-21" y="12" width="42" height="9" rx="1" fill="#52291F" />
+          <Rect x="23" y="12" width="42" height="9" rx="1" fill="#5E3124" />
+        </Pattern>
+        <Pattern id="gateI" width="10" height="8" patternUnits="userSpaceOnUse">
+          <Rect width="10" height="8" fill="#5C6266" />
+          <Rect y="6" width="10" height="2" fill="#30343A" />
+        </Pattern>
+      </Defs>
+      <Rect width={w} height={h} fill="url(#brickI)" opacity={0.8} />
+      {/* striped awning */}
+      {Array.from({ length: stripes }, (_, i) => (
+        <Rect key={i} x={(i * w) / stripes} y={awning - 46} width={w / stripes + 1} height={46} fill={i % 2 ? '#E8E2CC' : '#C8322A'} opacity={0.8} />
+      ))}
+      <Path d={Array.from({ length: stripes }, (_, i) => `M${(i * w) / stripes} ${awning} q ${w / stripes / 2} 14 ${w / stripes} 0`).join(' ')} fill="#C8322A" opacity={0.8} />
+      {/* lit shop window and neon */}
+      <Glow cx={w * 0.3} cy={h * 0.5} r={w * 0.45} color="#FFD58A" id="shopI" strength={0.35} />
+      <Rect x={w * 0.06} y={awning + 30} width={w * 0.5} height={h * 0.32} fill="#3A2C14" stroke="#0B0C0D" strokeWidth={5} />
+      <Rect x={w * 0.06} y={awning + 30} width={w * 0.5} height={h * 0.32} fill="#FFD58A" opacity={0.18} />
+      {[0.12, 0.22, 0.32, 0.42].map((f) => (
+        <Rect key={f} x={w * f} y={awning + 30 + h * 0.22} width={w * 0.07} height={h * 0.1} fill="#0B0C0D" opacity={0.35} />
+      ))}
+      <NeonTube d={`M${w * 0.1} ${awning + 60} L${w * 0.24} ${awning + 60}`} color={C.pink} />
+      <SvgText x={w * 0.31} y={awning + 98} fontSize={28} fontFamily={Display.block} fill="#FFD1EA" textAnchor="middle" letterSpacing={4} opacity={0.85}>
+        DELI
+      </SvgText>
+      {/* roll-down gate */}
+      <Rect x={w * 0.62} y={awning + 10} width={w * 0.34} height={floor - awning - 10} fill="url(#gateI)" stroke="#0B0C0D" strokeWidth={4} />
+      <G opacity={0.7}>
+        <GraffitiPiece p={{ text: 'CAPT', x: w * 0.63, y: h * 0.6, size: 40, fill: C.lime, rot: -6 }} />
+        <GraffitiPiece p={{ text: tags[1] ?? 'PULSE', x: w * 0.08, y: h * 0.82, size: 46, fill: C.cyan, rot: -3 }} />
+      </G>
+      {/* sidewalk */}
+      <Rect y={floor} width={w} height={h - floor} fill="#1E1F21" />
+      <Rect y={floor} width={w} height={5} fill="#45484C" />
+      <Mist w={w} h={h} n={16} seed={91} colors={[C.lime, C.cyan, C.pink]} />
+      <Finish w={w} h={h} id="I" />
+    </>
+  );
+}
+
+// ---------- Block Boss: basketball court ----------
+
+function BasketballCourt({ w, h, tags }: SceneProps) {
+  const ground = h * 0.66;
+  const bx = w / 2;
+  return (
+    <>
+      <Defs>
+        <SvgLinearGradient id="skyJ" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#070B16" />
+          <Stop offset="1" stopColor="#1C2430" />
+        </SvgLinearGradient>
+        <Pattern id="fenceJ" width="18" height="18" patternUnits="userSpaceOnUse">
+          <Path d="M0 0 L18 18 M18 0 L0 18" stroke="#7A8086" strokeWidth={1.2} />
+        </Pattern>
+      </Defs>
+      <Rect width={w} height={h} fill="url(#skyJ)" />
+      <Skyline w={w} top={h * 0.12} bottom={ground} seed={101} />
+      <Rect y={h * 0.2} width={w} height={ground - h * 0.2} fill="url(#fenceJ)" opacity={0.35} />
+      {/* floodlights */}
+      <Glow cx={w * 0.12} cy={h * 0.14} r={w * 0.55} color="#E8F2FF" id="floodJ1" strength={0.35} />
+      <Glow cx={w * 0.88} cy={h * 0.14} r={w * 0.55} color="#E8F2FF" id="floodJ2" strength={0.35} />
+      <Rect x={w * 0.06} y={h * 0.12} width={w * 0.12} height={10} fill="#F2F6FF" opacity={0.9} />
+      <Rect x={w * 0.82} y={h * 0.12} width={w * 0.12} height={10} fill="#F2F6FF" opacity={0.9} />
+      {/* hoop */}
+      <Rect x={bx - 4} y={h * 0.36} width={8} height={ground - h * 0.36} fill="#0B0C0D" />
+      <Rect x={bx - w * 0.17} y={h * 0.28} width={w * 0.34} height={h * 0.1} fill="#E8E2CC" opacity={0.85} stroke="#0B0C0D" strokeWidth={4} />
+      <Rect x={bx - w * 0.06} y={h * 0.32} width={w * 0.12} height={h * 0.05} fill="none" stroke={C.orange} strokeWidth={3} />
+      <Ellipse cx={bx} cy={h * 0.385} rx={w * 0.07} ry={5} fill="none" stroke={C.orange} strokeWidth={4} />
+      <Path d={`M${bx - w * 0.07} ${h * 0.39} L${bx - w * 0.04} ${h * 0.44} L${bx + w * 0.04} ${h * 0.44} L${bx + w * 0.07} ${h * 0.39} M${bx - w * 0.03} ${h * 0.39} L${bx - w * 0.02} ${h * 0.44} M${bx + w * 0.03} ${h * 0.39} L${bx + w * 0.02} ${h * 0.44}`} stroke="#E8E2CC" strokeWidth={1.5} fill="none" opacity={0.8} />
+      {/* court */}
+      <Rect y={ground} width={w} height={h - ground} fill="#2F5A4A" />
+      <Path d={`M${bx - w * 0.22} ${h} L${bx - w * 0.16} ${ground} L${bx + w * 0.16} ${ground} L${bx + w * 0.22} ${h}`} fill={C.orange} opacity={0.35} stroke="#E8E2CC" strokeWidth={3} strokeOpacity={0.6} />
+      <Ellipse cx={bx} cy={ground + (h - ground) * 0.55} rx={w * 0.2} ry={(h - ground) * 0.18} fill="none" stroke="#E8E2CC" strokeWidth={3} opacity={0.6} />
+      <G opacity={0.65}>
+        <GraffitiPiece p={{ text: 'BOSS', x: w * 0.04, y: h * 0.58, size: 58, fill: C.yellow, rot: -6 }} />
+        <GraffitiPiece p={{ text: tags[0] ?? 'NYC', x: w * 0.64, y: h * 0.6, size: 36, fill: C.cyan, rot: 6 }} />
+      </G>
+      <Mist w={w} h={h} n={14} seed={102} colors={[C.yellow, C.orange, C.cyan]} />
+      <Finish w={w} h={h} id="J" />
+    </>
+  );
+}
+
+// ---------- Subway King: subway tunnel ----------
+
+function SubwayTunnel({ w, h, tags }: SceneProps) {
+  const vx = w / 2;
+  const vy = h * 0.44;
+  const rings = 7;
+  return (
+    <>
+      <Rect width={w} height={h} fill="#0A0A0A" />
+      {/* tunnel rings receding to the vanishing point */}
+      {Array.from({ length: rings }, (_, i) => {
+        const k = Math.pow((rings - i) / rings, 1.6);
+        const rw = w * 0.75 * k + 18;
+        const rh = h * 0.62 * k + 24;
+        return (
+          <Path
+            key={i}
+            d={`M${vx - rw} ${vy + rh * 0.55} L${vx - rw} ${vy - rh * 0.2} Q ${vx - rw} ${vy - rh * 0.75} ${vx} ${vy - rh * 0.75} Q ${vx + rw} ${vy - rh * 0.75} ${vx + rw} ${vy - rh * 0.2} L${vx + rw} ${vy + rh * 0.55}`}
+            fill="none"
+            stroke="#3A3E42"
+            strokeOpacity={0.3 + 0.1 * (rings - i) / rings}
+            strokeWidth={4 + 6 * k}
+          />
+        );
+      })}
+      <Glow cx={vx} cy={vy} r={w * 0.35} color="#FFF1C2" id="lightK" strength={0.5} />
+      <Circle cx={vx - 10} cy={vy} r={5} fill="#FFF8E0" />
+      <Circle cx={vx + 10} cy={vy} r={5} fill="#FFF8E0" />
+      {/* rails */}
+      <G stroke="#9AA0A4" strokeWidth={4}>
+        <Line x1={vx - 8} y1={vy + 10} x2={w * 0.12} y2={h} />
+        <Line x1={vx + 8} y1={vy + 10} x2={w * 0.88} y2={h} />
+      </G>
+      {Array.from({ length: 8 }, (_, i) => {
+        const t = Math.pow((i + 1) / 8, 1.8);
+        const y = vy + 10 + (h - vy - 10) * t;
+        const half = 8 + (w * 0.38 - 8) * t;
+        return <Line key={i} x1={vx - half - 6} y1={y} x2={vx + half + 6} y2={y} stroke="#3B2A1C" strokeWidth={2 + 6 * t} />;
+      })}
+      {/* signal lights */}
+      <Rect x={w * 0.08} y={h * 0.3} width={22} height={50} rx={5} fill="#141414" stroke="#0B0C0D" strokeWidth={3} />
+      <Circle cx={w * 0.08 + 11} cy={h * 0.3 + 14} r={6} fill={C.danger} />
+      <Circle cx={w * 0.08 + 11} cy={h * 0.3 + 34} r={6} fill="#2E7D32" opacity={0.4} />
+      <Glow cx={w * 0.08 + 11} cy={h * 0.3 + 14} r={40} color={C.danger} id="sigK" strength={0.4} />
+      <G opacity={0.55}>
+        <GraffitiPiece p={{ text: 'KING', x: w * 0.56, y: h * 0.26, size: 50, fill: C.yellow, rot: 8 }} />
+        <GraffitiPiece p={{ text: tags[1] ?? 'PULSE', x: w * 0.04, y: h * 0.7, size: 42, fill: C.lime, rot: -10 }} />
+      </G>
+      <Mist w={w} h={h} n={12} seed={111} colors={[C.yellow, C.lime]} />
+      <Finish w={w} h={h} id="K" />
+    </>
+  );
+}
+
+// ---------- Legend: bridge underpass ----------
+
+function BridgeUnderpass({ w, h, tags }: SceneProps) {
+  const deck = h * 0.2;
+  const water = h * 0.72;
+  const r = rng(121);
+  return (
+    <>
+      <Defs>
+        <SvgLinearGradient id="skyL" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#0A1220" />
+          <Stop offset="1" stopColor="#24304A" />
+        </SvgLinearGradient>
+        <SvgLinearGradient id="waterL" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#14223A" />
+          <Stop offset="1" stopColor="#060A12" />
+        </SvgLinearGradient>
+      </Defs>
+      <Rect width={w} height={water} fill="url(#skyL)" />
+      <Skyline w={w} top={h * 0.4} bottom={water} seed={122} color="#0B1018" />
+      {/* bridge deck with steel girders */}
+      <Rect width={w} height={deck} fill="#1A1F26" />
+      <G stroke="#3A4450" strokeWidth={5}>
+        {Array.from({ length: 8 }, (_, i) => (
+          <Line key={i} x1={(i * w) / 7} y1={deck} x2={((i + 1) * w) / 7} y2={0} />
+        ))}
+      </G>
+      <Rect y={deck - 10} width={w} height={14} fill="#2C343E" stroke="#0B0C0D" strokeWidth={3} />
+      {Array.from({ length: 9 }, (_, i) => (
+        <Circle key={i} cx={(i + 0.5) * (w / 9)} cy={deck - 3} r={2.5} fill="#8A96A4" />
+      ))}
+      {/* stone pillars */}
+      {[0.02, 0.7].map((f) => (
+        <Rect key={f} x={w * f} y={deck} width={w * 0.28} height={h - deck} fill="#4A4642" stroke="#0B0C0D" strokeWidth={4} />
+      ))}
+      {/* river with city light reflections */}
+      <Rect x={w * 0.3} y={water} width={w * 0.4} height={h - water} fill="url(#waterL)" />
+      {Array.from({ length: 14 }, (_, i) => (
+        <Rect key={i} x={w * 0.32 + r() * w * 0.34} y={water + 8 + r() * (h - water - 20)} width={10 + r() * 24} height={2} fill="#FFD58A" opacity={0.25 + r() * 0.35} />
+      ))}
+      <G opacity={0.7}>
+        <GraffitiPiece p={{ text: 'LEG', x: w * 0.04, y: h * 0.48, size: 50, fill: C.orange, rot: -8 }} />
+        <GraffitiPiece p={{ text: 'END', x: w * 0.72, y: h * 0.5, size: 50, fill: C.orange, rot: 8 }} />
+        <GraffitiPiece p={{ text: tags[0] ?? 'NYC', x: w * 0.05, y: h * 0.78, size: 36, fill: C.cyan, rot: 4 }} />
+        <GraffitiPiece p={{ text: tags[1] ?? 'PULSE', x: w * 0.71, y: h * 0.8, size: 30, fill: C.lime, rot: -4 }} />
+      </G>
+      <Mist w={w} h={h} n={18} seed={123} colors={[C.orange, C.cyan, C.lime]} />
+      <Finish w={w} h={h} id="L" />
+    </>
+  );
+}
+
+// ---------- Underground Icon: block party ----------
+
+function BlockParty({ w, h, tags }: SceneProps) {
+  const floor = h * 0.8;
+  const r = rng(131);
+  const bulbs = [C.pink, C.yellow, C.cyan, C.lime, C.violet];
+  const speaker = (x: number, y: number, s: number) => (
+    <G key={`${x}-${y}`}>
+      <Rect x={x} y={y} width={s} height={s * 1.3} rx={4} fill="#141414" stroke="#0B0C0D" strokeWidth={3} />
+      <Circle cx={x + s / 2} cy={y + s * 0.38} r={s * 0.28} fill="#2A2A2A" stroke="#555" strokeWidth={2} />
+      <Circle cx={x + s / 2} cy={y + s * 0.38} r={s * 0.1} fill="#555" />
+      <Circle cx={x + s / 2} cy={y + s * 0.98} r={s * 0.18} fill="#2A2A2A" stroke="#555" strokeWidth={2} />
+    </G>
+  );
+  return (
+    <>
+      <Defs>
+        <Pattern id="brickM" width="44" height="22" patternUnits="userSpaceOnUse">
+          <Rect width="44" height="22" fill="#0E0812" />
+          <Rect x="1" y="1" width="42" height="9" rx="1" fill="#2E1A36" />
+          <Rect x="-21" y="12" width="42" height="9" rx="1" fill="#2A1730" />
+          <Rect x="23" y="12" width="42" height="9" rx="1" fill="#331D3A" />
+        </Pattern>
+      </Defs>
+      <Rect width={w} height={h} fill="url(#brickM)" opacity={0.9} />
+      {/* string lights */}
+      {[0.1, 0.2].map((f, row) => (
+        <G key={f}>
+          <Path d={`M0 ${h * f} Q ${w / 2} ${h * f + 50} ${w} ${h * f}`} stroke="#0B0C0D" strokeWidth={2} fill="none" />
+          {Array.from({ length: 12 }, (_, i) => {
+            const t = (i + 0.5) / 12;
+            const y = h * f + 100 * t * (1 - t);
+            return <Circle key={i} cx={w * t} cy={y + 6} r={4} fill={bulbs[(i + row) % bulbs.length]} opacity={0.9} />;
+          })}
+        </G>
+      ))}
+      <Glow cx={w / 2} cy={h * 0.55} r={w * 0.7} color={C.violet} id="partyM" strength={0.3} />
+      {/* speaker stacks and a boombox */}
+      {speaker(w * 0.04, floor - w * 0.22 * 1.3 * 2, w * 0.22)}
+      {speaker(w * 0.04, floor - w * 0.22 * 1.3, w * 0.22)}
+      {speaker(w * 0.74, floor - w * 0.22 * 1.3 * 2, w * 0.22)}
+      {speaker(w * 0.74, floor - w * 0.22 * 1.3, w * 0.22)}
+      <Rect x={w * 0.34} y={floor - 60} width={w * 0.32} height={56} rx={8} fill="#1E1E22" stroke="#0B0C0D" strokeWidth={4} />
+      <Path d={`M${w * 0.38} ${floor - 60} Q ${w / 2} ${floor - 96} ${w * 0.62} ${floor - 60}`} stroke="#0B0C0D" strokeWidth={6} fill="none" />
+      <Circle cx={w * 0.4} cy={floor - 32} r={16} fill="#2A2A2A" stroke={C.pink} strokeWidth={2} />
+      <Circle cx={w * 0.6} cy={floor - 32} r={16} fill="#2A2A2A" stroke={C.pink} strokeWidth={2} />
+      <Rect x={w * 0.46} y={floor - 46} width={w * 0.08} height={14} fill={C.cyan} opacity={0.7} />
+      <Rect y={floor} width={w} height={h - floor} fill="#141016" />
+      {Array.from({ length: 8 }, (_, i) => (
+        <SvgText key={i} x={w * (0.3 + r() * 0.4)} y={h * (0.3 + r() * 0.2)} fontSize={18 + r() * 10} fill={bulbs[i % bulbs.length]} opacity={0.5}>
+          ♪
+        </SvgText>
+      ))}
+      <G opacity={0.6}>
+        <GraffitiPiece p={{ text: 'ICON', x: w * 0.27, y: h * 0.5, size: 60, fill: C.pink, rot: -5 }} />
+        <GraffitiPiece p={{ text: tags[1] ?? 'PULSE', x: w * 0.32, y: h * 0.62, size: 34, fill: C.yellow, rot: 4 }} />
+      </G>
+      <Mist w={w} h={h} n={24} seed={132} colors={bulbs} />
+      <Finish w={w} h={h} id="M" />
+    </>
+  );
+}
+
+// ---------- City Myth: billboard square ----------
+
+function BillboardSquare({ w, h, tags }: SceneProps) {
+  const street = h * 0.86;
+  const boards: { x: number; y: number; bw: number; bh: number; color: string; text: string }[] = [
+    { x: w * 0.04, y: h * 0.1, bw: w * 0.4, bh: h * 0.14, color: C.pink, text: 'MYTH' },
+    { x: w * 0.52, y: h * 0.06, bw: w * 0.44, bh: h * 0.1, color: C.cyan, text: tags[1] ?? 'PULSE' },
+    { x: w * 0.56, y: h * 0.22, bw: w * 0.38, bh: h * 0.16, color: C.yellow, text: '24/7' },
+    { x: w * 0.04, y: h * 0.3, bw: w * 0.3, bh: h * 0.2, color: C.lime, text: 'GO' },
+    { x: w * 0.38, y: h * 0.44, bw: w * 0.3, bh: h * 0.1, color: C.violet, text: tags[0] ?? 'NYC' },
+  ];
+  return (
+    <>
+      <Rect width={w} height={h} fill="#08060F" />
+      <Skyline w={w} top={0} bottom={street} seed={141} color="#120E1E" lit="#9CC8FF" />
+      {boards.map((b, i) => (
+        <G key={i}>
+          <Glow cx={b.x + b.bw / 2} cy={b.y + b.bh / 2} r={b.bw * 0.8} color={b.color} id={`bbN${i}`} strength={0.35} />
+          <Rect x={b.x} y={b.y} width={b.bw} height={b.bh} fill={b.color} opacity={0.3} stroke={b.color} strokeWidth={3} />
+          <SvgText x={b.x + b.bw / 2} y={b.y + b.bh / 2 + Math.min(b.bh * 0.25, 18)} fontSize={Math.min(b.bh * 0.55, 46)} fontFamily={Display.comic} fill="#fff" fillOpacity={0.75} textAnchor="middle">
+            {b.text}
+          </SvgText>
+        </G>
+      ))}
+      {/* ticker strip */}
+      <Rect y={h * 0.6} width={w} height={26} fill="#0B0C0D" />
+      <SvgText x={8} y={h * 0.6 + 19} fontSize={15} fontFamily={Display.block} fill={C.orange} letterSpacing={2} opacity={0.85}>
+        ★ STREAK CITY ★ NEW RECORD ★ CITY MYTH SPOTTED ★
+      </SvgText>
+      {/* crowd silhouettes */}
+      {Array.from({ length: 14 }, (_, i) => {
+        const x = (i + 0.5) * (w / 14);
+        const s = 10 + ((i * 7) % 5) * 2;
+        return (
+          <G key={i} fill="#05040A">
+            <Circle cx={x} cy={street - s * 3.2} r={s * 0.7} />
+            <Rect x={x - s * 0.8} y={street - s * 2.5} width={s * 1.6} height={s * 2.5} rx={s * 0.5} />
+          </G>
+        );
+      })}
+      <Rect y={street} width={w} height={h - street} fill="#141218" />
+      <Rect y={street + 20} width={w} height={4} fill={C.yellow} opacity={0.4} />
+      <Mist w={w} h={h} n={26} seed={142} colors={[C.pink, C.cyan, C.yellow, C.lime]} />
+      <Finish w={w} h={h} id="N" />
+    </>
+  );
+}
+
+// ---------- Pulse Immortal: pulse tower ----------
+
+function PulseTower({ w, h, tags }: SceneProps) {
+  const gold = '#E8B830';
+  const r = rng(151);
+  const ground = h * 0.82;
+  const tx = w / 2;
+  const tw = w * 0.16;
+  const beat = `M0 ${h * 0.3} L${w * 0.3} ${h * 0.3} L${w * 0.36} ${h * 0.24} L${w * 0.42} ${h * 0.38} L${w * 0.48} ${h * 0.16} L${w * 0.54} ${h * 0.34} L${w * 0.6} ${h * 0.3} L${w} ${h * 0.3}`;
+  return (
+    <>
+      <Defs>
+        <SvgLinearGradient id="skyO" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#120A1E" />
+          <Stop offset="0.55" stopColor="#4A2A20" />
+          <Stop offset="1" stopColor="#8A5A1A" />
+        </SvgLinearGradient>
+        <SvgLinearGradient id="towerO" x1="0" y1="0" x2="1" y2="0">
+          <Stop offset="0" stopColor="#5A4210" />
+          <Stop offset="0.5" stopColor={gold} />
+          <Stop offset="1" stopColor="#5A4210" />
+        </SvgLinearGradient>
+      </Defs>
+      <Rect width={w} height={h} fill="url(#skyO)" />
+      {Array.from({ length: 36 }, (_, i) => (
+        <Circle key={i} cx={r() * w} cy={r() * h * 0.45} r={0.6 + r() * 1.4} fill="#FFF1C2" opacity={0.3 + r() * 0.6} />
+      ))}
+      <Glow cx={tx} cy={h * 0.2} r={w * 0.8} color={gold} id="haloO" strength={0.45} />
+      <Skyline w={w} top={h * 0.45} bottom={ground} seed={152} color="#1A1008" lit={gold} />
+      {/* the tower */}
+      <Polygon points={`${tx - tw / 2},${ground} ${tx - tw / 4},${h * 0.2} ${tx + tw / 4},${h * 0.2} ${tx + tw / 2},${ground}`} fill="url(#towerO)" stroke="#0B0C0D" strokeWidth={4} />
+      <Line x1={tx} y1={h * 0.2} x2={tx} y2={h * 0.08} stroke="#0B0C0D" strokeWidth={5} />
+      <Circle cx={tx} cy={h * 0.08} r={6} fill="#FFF1C2" />
+      {Array.from({ length: 10 }, (_, i) => (
+        <Line key={i} x1={tx - tw / 4 - (tw / 4) * (i / 10)} x2={tx + tw / 4 + (tw / 4) * (i / 10)} y1={h * 0.24 + i * ((ground - h * 0.24) / 10)} y2={h * 0.24 + i * ((ground - h * 0.24) / 10)} stroke="#0B0C0D" strokeOpacity={0.35} strokeWidth={2} />
+      ))}
+      {/* heartbeat across the sky */}
+      <G opacity={0.75}>
+        <NeonTube d={beat} color={gold} />
+      </G>
+      <Rect y={ground} width={w} height={h - ground} fill="#140C06" />
+      <G opacity={0.6}>
+        <GraffitiPiece p={{ text: 'IMMORTAL', x: w * 0.04, y: ground + 56, size: 48, fill: gold, rot: -4 }} />
+        <GraffitiPiece p={{ text: tags[1] ?? 'PULSE', x: w * 0.5, y: ground + 100, size: 36, fill: C.pink, rot: 4 }} />
+      </G>
+      <Mist w={w} h={h} n={30} seed={153} colors={[gold, '#FFF1C2', C.pink]} />
+      <Finish w={w} h={h} id="O" />
+    </>
+  );
+}
+
+// Index = RANKS[i].scene: one wall per rank, in rank order.
+const SCENES = [BackAlley, HandballCourt, NightStreet, BodegaCorner, BasketballCourt, Rooftop, SubwayStation, SubwayTunnel, TrainYard, BridgeUnderpass, NeonClub, BlockParty, BillboardSquare, HallOfFame, PulseTower];
 const BASE: readonly (readonly [string, string])[] = [
   ['#2A2622', '#141210'],
+  ['#3A3E44', '#1A1C20'],
   ['#1A1426', '#0E0B12'],
+  ['#2A1A14', '#120B08'],
+  ['#1C2430', '#0A0E14'],
   ['#14122A', '#0B0A14'],
   ['#4A4F4C', '#2A2D2C'],
+  ['#141414', '#060606'],
   ['#1B1E28', '#0A0D16'],
+  ['#16202A', '#080C10'],
   ['#25103A', '#0B0614'],
+  ['#2A1430', '#0E0612'],
+  ['#1A1030', '#08060F'],
   ['#3A342A', '#1A1610'],
+  ['#3A2A10', '#120C04'],
 ];
 
 /** The wall this player sees: the one they picked, if they've unlocked it, else their current rank's. */
