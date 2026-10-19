@@ -14,7 +14,7 @@ export interface Media {
 }
 
 /** What the model hands back for an entry; the store turns it into a full Entry. */
-export type AiEntry = Omit<Entry, 'id' | 'createdAt' | 'source'> & { hoursAgo?: number };
+export type AiEntry = Omit<Entry, 'id' | 'createdAt' | 'source'> & { hoursAgo?: number; daysAgo?: number; replacesId?: string };
 
 export interface GoalUpdate {
   goal: Goal;
@@ -47,7 +47,9 @@ const ENTRY_SCHEMA = {
     kind: { type: 'STRING', enum: ['meal', 'exercise', 'water', 'weight', 'journal'] },
     title: { type: 'STRING', description: 'Short name, e.g. "Chicken burrito bowl" or "5k run"' },
     emoji: { type: 'STRING', description: 'One emoji that fits the entry' },
-    hoursAgo: { type: 'NUMBER', description: 'How long ago it happened if the user said so, else 0' },
+    hoursAgo: { type: 'NUMBER', description: 'Hours ago it happened, only for times earlier today ("2 hours ago", "this morning"), else 0' },
+    daysAgo: { type: 'NUMBER', description: 'Only when the user names a day: 0 = today, 1 = yesterday, 2 = two days ago. Omit otherwise.' },
+    replacesId: { type: 'STRING', description: 'For a correction: the id of the entry this one replaces (also listed in removeEntryIds). Keeps that entry’s date unless daysAgo is set.' },
     nutrition: {
       type: 'OBJECT',
       properties: {
@@ -153,9 +155,10 @@ RULES
 - Food photo or description -> one "meal" entry per meal (not per ingredient). List components in "items" with portion estimates. Estimate portions from visual cues (plate size, utensils). Fill nutrition incl. fiber/sugar/sodium.
 - Exercise (text, voice, or a photo of a workout, machine display, or smartwatch screen) -> "exercise" entry. Compute caloriesBurned with MET x body weight (${profile.weightKg} kg) x hours unless the screen shows a number. Infer a sensible duration if missing and say you assumed it.
 - "drank a glass of water" -> water entry (glass = 250 ml, bottle = 500 ml). Coffee/tea/drinks with calories are meals; plain water is water.
-- Weigh-ins -> weight entry in kg (convert from lb).
+- Weigh-ins -> weight entry in kg (convert from lb). Weights for different days are separate entries, each with its own daysAgo ("245 yesterday and 247 today" -> 245 with daysAgo 1, 247 with daysAgo 0).
 - Several things in one message -> several entries.
-- Corrections like "actually it was 2 slices" or "delete that" -> put the old entry id in removeEntryIds and add the corrected entry.
+- Corrections like "actually it was 2 slices" or "delete that" -> put the old entry id in removeEntryIds and add the corrected entry with replacesId set to that id, so it keeps its original date. If the user says which day it belongs to, also set daysAgo.
+- Dates: "yesterday" and other named days use daysAgo, never hoursAgo. Each RECENT ENTRY shows its date and time; match it against NOW to tell today from yesterday.
 - The user states a new goal ("I want to build muscle and lose weight", "time to bulk") -> set goalUpdate (lose = fat loss, recomp = build muscle AND lose fat, maintain, gain = build muscle/bulk) and explain the new targets in the reply. Otherwise omit goalUpdate.
 - Mood, sleep, energy, or what happened in their day ("slept 5 hours", "rough day at work", "feeling great", "had a fight with my partner", "legs are sore") -> one "journal" entry. ALWAYS set sleepHours as a number when any amount of sleep is mentioned ("5 and a half hours" -> 5.5, "barely slept" -> 4); ALWAYS set mood (1-5) from their tone; set energy, stress (1-10) and sleepQuality when implied, tags with the key factors, summary in their words, and a short supportive note. A message can contain a journal entry AND meals/exercise. Sleep "last night" belongs to today.
 - When today's stress is high or sleep was short, adapt: suggest a lighter session or a maintenance-calorie day, and mention how stress and poor sleep raise cravings and water retention.
