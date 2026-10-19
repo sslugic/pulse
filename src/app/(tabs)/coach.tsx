@@ -304,7 +304,7 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
   return (
     <Animated.View entering={FadeInDown.duration(260)} style={{ alignItems: 'flex-start', gap: 8, maxWidth: '92%' }}>
       <View style={[styles.bubble, styles.theirs, msg.error && { borderColor: C.danger + '88' }]}>
-        {msg.pending ? (
+        {msg.pending && !msg.text ? (
           <PendingStatus since={msg.createdAt} label={PENDING_LABEL[msg.pendingKind ?? 'text']} />
         ) : msg.error ? (
           <View style={{ gap: 10 }}>

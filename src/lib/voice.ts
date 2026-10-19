@@ -20,17 +20,14 @@ const setSpeaking = (id: string | null) => {
   listeners.forEach((l) => l());
 };
 
-/** Replies are written for the screen; drop emoji and markdown so they read naturally. */
-// Backstop for the Coach prompt: never speak a self-introduction or greeting before the answer.
-const INTRO = /^\s*(?:(?:hi|hey|hello|hiya|yo)\b[^.!?\n]{0,25}[.!?]+|(?:i'm|i am|this is|it's)\s+(?:pulse|your (?:pulse |ai )?(?:fitness )?coach)\b[^.!?\n]*[.!?]+|(?:sure|absolutely|of course|great question|good question)\b[^.!?\n]{0,20}[.!?]+)\s*/i;
+// Backstop for the Coach prompt: never speak a self-introduction, greeting or filler before the answer.
+const INTRO = /^\s*(?:(?:hi|hey|hello|hiya|yo)\b[^.!?\n]{0,25}[.!?]+|(?:i'm|i am|this is|it's)\s+(?:pulse|your (?:pulse |ai )?(?:fitness )?coach)\b[^.!?\n]*[.!?]+|(?:sure|absolutely|of course|great question|good question)\b[^.!?\n]{0,20}[.!?]+)\s*$/i;
 
-function forSpeech(text: string) {
-  let rest = text;
-  // Only strip while something is left to say.
-  for (let m = rest.match(INTRO); m && rest.length > m[0].length; m = rest.match(INTRO)) rest = rest.slice(m[0].length);
-  return rest
-    .replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|️|‍/gu, '')
-    .replace(/^\s*[-•]\s+(.*?)[.!?]?\s*$/gm, '$1.')
+/** Replies are written for the screen; drop emoji and markdown so a sentence reads naturally. */
+function forSpeech(sentence: string) {
+  return sentence
+    .replace(/\p{Extended_Pictographic}|\p{Emoji_Modifier}|\uFE0F|\u200D/gu, '')
+    .replace(/^\s*[-•]\s+(.*?)[.!?]?\s*$/, '$1.')
     .replace(/(\d)\s?[-–]\s?(\d)/g, '$1 to $2')
     .replace(/[*_#`>~]/g, '')
     .replace(/(\d)\s?x\s?(\d)/g, '$1 sets of $2')
@@ -40,8 +37,23 @@ function forSpeech(text: string) {
     .replace(/(\d)\s?kg\b/g, '$1 kilos')
     .replace(/(\d)\s?lbs?\b/g, '$1 pounds')
     .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 4000);
+    .trim();
+}
+
+/**
+ * The complete sentences (or bullet lines) in text. A sentence counts as complete once a space or
+ * newline follows its . ! or ?, so "1.6" stays whole and a reply still streaming in isn't cut short.
+ */
+function sentences(text: string, final: boolean) {
+  const out: string[] = [];
+  let last = 0;
+  for (const m of text.matchAll(/[.!?]+["')\]]*(?=\s)|\n/g)) {
+    const end = m.index + m[0].length;
+    out.push(text.slice(last, end));
+    last = end;
+  }
+  if (final) out.push(text.slice(last));
+  return out.map((x) => x.trim()).filter((x) => /\w/.test(x));
 }
 
 // Every speak/stop bumps this, so a slow speech request can't start talking over a newer one.
@@ -74,32 +86,7 @@ function playClip(uri: string) {
   });
 }
 
-/**
- * Speech is generated a few sentences at a time. The first chunk is one sentence so the Coach
- * starts talking quickly; the rest are generated while it speaks.
- */
-function chunks(text: string) {
-  // Split after . ! ? followed by a space, so decimals like "1.6" stay whole.
-  const sentences = text
-    .replace(/([.!?]+["')\]]*)\s+/g, '$1\n')
-    .split('\n')
-    .map((x) => x.trim())
-    .filter((x) => /\w/.test(x));
-  const out: string[] = [];
-  let cur = '';
-  for (const sentence of sentences) {
-    // Grow chunk sizes so each one is ready before the previous one finishes playing.
-    const limit = [0, 120][out.length] ?? 260;
-    if (cur && cur.length + sentence.length > limit) {
-      out.push(cur);
-      cur = sentence;
-    } else cur = cur ? `${cur} ${sentence}` : sentence;
-  }
-  if (cur) out.push(cur);
-  return out;
-}
-
-// Generated audio per message and voice, so Listen replays instantly and costs nothing.
+// Generated audio by voice and text, so Listen replays instantly and costs nothing.
 const clips = new Map<string, string>();
 const MAX_CLIPS = 60;
 
@@ -191,53 +178,147 @@ function speakOnDevice(text: string, my: number) {
   });
 }
 
-export async function speak(id: string, text: string, opts: { apiKey: string; voice: string }) {
+function hash(text: string) {
+  let h = 5381;
+  for (let i = 0; i < text.length; i++) h = (h * 33) ^ text.charCodeAt(i);
+  return (h >>> 0).toString(36);
+}
+
+export interface SpeechStream {
+  /** The reply so far; complete sentences start playing while the rest streams in. */
+  update(text: string): void;
+  /** The whole reply. */
+  finish(text: string): void;
+  /** Stop, e.g. when the reply failed. */
+  cancel(): void;
+}
+
+/**
+ * Speaks a reply while it is still arriving. Speech is generated a chunk at a time: the first
+ * sentence alone so the Coach starts talking quickly, then bigger chunks made while it speaks.
+ */
+export function speakStream(id: string, opts: { apiKey: string; voice: string }): SpeechStream {
   const my = ++turn;
   releasePlayer();
-  await Speech?.stop().catch(() => {});
-  const say = forSpeech(text);
-  if (!say) return setSpeaking(null);
-  setSpeaking(id);
+  Speech?.stop().catch(() => {});
+  const natural = opts.voice !== 'device' && !!opts.apiKey;
 
-  try {
+  const parts: string[] = []; // chunks queued to speak, in order
+  let pending: string[] = []; // complete sentences not yet grouped into a chunk
+  let seen = 0; // sentences of the reply taken so far
+  let skipped: string[] = []; // a leading greeting or intro, said only if it's the whole reply
+  let ended = false;
+  let idle = true; // nothing queued to play, so queue whatever is ready
+  let playing = 0;
+  let wake: (() => void) | null = null;
+
+  const clipsFor: Promise<string>[] = [];
+  const clip = (i: number) => {
+    // Generate up to two chunks ahead of the one playing.
+    if (!natural || i >= parts.length || i > playing + 2) return;
+    if (!clipsFor[i]) {
+      clipsFor[i] = naturalClip(`${opts.voice}-${hash(parts[i])}`, parts[i], opts.apiKey, opts.voice);
+      clipsFor[i].catch(() => {}); // awaited when its turn comes; don't report prefetches as unhandled
+    }
+    return clipsFor[i];
+  };
+
+  const push = (chunk: string) => {
+    parts.push(chunk);
+    if (parts.length === 1) setSpeaking(id);
+    clip(parts.length - 1);
+    wake?.();
+  };
+
+  const flush = (final: boolean) => {
+    while (pending.length) {
+      // Grow chunk sizes so each one is ready before the previous one finishes playing.
+      const limit = [0, 120][parts.length] ?? 260;
+      let chunk = pending[0];
+      let n = 1;
+      for (; n < pending.length && chunk.length + pending[n].length < limit; n++) chunk += ` ${pending[n]}`;
+      // A chunk with room left waits for more sentences, unless that would leave the Coach silent.
+      if (!final && !idle && n === pending.length && chunk.length < limit) return;
+      pending = pending.slice(n);
+      push(chunk);
+    }
+  };
+
+  const feed = (text: string, final: boolean) => {
+    if (my !== turn || ended) return;
+    const all = sentences(text, final);
+    for (const sentence of all.slice(seen).map(forSpeech)) {
+      if (!sentence) continue;
+      if (!parts.length && !pending.length && INTRO.test(sentence)) skipped.push(sentence);
+      else pending.push(sentence);
+    }
+    seen = all.length;
+    if (final) {
+      if (!parts.length && !pending.length) pending = skipped;
+      skipped = [];
+      flush(true);
+      ended = true;
+      wake?.();
+    } else flush(false);
+  };
+
+  (async () => {
     // Talk back even with the ringer switch off, like a voice note would.
     await setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
-    const parts = opts.voice !== 'device' && opts.apiKey ? chunks(say) : [];
-    const clipsFor: Promise<string>[] = [];
-    const clip = (i: number) => {
-      if (i >= parts.length) return;
-      if (!clipsFor[i]) {
-        clipsFor[i] = naturalClip(`${opts.voice}-${id}-${i}`, parts[i], opts.apiKey, opts.voice);
-        clipsFor[i].catch(() => {}); // awaited below; don't report prefetches as unhandled
-      }
-      return clipsFor[i];
-    };
-
-    let spoken = 0;
-    try {
-      for (; spoken < parts.length; spoken++) {
-        // Keep the next two chunks generating while this one plays.
-        clip(spoken + 1);
-        clip(spoken + 2);
-        const uri = await clip(spoken)!;
-        if (my !== turn) return;
-        await playClip(uri);
+    let device = !natural;
+    for (let i = 0; ; i++) {
+      while (i >= parts.length && !ended) {
+        idle = true;
+        flush(false);
+        if (i < parts.length) break;
+        await new Promise<void>((r) => (wake = r));
+        wake = null;
         if (my !== turn) return;
       }
-    } catch (err) {
-      if (my !== turn) return;
-      console.warn('[voice] Gemini speech failed, using the device voice', err);
+      idle = false;
+      if (my !== turn || i >= parts.length) break;
+      playing = i;
+      clip(i + 1);
+      clip(i + 2);
+      if (!device) {
+        try {
+          const uri = await clip(i)!;
+          if (my !== turn) return;
+          await playClip(uri);
+          continue;
+        } catch (err) {
+          if (my !== turn) return;
+          console.warn('[voice] Gemini speech failed, using the device voice', err);
+          device = true;
+        }
+      }
+      // Whatever Gemini couldn't voice (or everything, for the Offline voice) uses the device voice.
+      await speakOnDevice(parts[i], my);
     }
-    // Whatever Gemini couldn't voice (or everything, for the Offline voice) uses the device voice.
-    const rest = parts.length ? parts.slice(spoken).join(' ') : say;
-    if (rest) await speakOnDevice(rest, my);
-  } catch (err) {
+    if (my === turn) {
+      releasePlayer();
+      setSpeaking(null);
+    }
+  })().catch((err) => {
     console.warn('[voice] speak failed', err);
-  }
-  if (my === turn) {
-    releasePlayer();
-    setSpeaking(null);
-  }
+    if (my === turn) {
+      releasePlayer();
+      setSpeaking(null);
+    }
+  });
+
+  return {
+    update: (text) => feed(text, false),
+    finish: (text) => feed(text, true),
+    cancel: () => {
+      if (my === turn) stopSpeaking();
+    },
+  };
+}
+
+/** Speaks a whole reply, e.g. when the user taps Listen. */
+export function speak(id: string, text: string, opts: { apiKey: string; voice: string }) {
+  speakStream(id, opts).finish(text);
 }
 
 export async function stopSpeaking() {

@@ -10,7 +10,7 @@ import { macroTargets, recommendedTargets } from './nutrition';
 import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, type Claim } from './quests';
 import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
-import { speak, stopSpeaking } from './voice';
+import { speak, speakStream, stopSpeaking } from './voice';
 
 interface State {
   ready: boolean;
@@ -295,7 +295,10 @@ export const actions = {
       pendingKind: input.audio ? 'voice' : input.image ? 'photo' : 'text',
     };
     set({ messages: [...s.messages, userMsg, pending], thinking: true });
-    stopSpeaking();
+    const { apiKey, coachVoice, voiceReplies } = s.settings;
+    // Start talking as soon as the first sentence of the reply streams in.
+    const voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice }) : null;
+    if (!voice) stopSpeaking();
 
     try {
       const result = await askCoach({
@@ -307,6 +310,11 @@ export const actions = {
         text: input.text,
         image: input.image,
         audio: input.audio,
+        onReply: (reply) => {
+          // Still pending (kept out of history and storage) until the whole answer is in.
+          set((st) => ({ messages: st.messages.map((m) => (m.id === pending.id ? { ...m, text: reply } : m)) }));
+          voice?.update(reply);
+        },
       });
       result.removeEntryIds.forEach(actions.removeEntry);
       if (result.goalUpdate) actions.setGoal(result.goalUpdate.goal, result.goalUpdate.pace, result.goalUpdate.note);
@@ -334,9 +342,10 @@ export const actions = {
           m.id === pending.id ? { ...m, pending: false, text: result.reply, entryIds: added.map((a) => a.id) } : m,
         ),
       }));
-      if (state.settings.voiceReplies) actions.speakMessage(pending.id, result.reply);
+      voice?.finish(result.reply);
       return added;
     } catch (err) {
+      voice?.cancel();
       const retryable = !(err instanceof AiError) || err.retryable;
       if (retryable) retryInputs.set(pending.id, input);
       set((st) => ({
