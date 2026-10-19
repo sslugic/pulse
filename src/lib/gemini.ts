@@ -2,6 +2,7 @@
 import { fetch as streamingFetch } from 'expo/fetch';
 
 import type { ChatMessage, Entry, Goal, Pace, Profile, Targets } from './types';
+import { SCENE_NAMES } from './scene';
 import { dayKey, GOAL_INFO, recommendedTargets, summarize, targets as currentTargets } from './nutrition';
 import { dayWellbeing, wellbeingDigest } from './wellbeing';
 
@@ -83,6 +84,7 @@ const ENTRY_SCHEMA = {
     sleepQuality: { type: 'NUMBER', description: 'journal: 1 terrible .. 5 great' },
     tags: { type: 'ARRAY', items: { type: 'STRING' }, description: 'journal: 1-4 short factors, e.g. "work deadline", "sore legs"' },
     summary: { type: 'STRING', description: 'journal: their note in first person, 1-2 sentences' },
+    scene: { type: 'ARRAY', items: { type: 'STRING', enum: SCENE_NAMES }, description: 'journal: 1-4 things to draw this moment with, most important first (e.g. a beach day with friends and beers -> beach, swim, people, beer)' },
     note: { type: 'STRING', description: 'One-line tip or observation about this entry' },
     confidence: { type: 'NUMBER', description: '0..1 how sure you are of the estimate' },
   },
@@ -162,7 +164,7 @@ RULES
 - Corrections like "actually it was 2 slices" or "delete that" -> put the old entry id in removeEntryIds and add the corrected entry with replacesId set to that id, so it keeps its original date. If the user says which day it belongs to, also set daysAgo.
 - Dates: "yesterday" and other named days use daysAgo, never hoursAgo. Each RECENT ENTRY is labelled TODAY or YESTERDAY. When fixing which day a value belongs to, set daysAgo from what the user says the value should be ("245 yesterday" -> the 245 entry gets daysAgo 1), not from the old entry's day. Before replying, check that each entry's daysAgo matches the day you say in the reply.
 - The user states a new goal ("I want to build muscle and lose weight", "time to bulk") -> set goalUpdate (lose = fat loss, recomp = build muscle AND lose fat, maintain, gain = build muscle/bulk) and explain the new targets in the reply. Otherwise omit goalUpdate.
-- Mood, sleep, energy, or what happened in their day ("slept 5 hours", "rough day at work", "feeling great", "had a fight with my partner", "legs are sore") -> one "journal" entry. ALWAYS set sleepHours as a number when any amount of sleep is mentioned ("5 and a half hours" -> 5.5, "barely slept" -> 4); ALWAYS set mood (1-5) from their tone; set energy, stress (1-10) and sleepQuality when implied, tags with the key factors, summary in their words, and a short supportive note. A message can contain a journal entry AND meals/exercise. Sleep "last night" belongs to today.
+- Mood, sleep, energy, or what happened in their day ("slept 5 hours", "rough day at work", "feeling great", "had a fight with my partner", "legs are sore") -> one "journal" entry. ALWAYS set sleepHours as a number when any amount of sleep is mentioned ("5 and a half hours" -> 5.5, "barely slept" -> 4); ALWAYS set mood (1-5) from their tone; set energy, stress (1-10) and sleepQuality when implied, tags with the key factors, summary in their words, scene with 1-4 things that picture the moment, and a short supportive note. A message can contain a journal entry AND meals/exercise. Sleep "last night" belongs to today.
 - When today's stress is high or sleep was short, adapt: suggest a lighter session or a maintenance-calorie day, and mention how stress and poor sleep raise cravings and water retention.
 - Questions about their day ("how am I doing?", "what should I eat for dinner?") -> no entries; answer using today's numbers.
 - Fitness questions (training, workouts and programs, exercise form and technique, cardio, running, strength, mobility, warm-ups, recovery, soreness, sleep, nutrition, supplements, hydration, body composition, motivation) -> no entries; answer them properly. Give a direct answer first, then the why and how in practical, evidence-based terms, tailored to their goal, body, activity level and recent logs. For a workout or plan request, give a concrete one they can follow today (exercises, sets x reps or time, rest, and how to progress). Follow-up questions build on the conversation.

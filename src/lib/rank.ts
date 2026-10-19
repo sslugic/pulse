@@ -3,11 +3,27 @@ import type { Entry } from './types';
 
 // Arcade-style progression: logging earns XP, streaks multiply it, quests add on top.
 export const RANKS = [
-  { name: 'Rookie', xp: 0 },
-  { name: 'Street Crew', xp: 150 },
-  { name: 'Block Boss', xp: 450 },
-  { name: 'Subway King', xp: 1000 },
-  { name: 'Legend', xp: 2000 },
+  { name: 'Rookie', xp: 0, blurb: 'Fresh off the train. Log anything to start earning XP.' },
+  { name: 'Street Crew', xp: 150, blurb: 'You’ve got a routine going. A few solid days of logging.' },
+  { name: 'Block Boss', xp: 450, blurb: 'Consistent all week. Quests are part of your day.' },
+  { name: 'Subway King', xp: 1000, blurb: 'Weeks of streaks. The habits are sticking.' },
+  { name: 'Legend', xp: 2000, blurb: 'A month or more of showing up. People ask how you do it.' },
+  { name: 'Underground Icon', xp: 3500, blurb: 'Months in. Tracking is second nature.' },
+  { name: 'Hall of Fame', xp: 6000, blurb: 'The top of the board. Your name is on the wall.' },
+] as const;
+
+/** How XP is earned, for the rank ladder screen. */
+export const XP_SOURCES = [
+  { label: 'Log a meal', xp: '+10' },
+  { label: 'Log a workout', xp: '+15' },
+  { label: 'Journal check-in', xp: '+15' },
+  { label: 'Weigh-in', xp: '+10' },
+  { label: 'Water (up to 15 a day)', xp: '+3' },
+  { label: 'Each day you log anything', xp: '+20' },
+  { label: 'Each day of your current streak', xp: '+25' },
+  { label: 'Daily quests', xp: '+20 to +60' },
+  { label: 'Perfect day (all 3 quests)', xp: '+30' },
+  { label: 'Arcade minute (once a day)', xp: '+15' },
 ] as const;
 
 const ENTRY_XP: Record<Entry['kind'], number> = { meal: 10, exercise: 15, journal: 15, weight: 10, water: 3 };
