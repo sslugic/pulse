@@ -9,8 +9,14 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
-  const secret = Deno.env.get('REVENUECAT_WEBHOOK_AUTH');
-  if (!secret || req.headers.get('Authorization') !== `Bearer ${secret}`) return json({ error: 'unauthorized' }, 401);
+  const secret = Deno.env.get('REVENUECAT_WEBHOOK_AUTH')?.trim();
+  // RevenueCat sends the header exactly as typed in its dashboard, so accept the secret with or
+  // without the "Bearer " prefix and ignore stray whitespace.
+  const sent = (req.headers.get('Authorization') ?? '').trim().replace(/^Bearer\s+/i, '');
+  if (!secret || sent !== secret) {
+    console.warn('webhook auth failed', { length: sent.length, bearer: /^Bearer\s/i.test(req.headers.get('Authorization') ?? '') });
+    return json({ error: 'unauthorized' }, 401);
+  }
 
   const body = await req.json().catch(() => null);
   const e = body?.event;
