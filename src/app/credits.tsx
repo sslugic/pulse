@@ -140,7 +140,7 @@ export default function CreditsScreen() {
                     label={account.subscription?.active ? t('credits.subscribed') : busy === pro.id ? t('credits.working') : t('credits.subscribe')}
                     size="md"
                     colors={['#B8FF4A', '#5BE01E']}
-                    textColor={C.ink}
+                    textColor="#fff"
                     disabled={!!busy || !!account.subscription?.active}
                     onPress={() => purchase(pro)}
                   />
