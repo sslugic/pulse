@@ -67,7 +67,7 @@ export default function PlansScreen() {
           </T>
           {!hasKey && (
             <T size={12} color={C.orange}>
-              Add your Gemini key in Crew to make plans.
+              Sign in (Crew → Account) to make plans.
             </T>
           )}
         </Card>

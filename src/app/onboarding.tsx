@@ -21,7 +21,6 @@ export default function Onboarding() {
   const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const [p, setP] = useState<Profile>(getState().profile);
-  const [key, setKey] = useState(getState().settings.apiKey);
   const signedIn = useStore((st) => !!st.account.userId);
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const set = (patch: Partial<Profile>) => setP((x) => ({ ...x, ...patch }));
@@ -102,41 +101,14 @@ export default function Onboarding() {
           </Animated.View>
         )}
 
-        {step === 2 && !cloudConfigured && (
-          <Animated.View entering={FadeInDown.duration(350)} style={{ gap: 18 }}>
-            <Comic size={38}>CONNECT GOOGLE AI</Comic>
-            <T size={14} color={C.textDim} style={{ lineHeight: 20 }}>
-              Pulse uses your own Gemini API key. It’s stored in the device Keychain and only sent to Google.
-            </T>
-            <Field label="Gemini API key">
-              <TextInput
-                value={key}
-                onChangeText={setKey}
-                placeholder="AIza…"
-                placeholderTextColor={C.textMute}
-                secureTextEntry
-                textContentType="none"
-                autoComplete="off"
-                importantForAutofill="no"
-                autoCapitalize="none"
-                autoCorrect={false}
-                style={inputStyle}
-              />
-            </Field>
-            <T size={12} color={C.textMute}>
-              Get one free at aistudio.google.com/apikey. You can also add it later in Profile.
-            </T>
-          </Animated.View>
-        )}
-
         <View style={{ flex: 1 }} />
         <GradientButton
-          label={step === 0 ? 'Get started' : step === 1 ? 'Continue' : key.trim() || signedIn ? 'Start logging' : 'Skip for now'}
+          label={step === 0 ? 'Get started' : step === 1 ? 'Continue' : signedIn ? 'Start logging' : 'Skip for now'}
           onPress={() => {
             if (step < 2) {
               setStep(step + 1);
               scroll.current?.scrollTo({ y: 0, animated: false });
-            } else actions.completeOnboarding(p, key);
+            } else actions.completeOnboarding(p);
           }}
           style={{ marginTop: Space.xl }}
         />

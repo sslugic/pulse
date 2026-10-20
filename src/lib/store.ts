@@ -53,6 +53,8 @@ export interface Reward {
 
 const DATA_KEY = 'pulse:data:v1';
 const KEY_KEY = 'pulse_gemini_api_key';
+/** Development builds can call Gemini directly with a key from the gitignored .env.local; Release never does. */
+const DEV_GEMINI_KEY = __DEV__ ? (process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '') : '';
 
 const defaultProfile: Profile = {
   name: '',
@@ -72,7 +74,7 @@ let state: State = {
   profile: defaultProfile,
   entries: [],
   messages: [],
-  settings: { apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '', model: DEFAULT_MODEL, voiceReplies: true, coachVoice: DEFAULT_VOICE },
+  settings: { apiKey: DEV_GEMINI_KEY, model: DEFAULT_MODEL, voiceReplies: true, coachVoice: DEFAULT_VOICE },
   thinking: false,
   game: { claims: [], unlocked: [] },
   photos: [],
@@ -131,15 +133,14 @@ function scheduleBackup(data: unknown) {
   }, 60_000);
 }
 
-// The API key stays out of AsyncStorage on device: Keychain via SecureStore.
-const secret = {
-  get: () => (Platform.OS === 'web' ? AsyncStorage.getItem(KEY_KEY) : SecureStore.getItemAsync(KEY_KEY)),
-  set: (v: string) => (Platform.OS === 'web' ? AsyncStorage.setItem(KEY_KEY, v) : SecureStore.setItemAsync(KEY_KEY, v)),
-};
+// Older builds let users paste their own Gemini key into the Keychain. AI now runs only through Pulse
+// cloud (the key is a server secret), so any stored key is wiped on launch.
+const wipeStoredKey = () => (Platform.OS === 'web' ? AsyncStorage.removeItem(KEY_KEY) : SecureStore.deleteItemAsync(KEY_KEY)).catch(() => {});
 
 export async function hydrate() {
   try {
-    const [raw, key] = await Promise.all([AsyncStorage.getItem(DATA_KEY), secret.get().catch(() => null)]);
+    wipeStoredKey();
+    const raw = await AsyncStorage.getItem(DATA_KEY);
     const data = raw ? JSON.parse(raw) : {};
     state = {
       ...state,
@@ -148,7 +149,7 @@ export async function hydrate() {
       entries: data.entries ?? [],
       messages: data.messages ?? [],
       settings: {
-        apiKey: key || state.settings.apiKey,
+        apiKey: DEV_GEMINI_KEY,
         model: data.model || DEFAULT_MODEL,
         voiceReplies: data.voiceReplies ?? true,
         coachVoice: data.coachVoice || DEFAULT_VOICE,
@@ -258,8 +259,8 @@ export function useStore<T>(select: (s: State) => T): T {
 export const getState = () => state;
 
 /** AI features can run: signed in to Pulse cloud (credits) or a personal Gemini key is set. */
-export const canUseAI = () => !!state.account.userId || !!state.settings.apiKey;
-export const useAiReady = () => useStore((s) => !!s.account.userId || !!s.settings.apiKey);
+export const canUseAI = () => !!state.account.userId || (__DEV__ && !!state.settings.apiKey);
+export const useAiReady = () => useStore((s) => !!s.account.userId || (__DEV__ && !!s.settings.apiKey));
 
 /** Newest weigh-in by date (entries are kept newest first). */
 const latestWeight = (entries: Entry[]) => entries.find((e) => e.kind === 'weight' && e.weightKg);
@@ -393,16 +394,11 @@ onSessionChange((s) => {
 onCreditBalance((credits) => set({ account: { ...state.account, credits } }));
 
 export const actions = {
-  completeOnboarding(profile: Partial<Profile>, apiKey?: string) {
+  completeOnboarding(profile: Partial<Profile>) {
     set((s) => ({ onboarded: true, profile: { ...s.profile, ...profile } }));
-    if (apiKey !== undefined) actions.setApiKey(apiKey);
   },
   updateProfile(patch: Partial<Profile>) {
     set((s) => ({ profile: { ...s.profile, ...patch } }));
-  },
-  setApiKey(apiKey: string) {
-    set((s) => ({ settings: { ...s.settings, apiKey: apiKey.trim() } }));
-    secret.set(apiKey.trim()).catch(() => {});
   },
   setModel(model: string) {
     set((s) => ({ settings: { ...s.settings, model: model.trim() || DEFAULT_MODEL } }));
