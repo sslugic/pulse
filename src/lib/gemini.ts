@@ -96,6 +96,9 @@ async function aiFetch(
     });
     if (res.status === 402) {
       const j = await res.json().catch(() => ({}));
+      // Only our proxy's own refusal means the wallet is short. Any other 402 comes from the hosting
+      // platform (e.g. the project is over its plan quota) and says nothing about the user's credits.
+      if (j.error !== 'insufficient_credits') throw new AiError(t('errors.serviceUnavailable'), true);
       if (typeof j.balance === 'number') balanceListener?.(j.balance);
       throw new AiError(t('errors.outOfCredits', { cost: j.cost ?? '?' }), false, 'credits');
     }
