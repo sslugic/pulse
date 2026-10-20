@@ -244,6 +244,15 @@ function fillJournal<T extends Partial<Entry>>(e: T): T {
   return n > 0 && n <= 14 && /sleep|slept|night/.test(text) ? { ...e, sleepHours: n } : e;
 }
 
+// Safety net: models sometimes log a workout without its calories, which shows as "−0 kcal".
+// Estimate it the way the Coach is told to: MET (by intensity) x body weight x hours.
+const MET = { low: 3.5, moderate: 5, high: 8 } as const;
+function fillExercise<T extends Partial<Entry>>(e: T, weightKg: number): T {
+  if (e.kind !== 'exercise' || (e.caloriesBurned ?? 0) > 0) return e;
+  const minutes = e.durationMin && e.durationMin > 0 ? e.durationMin : 30;
+  return { ...e, durationMin: minutes, caloriesBurned: Math.round(MET[e.intensity ?? 'moderate'] * weightKg * (minutes / 60)) };
+}
+
 /**
  * When a Coach entry happened. A named day ("yesterday") moves the entry back whole days, keeping the
  * replaced entry's time of day if there is one; a plain correction keeps the replaced entry's time.
@@ -1007,7 +1016,7 @@ export const actions = {
       result.removeEntryIds.forEach(actions.removeEntry);
       if (result.goalUpdate) actions.setGoal(result.goalUpdate.goal, result.goalUpdate.pace, result.goalUpdate.note);
       const source: Entry['source'] = input.audio ? 'voice' : input.image ? 'photo' : 'text';
-      const added = result.entries.map(cleanEntry).map(fillJournal).map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
+      const added = result.entries.map(cleanEntry).map(fillJournal).map((e) => fillExercise(e, s.profile.weightKg)).map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
         actions.addEntry({
           ...e,
           source,

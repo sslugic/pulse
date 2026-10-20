@@ -154,7 +154,7 @@ const ENTRY_SCHEMA = {
         required: ['name', 'amount', 'calories'],
       },
     },
-    caloriesBurned: { type: 'NUMBER' },
+    caloriesBurned: { type: 'NUMBER', description: 'exercise: always set, kcal burned (never 0 for a real workout)' },
     durationMin: { type: 'NUMBER' },
     intensity: { type: 'STRING', enum: ['low', 'moderate', 'high'] },
     waterMl: { type: 'NUMBER' },
