@@ -10,11 +10,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const secret = Deno.env.get('REVENUECAT_WEBHOOK_AUTH')?.trim();
-  // RevenueCat sends the header exactly as typed in its dashboard, so accept the secret with or
-  // without the "Bearer " prefix and ignore stray whitespace.
+  // The secret can come in the Authorization header (with or without "Bearer ") or as ?key= on the
+  // webhook URL. The URL form avoids password managers autofilling RevenueCat's header field.
   const sent = (req.headers.get('Authorization') ?? '').trim().replace(/^Bearer\s+/i, '');
-  if (!secret || sent !== secret) {
-    console.warn('webhook auth failed', { length: sent.length, bearer: /^Bearer\s/i.test(req.headers.get('Authorization') ?? '') });
+  const key = new URL(req.url).searchParams.get('key')?.trim() ?? '';
+  if (!secret || (sent !== secret && key !== secret)) {
+    console.warn('webhook auth failed', { headerLength: sent.length, keyLength: key.length });
     return json({ error: 'unauthorized' }, 401);
   }
 

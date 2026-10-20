@@ -73,8 +73,9 @@ tax info, or products won't load.
 2. Products → import the four products. Entitlements → create `pro` and attach `pulse_pro_monthly`.
 3. Offerings → make a `default` offering (marked current) with packages for all four products
    (the monthly package as type Monthly).
-4. Integrations → Webhooks → URL `https://<ref>.supabase.co/functions/v1/revenuecat-webhook`,
-   Authorization header `Bearer <REVENUECAT_WEBHOOK_AUTH>`.
+4. Integrations → Webhooks → URL `https://<ref>.supabase.co/functions/v1/revenuecat-webhook?key=<REVENUECAT_WEBHOOK_AUTH>`
+   and leave the Authorization header empty. (A `Bearer <secret>` header also works, but password
+   managers like 1Password autofill that field and silently break it.)
 5. Put the public iOS SDK key in `.env` / EAS: `EXPO_PUBLIC_REVENUECAT_IOS_KEY=appl_...`
 
 **Check:** with a sandbox tester signed in on a device (Settings → Developer → Sandbox Apple
