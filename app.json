@@ -94,7 +94,8 @@
           "NSHealthUpdateUsageDescription": false
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      ["expo-localization", { "supportedLocales": ["en", "es", "de", "fr", "it", "pt"] }]
     ],
     "experiments": {
       "typedRoutes": true,
