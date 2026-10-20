@@ -149,6 +149,13 @@ export default function ProfileScreen() {
           </T>
         </Card>
 
+        <Pressable onPress={() => actions.startTour()} style={styles.tourLink} accessibilityRole="button">
+          <Icon name="sparkles" size={16} color={C.yellow} />
+          <T size={14} rounded color={C.yellow}>
+            {t('crew.replayTour')}
+          </T>
+        </Pressable>
+
         <SectionTitle>{t('crew.sectionDetails')}</SectionTitle>
         <Card style={{ gap: 18 }}>
           <Field label={t('crew.fieldName')}>
@@ -196,4 +203,5 @@ function Target({ label, value, unit = '', color }: { label: string; value: numb
 const styles = StyleSheet.create({
   content: { paddingHorizontal: Space.md, gap: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   targets: { flexDirection: 'row' },
+  tourLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12 },
 });

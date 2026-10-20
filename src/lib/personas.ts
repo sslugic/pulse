@@ -85,4 +85,8 @@ export const personaUnlockId = (id: PersonaId) => `persona:${id}`;
 
 export const personaPrice = (unlockId: string) => (unlockId.startsWith('persona:') ? (personaById(unlockId.slice(8)).price ?? 0) : undefined);
 
-export const isPersonaUnlocked = (id: PersonaId, unlocked: string[]) => personaById(id).price === 0 || unlocked.includes(personaUnlockId(id));
+/** The coach picked for free during setup is kept as a gift, so it doesn't count as tokens spent. */
+export const starterCoachId = (id: PersonaId) => `gift:${personaUnlockId(id)}`;
+
+export const isPersonaUnlocked = (id: PersonaId, unlocked: string[]) =>
+  personaById(id).price === 0 || unlocked.includes(personaUnlockId(id)) || unlocked.includes(starterCoachId(id));
