@@ -94,10 +94,17 @@ async function aiFetch(
       body: `{"feature":${JSON.stringify(opts.feature)},"model":${JSON.stringify(opts.model)},"method":"${opts.method}","requestId":"${opts.id}","payload":${opts.body}}`,
       signal: opts.signal,
     });
-    if (res.status === 402) {
-      const j = await res.json().catch(() => ({}));
-      if (typeof j.balance === 'number') balanceListener?.(j.balance);
-      throw new AiError(t('errors.outOfCredits', { cost: j.cost ?? '?' }), false, 'credits');
+    if (res.status === 402 || res.status === 503) {
+      const j = await res.clone().json().catch(() => ({}));
+      if (j.error === 'insufficient_credits') {
+        if (typeof j.balance === 'number') balanceListener?.(j.balance);
+        throw new AiError(typeof j.cost === 'number' ? t('errors.outOfCredits', { cost: j.cost }) : t('errors.outOfCreditsNoCost'), false, 'credits');
+      }
+      // Pulse cloud couldn't reach the AI provider (quota, billing, outage). The charge was refunded.
+      if (j.error?.code === 'ai_unavailable' || res.status === 402) {
+        console.warn('AI unavailable', res.status, j.upstream);
+        throw new AiError(t('errors.aiUnavailable'), j.retryable === true);
+      }
     }
     if (res.status === 401) throw new AiError(t('errors.sessionExpired'), false);
     const bal = res.headers.get('x-credits-balance');
