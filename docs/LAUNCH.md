@@ -102,9 +102,8 @@ Already built in the app:
 
 You still need to:
 
-- [ ] Publish a **Privacy Policy** and **Terms** page and set `EXPO_PUBLIC_PRIVACY_URL`,
-      `EXPO_PUBLIC_TERMS_URL` and `EXPO_PUBLIC_SUPPORT_URL` (the Terms link defaults to Apple's
-      standard EULA). Add the same URLs in App Store Connect.
+- [x] **Privacy Policy, Terms and Support** pages: https://sslugic.github.io/pulse-site/ (repo `sslugic/pulse-site`),
+      wired in as the defaults in `src/lib/legal.ts`. Use the same URLs in App Store Connect.
 - [ ] Fill in **App Privacy** ("nutrition labels") in App Store Connect. Data Pulse collects
       when signed in: Health & Fitness (logs, HealthKit), Identifiers (user id), Purchases,
       User Content (journal, photos sent to the AI). Not used for tracking.
