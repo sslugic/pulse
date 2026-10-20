@@ -135,11 +135,17 @@ export default function Today() {
           <View style={styles.week}>
             {week.map((d, i) => (
               <Pressable key={i} onPress={() => openDay(d.key)} accessibilityLabel={t('hq.openDay', { day: d.key })} hitSlop={4}>
-                <DripLetter letter={d.letter} on={d.on} color={d.today ? C.orange : C.lime} />
+                <DripLetter letter={d.letter} on={d.on} today={d.today} color={d.today ? C.orange : C.lime} />
               </Pressable>
             ))}
           </View>
         </View>
+        {/* The streak counts through yesterday until today is logged, so say what keeps it going. */}
+        {days > 0 && !week.find((d) => d.today)?.on && (
+          <T size={11} rounded color={C.orange} style={{ marginTop: -4 }}>
+            {t('hq.logTodayToKeep', { n: days + 1 })}
+          </T>
+        )}
 
         {/* Today's numbers first: calories left, eaten, burned and macros in one card */}
         <Card style={{ gap: 12, marginTop: Space.xs }} accent={remaining < 0 ? C.danger : C.orange + '99'} onPress={() => openDay(todayKey)}>
