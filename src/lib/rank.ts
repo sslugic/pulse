@@ -1,4 +1,4 @@
-import { dayKey, streak } from './nutrition';
+import { dayKey, loggedDays, streak } from './nutrition';
 import type { Entry } from './types';
 
 // Arcade-style progression: logging earns XP, streaks multiply it, quests add on top.
@@ -49,6 +49,7 @@ export function logXp(entries: Entry[], frozen: string[] = []) {
   const water = new Map<string, number>();
   let xp = 0;
   for (const e of entries) {
+    if (e.passive) continue;
     if (e.kind === 'water') {
       const k = dayKey(e.createdAt);
       const add = Math.min(ENTRY_XP.water, WATER_XP_PER_DAY - (water.get(k) ?? 0));
@@ -56,7 +57,7 @@ export function logXp(entries: Entry[], frozen: string[] = []) {
       xp += add;
     } else xp += ENTRY_XP[e.kind];
   }
-  const days = new Set(entries.map((e) => dayKey(e.createdAt))).size;
+  const days = loggedDays(entries).size;
   return xp + days * 20 + streak(entries, frozen) * 25;
 }
 
@@ -72,7 +73,7 @@ export function crewRank(entries: Entry[], bonusXp = 0, frozen: string[] = []) {
 
 /** Which of the last 7 days (Mon-first, this week) have any log. */
 export function weekDots(entries: Entry[], now = new Date()) {
-  const logged = new Set(entries.map((e) => dayKey(e.createdAt)));
+  const logged = loggedDays(entries);
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
   return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((letter, i) => {

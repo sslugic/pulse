@@ -11,6 +11,7 @@ import {
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import { dayKey } from './nutrition';
 import type { Entry } from './types';
 
 // Apple Health, read-only. Workouts, sleep and weigh-ins become Pulse entries (tagged with the
@@ -100,6 +101,27 @@ export async function pullHealth(since: Date, known: Set<string>): Promise<Healt
     if (known.has(id) || n.ms < 2 * 3600_000) continue;
     const hours = Math.round((n.ms / 3600_000) * 2) / 2;
     out.push({ kind: 'journal', title: `Slept ${hours}h`, emoji: '😴', createdAt: n.end, sleepHours: hours, source: 'quick', note: 'From Apple Health', healthId: id });
+  }
+  return out;
+}
+
+/**
+ * Active energy (kcal) Health recorded on each day from `since` to today. This includes walks and
+ * other movement the iPhone or Watch tracked without a workout being started.
+ */
+export async function activeEnergyByDay(since: Date): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const start = new Date(since);
+  start.setHours(0, 0, 0, 0);
+  for (const d = start; d.getTime() <= Date.now(); d.setDate(d.getDate() + 1)) {
+    const from = new Date(d);
+    const to = new Date(d);
+    to.setDate(to.getDate() + 1);
+    const r = await queryStatisticsForQuantity('HKQuantityTypeIdentifierActiveEnergyBurned', ['cumulativeSum'], {
+      filter: { date: { startDate: from, endDate: to.getTime() > Date.now() ? new Date() : to } },
+      unit: 'kcal',
+    });
+    out.set(dayKey(from), Math.round(r.sumQuantity?.quantity ?? 0));
   }
   return out;
 }

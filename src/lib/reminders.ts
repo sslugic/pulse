@@ -34,7 +34,7 @@ export async function scheduleReminder(entries: Entry[], hour: number, frozen: s
   const now = new Date();
   const when = new Date(now);
   when.setHours(hour, 0, 0, 0);
-  const loggedToday = entries.some((e) => dayKey(e.createdAt) === dayKey(now));
+  const loggedToday = entries.some((e) => !e.passive && dayKey(e.createdAt) === dayKey(now));
   if (loggedToday || when <= now) when.setDate(when.getDate() + 1);
 
   // The streak they'd be protecting on that evening.

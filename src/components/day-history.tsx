@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { C, Space } from '@/constants/theme';
-import { dayKey, lastNDays, macroTargets, summarize } from '@/lib/nutrition';
+import { dayKey, lastNDays, loggedDays, macroTargets, summarize } from '@/lib/nutrition';
 import { useStore } from '@/lib/store';
 import type { Entry } from '@/lib/types';
 
@@ -33,7 +33,7 @@ export function DayHistory({ todayKey }: { todayKey: string }) {
   const t = macroTargets(profile);
 
   const strip = useMemo(() => {
-    const logged = new Set(entries.map((e) => dayKey(e.createdAt)));
+    const logged = loggedDays(entries);
     return lastNDays(14, new Date(todayKey + 'T12:00'))
       .reverse()
       .map((k) => ({ k, logged: logged.has(k), d: new Date(k + 'T12:00') }));

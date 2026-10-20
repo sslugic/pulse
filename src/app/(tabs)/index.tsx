@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ArcadePrompt, isStressHigh } from '@/components/arcade-prompt';
@@ -72,6 +72,11 @@ export default function Today() {
     actions.ensurePlans();
   }, [todayKey]);
   const steps = useSteps(!!settings.health?.on);
+  // Health keeps adding active energy through the day; pick it up whenever the app comes back.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && actions.syncHealth());
+    return () => sub.remove();
+  }, []);
 
   const openDay = (key: string) => {
     tap();
