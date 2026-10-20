@@ -65,7 +65,16 @@ Deno.serve(async (req) => {
   if (!upstream.ok) {
     await refund();
     const body = await upstream.text();
-    return new Response(body, { status: upstream.status, headers: { ...cors, 'Content-Type': upstream.headers.get('Content-Type') ?? 'application/json' } });
+    console.error('gemini error', JSON.stringify({ status: upstream.status, feature, model, body: body.slice(0, 1000) }));
+    // Request problems (400/404) go back as-is so the app can adapt (e.g. retry without thinking).
+    // Anything on Google's side (billing or quota exhausted, auth, outages) is our problem, not the
+    // player's: report it as AI unavailable so the app never mistakes it for an empty credit balance.
+    if (upstream.status === 400 || upstream.status === 404) {
+      return new Response(body, { status: upstream.status, headers: { ...cors, 'Content-Type': upstream.headers.get('Content-Type') ?? 'application/json' } });
+    }
+    // `message` is what older app builds show for an unknown error.
+    const message = 'Pulse AI is temporarily unavailable. You weren’t charged. Try again a bit later.';
+    return json({ error: { code: 'ai_unavailable', message }, upstream: upstream.status, retryable: upstream.status === 429 || upstream.status >= 500 }, 503);
   }
   // Pass the answer through untouched while keeping a copy; once it has all been sent, log the token
   // usage from it. Doing it at the end of the stream keeps the request alive until the log is written.
