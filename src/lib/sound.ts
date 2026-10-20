@@ -3,10 +3,10 @@ import { AppState, Platform } from 'react-native';
 
 import { DEFAULT_TRACK, TRACK_FILES, type TrackId } from './music';
 
-// Background music (scripts/make-music.py) and reward sounds (scripts/make-sounds.py). Music loops
-// while the app is open and is on by default; the track, its volume, and both on/off switches live in
-// Crew. Sounds follow the ringer switch and mix with whatever else is playing, and the music pauses
-// while the Coach talks or you record.
+// Background music (scripts/make-music.py) and reward sounds (scripts/make-sounds.py). Music is off
+// until the player turns it on, then loops while the app is open; the track, its volume, and both
+// on/off switches live in Crew. Sounds follow the ringer switch and mix with whatever else is
+// playing, and the music pauses while the Coach talks or you record.
 
 /** Loudest the music gets at 100% on the volume control, so it stays background music. */
 const MUSIC_MAX = 0.45;
@@ -21,7 +21,7 @@ const SFX: Record<Sfx, number> = {
   nudge: require('@/assets/audio/nudge.m4a'),
 };
 
-let musicOn = true;
+let musicOn = false;
 let sfxOn = true;
 let track: TrackId = DEFAULT_TRACK;
 let volume = 0.5;

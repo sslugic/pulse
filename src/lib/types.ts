@@ -105,7 +105,7 @@ export interface Settings {
   health?: { on: boolean; lastSync?: number };
   /** Generate today's meal and workout plans automatically each day (default on). */
   autoPlans?: boolean;
-  /** Arcade background music (default on). */
+  /** Background music (default off; the player turns it on in Crew or the jukebox). */
   music?: boolean;
   /** Reward and chest sounds (default on). */
   sfx?: boolean;
