@@ -1,19 +1,18 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, View } from 'react-native';
-import Svg, { Circle, Rect } from 'react-native-svg';
+import Svg, { Circle, SvgXml } from 'react-native-svg';
 
 import { C, Display } from '@/constants/theme';
+import { AVATAR_ART } from '@/lib/avatar-art';
 import { avatarById, type AvatarId } from '@/lib/avatars';
 
 /**
- * Graffiti-tag avatar: the user's initial (or a chosen 8-bit sprite) sprayed on a colour splash inside
- * a steel ring. With `avatar`, the sprite's own splash colour replaces `band`.
+ * Graffiti-tag avatar inside a steel ring: the user's initial sprayed on a colour splash, or a chosen
+ * subway-graffiti sticker (see lib/avatar-art) that fills the frame.
  */
 export function TagAvatar({ size = 72, band = C.orange, online = true, letter = 'P', avatar }: { size?: number; band?: string; online?: boolean; letter?: string; avatar?: AvatarId }) {
   const inner = size - 8;
-  const def = avatar ? avatarById(avatar) : null;
-  const sprite = def?.sprite.length ? def : null;
-  if (def) band = def.band;
+  const art = avatar ? AVATAR_ART[avatarById(avatar).id] : undefined;
   return (
     <View style={{ width: size, height: size }}>
       <LinearGradient
@@ -39,8 +38,8 @@ export function TagAvatar({ size = 72, band = C.orange, online = true, letter = 
             <Circle cx={18} cy={78} r={5} fill={band} opacity={0.8} />
             <Circle cx={88} cy={70} r={3} fill={band} opacity={0.7} />
           </Svg>
-          {sprite ? (
-            <PixelSprite rows={sprite.sprite} colors={sprite.colors} size={inner * 0.62} />
+          {art ? (
+            <SvgXml xml={`<svg viewBox="0 0 100 100">${art}</svg>`} width={inner} height={inner} style={{ position: 'absolute' }} />
           ) : (
             <Text
               style={{
@@ -76,21 +75,3 @@ export function TagAvatar({ size = 72, band = C.orange, online = true, letter = 
   );
 }
 
-/** Draws pixel rows ('.' is empty, letters index `colors`) as crisp squares with a hard ink shadow. */
-export function PixelSprite({ rows, colors, size }: { rows: string[]; colors: Record<string, string>; size: number }) {
-  const w = Math.max(...rows.map((r) => r.length));
-  const side = Math.max(w, rows.length);
-  const dx = (side - w) / 2;
-  const dy = (side - rows.length) / 2;
-  const cells = rows.flatMap((r, y) => [...r].flatMap((ch, x) => (ch === '.' ? [] : [{ x: x + dx, y: y + dy, fill: colors[ch] ?? C.text }])));
-  return (
-    <Svg width={size} height={size} viewBox={`-0.6 -0.6 ${side + 1.2} ${side + 1.2}`}>
-      {cells.map((c) => (
-        <Rect key={`s${c.x}-${c.y}`} x={c.x + 0.35} y={c.y + 0.45} width={1.02} height={1.02} fill={C.ink} />
-      ))}
-      {cells.map((c) => (
-        <Rect key={`p${c.x}-${c.y}`} x={c.x} y={c.y} width={1.02} height={1.02} fill={c.fill} />
-      ))}
-    </Svg>
-  );
-}
