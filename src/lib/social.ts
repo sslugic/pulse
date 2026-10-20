@@ -11,8 +11,9 @@ import { currentSession, onSessionChange, supabase } from './cloud';
 import { language, t } from './i18n';
 import { LEGAL } from './legal';
 import { dayKey, loggedDays, macroTargets, streak, summarize } from './nutrition';
-import { questXp } from './quests';
+import { PERFECT_DAY, questsFor, questXp } from './quests';
 import { crewRank, weekStart, weeklyXp } from './rank';
+import { playSfx } from './sound';
 import { actions, getState } from './store';
 import type { Entry, Targets } from './types';
 
@@ -67,7 +68,9 @@ export interface CrewView {
   members: CrewMember[];
 }
 
-export type ChallengeTemplate = 'protein' | 'meals' | 'water' | 'workouts' | 'logging';
+export type ChallengeTemplate =
+  | 'logging' | 'protein' | 'meals' | 'water' | 'workouts'
+  | 'calories' | 'sleep' | 'journal' | 'breakfast' | 'weighin' | 'active' | 'burn' | 'quests' | 'perfect';
 
 export interface Challenge {
   id: string;
@@ -78,6 +81,8 @@ export interface Challenge {
   createdBy: string;
   opponent: string | null;
   declined: boolean;
+  /** Hard mode: a tougher goal for a better chest. */
+  hard: boolean;
   progress: Record<string, { progress: number; completedAt: string | null }>;
 }
 
@@ -195,7 +200,7 @@ async function load() {
       db.from('friendships').select('user_a, user_b'),
       db.from('weekly_scores').select('user_id, week, xp').in('week', [week, prev]),
       db.from('crews').select('id, name, invite_code'),
-      db.from('challenges').select('id, template, target, starts, ends, created_by, opponent, declined_at').gte('ends', dayKey(Date.now() - 21 * 864e5)),
+      db.from('challenges').select('id, template, target, starts, ends, created_by, opponent, declined_at, hard').gte('ends', dayKey(Date.now() - 21 * 864e5)),
       db.from('challenge_progress').select('challenge_id, user_id, progress, completed_at'),
       db.from('nudges').select('id, sender, recipient, day, created_at, seen_at').gte('created_at', new Date(Date.now() - 7 * 864e5).toISOString()).order('created_at', { ascending: false }),
     ]);
@@ -239,7 +244,7 @@ async function load() {
       progressBy.set(p.challenge_id, m);
     }
     const challengeList: Challenge[] = ((challenges.data ?? []) as {
-      id: string; template: ChallengeTemplate; target: number; starts: string; ends: string; created_by: string; opponent: string | null; declined_at: string | null;
+      id: string; template: ChallengeTemplate; target: number; starts: string; ends: string; created_by: string; opponent: string | null; declined_at: string | null; hard: boolean;
     }[]).map((c) => ({
       id: c.id,
       template: c.template,
@@ -249,6 +254,7 @@ async function load() {
       createdBy: c.created_by,
       opponent: c.opponent,
       declined: !!c.declined_at,
+      hard: !!c.hard,
       progress: progressBy.get(c.id) ?? {},
     }));
 
@@ -377,6 +383,7 @@ export async function nudge(userId: string) {
     throw new SquadError(status === 409 ? 'already_nudged' : status === 403 ? 'not_friends' : 'nudge_failed');
   }
   set({ nudgedToday: new Set([...squad.nudgedToday, userId]) });
+  playSfx('nudge');
   return data as { delivered: number };
 }
 
@@ -412,36 +419,85 @@ export async function leaveCrew(id: string) {
 export const CHALLENGE_DAYS = [3, 7, 14] as const;
 export type ChallengeDays = (typeof CHALLENGE_DAYS)[number];
 
-export const CHALLENGES: Record<ChallengeTemplate, { icon: IconName; color: string; perWeek: number }> = {
-  logging: { icon: 'flame', color: C.yellow, perWeek: 7 },
-  protein: { icon: 'bolt', color: C.protein, perWeek: 5 },
-  meals: { icon: 'fork', color: C.orange, perWeek: 6 },
-  water: { icon: 'drop', color: C.water, perWeek: 5 },
-  workouts: { icon: 'dumbbell', color: C.lime, perWeek: 3 },
+export type ChallengeGroup = 'habits' | 'nutrition' | 'training' | 'arcade';
+
+/**
+ * Challenge types. `perWeek` is the goal for 7 days, scaled to the length. `per: 'day'` goals count
+ * days that hit the bar (capped at the number of days); the rest add up (minutes, kcal, workouts).
+ */
+export const CHALLENGES: Record<ChallengeTemplate, { icon: IconName; color: string; perWeek: number; per: 'day' | 'total'; group: ChallengeGroup }> = {
+  logging: { icon: 'flame', color: C.yellow, perWeek: 7, per: 'day', group: 'habits' },
+  journal: { icon: 'journal', color: C.violet, perWeek: 5, per: 'day', group: 'habits' },
+  sleep: { icon: 'moon', color: C.blue, perWeek: 5, per: 'day', group: 'habits' },
+  breakfast: { icon: 'sun', color: C.orange, perWeek: 5, per: 'day', group: 'habits' },
+  weighin: { icon: 'scale', color: C.cyan, perWeek: 3, per: 'total', group: 'habits' },
+  protein: { icon: 'bolt', color: C.protein, perWeek: 5, per: 'day', group: 'nutrition' },
+  calories: { icon: 'target', color: C.lime, perWeek: 5, per: 'day', group: 'nutrition' },
+  meals: { icon: 'fork', color: C.orange, perWeek: 6, per: 'day', group: 'nutrition' },
+  water: { icon: 'drop', color: C.water, perWeek: 5, per: 'day', group: 'nutrition' },
+  workouts: { icon: 'dumbbell', color: C.lime, perWeek: 3, per: 'total', group: 'training' },
+  active: { icon: 'figure', color: C.pink, perWeek: 150, per: 'total', group: 'training' },
+  burn: { icon: 'flame', color: C.orange, perWeek: 1500, per: 'total', group: 'training' },
+  quests: { icon: 'trophy', color: C.yellow, perWeek: 12, per: 'total', group: 'arcade' },
+  perfect: { icon: 'sparkles', color: C.violet, perWeek: 2, per: 'day', group: 'arcade' },
 };
 
-/** The goal for a challenge of `days` days: the weekly goal scaled to the length, at least 1. */
-export const challengeTarget = (template: ChallengeTemplate, days: number) => Math.max(1, Math.min(days, Math.round((CHALLENGES[template].perWeek * days) / 7)));
+export const CHALLENGE_GROUPS: ChallengeGroup[] = ['habits', 'nutrition', 'training', 'arcade'];
 
-/** How far the player is in a challenge, counted from this device's logs. */
-export function challengeProgress(template: ChallengeTemplate, starts: string, ends: string, entries: Entry[], targets: Targets) {
+/** Hard mode asks for 40% more (day goals still can't exceed the number of days). */
+export const HARD_FACTOR = 1.4;
+
+/** The goal for a challenge of `days` days: the weekly goal scaled to the length, at least 1. */
+export function challengeTarget(template: ChallengeTemplate, days: number, hard = false) {
+  const def = CHALLENGES[template];
+  const raw = (def.perWeek * days * (hard ? HARD_FACTOR : 1)) / 7;
+  const round = def.perWeek >= 100 ? 10 : 1;
+  const n = Math.max(1, Math.round(raw / round) * round);
+  return def.per === 'day' ? Math.min(days, n) : n;
+}
+
+/** How far the player is in a challenge, counted from this device's logs and claims. */
+export function challengeProgress(
+  template: ChallengeTemplate,
+  starts: string,
+  ends: string,
+  entries: Entry[],
+  targets: Targets,
+  claims: { day: string; questId: string }[] = [],
+) {
   let n = 0;
   const d = new Date(starts + 'T12:00');
   const last = ends < todayKey() ? ends : todayKey();
   for (; dayKey(d) <= last; d.setDate(d.getDate() + 1)) {
     const k = dayKey(d);
     const s = summarize(entries, k);
-    if (template === 'workouts') n += s.workouts;
-    else if (template === 'protein') n += s.protein >= targets.protein * 0.9 ? 1 : 0;
-    else if (template === 'meals') n += s.meals >= 2 ? 1 : 0;
-    else if (template === 'water') n += s.water >= targets.waterMl ? 1 : 0;
-    else n += entries.some((e) => !e.passive && dayKey(e.createdAt) === k) ? 1 : 0;
+    const day = entries.filter((e) => !e.passive && dayKey(e.createdAt) === k);
+    switch (template) {
+      case 'workouts': n += s.workouts; break;
+      case 'active': n += s.activeMin; break;
+      case 'burn': n += Math.round(day.reduce((m, e) => m + (e.kind === 'exercise' ? (e.caloriesBurned ?? 0) : 0), 0)); break;
+      case 'weighin': n += day.filter((e) => e.kind === 'weight').length; break;
+      case 'protein': n += s.protein >= targets.protein * 0.9 ? 1 : 0; break;
+      case 'meals': n += s.meals >= 2 ? 1 : 0; break;
+      case 'water': n += s.water >= targets.waterMl ? 1 : 0; break;
+      case 'calories': n += s.eaten > 0 && Math.abs(s.eaten - s.burned - targets.calories) <= targets.calories * 0.12 ? 1 : 0; break;
+      case 'sleep': n += day.some((e) => (e.sleepHours ?? 0) >= 7) ? 1 : 0; break;
+      case 'journal': n += day.some((e) => e.kind === 'journal' && !e.healthId) ? 1 : 0; break;
+      case 'breakfast': n += day.some((e) => e.kind === 'meal' && new Date(e.createdAt).getHours() < 10) ? 1 : 0; break;
+      case 'quests': {
+        const ids = new Set(questsFor(k).map((q) => q.id));
+        n += claims.filter((c) => c.day === k && ids.has(c.questId)).length;
+        break;
+      }
+      case 'perfect': n += claims.some((c) => c.day === k && c.questId === PERFECT_DAY) ? 1 : 0; break;
+      default: n += day.length ? 1 : 0;
+    }
   }
   return n;
 }
 
-export async function createChallenge(template: ChallengeTemplate, days: ChallengeDays, opponent: string | null) {
-  await rpc('create_challenge', { p_template: template, p_target: challengeTarget(template, days), p_starts: todayKey(), p_days: days, p_opponent: opponent });
+export async function createChallenge(template: ChallengeTemplate, days: ChallengeDays, opponent: string | null, hard = false) {
+  await rpc('create_challenge', { p_template: template, p_target: challengeTarget(template, days, hard), p_starts: todayKey(), p_days: days, p_opponent: opponent, p_hard: hard });
   await reportChallengeProgress().catch(() => {});
   await refreshSquad();
 }
@@ -455,12 +511,12 @@ export async function declineChallenge(id: string) {
 async function reportChallengeProgress() {
   const uid = me();
   if (!uid) return;
-  const { entries, profile } = getState();
+  const { entries, profile, game } = getState();
   const targets = macroTargets(profile);
   const today = todayKey();
   for (const c of squad.challenges) {
     if (c.declined || c.starts > today || c.ends < dayKey(Date.now() - 864e5)) continue;
-    const value = Math.min(c.target, challengeProgress(c.template, c.starts, c.ends, entries, targets));
+    const value = Math.min(c.target, challengeProgress(c.template, c.starts, c.ends, entries, targets, game.claims));
     if (value > (c.progress[uid]?.progress ?? 0)) {
       await rpc('report_challenge_progress', { p_id: c.id, p_progress: value });
       c.progress[uid] = { progress: value, completedAt: value >= c.target ? new Date().toISOString() : null };
@@ -496,12 +552,13 @@ export function outcome(c: Challenge, uid = me()): Outcome {
   return a === b ? 'tied' : a > b ? 'won' : 'lost';
 }
 
-/** The chest a finished challenge pays, if any. */
-export const challengeChest = (o: Outcome): ChestTier | null => (o === 'won' ? 'gold' : o === 'tied' || o === 'done' ? 'silver' : null);
+/** The chest a finished challenge pays, if any. Hard mode bumps a finished solo or a tie to gold. */
+export const challengeChest = (o: Outcome, hard = false): ChestTier | null =>
+  o === 'won' ? 'gold' : o === 'tied' || o === 'done' ? (hard ? 'gold' : 'silver') : null;
 export const challengeClaimId = (id: string) => `challenge:${id}`;
 
 export function claimChallenge(c: Challenge) {
-  const tier = challengeChest(outcome(c));
+  const tier = challengeChest(outcome(c), c.hard);
   return tier ? actions.grantChest(tier, challengeClaimId(c.id), 'challenge') : null;
 }
 

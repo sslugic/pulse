@@ -13,14 +13,16 @@ nudges (push notifications) and share cards. It needs a Pulse account (Sign in w
   `src/app/join/[code].tsx`, share cards `src/components/share-card.tsx`.
 - Invite page: `invite.html` in the `sslugic/pulse-site` repo (branch `squad-1.1`). It opens
   `pulse://add/CODE` or `pulse://join/CODE`, and shows the code and an App Store button.
-- Tests: `supabase/tests/social.mjs` (55 checks against a local Supabase).
+- Tests: `supabase/tests/social.mjs` (55 checks) and `supabase/tests/rewards.mjs` (22 checks) against a local Supabase.
+- Rewards pop-up: `src/components/rewards-popup.tsx` (at most every 6 hours, only for new rewards).
+- Music and sounds: `src/lib/sound.ts`; regenerate the audio with `python3 scripts/make-sounds.py`.
 
 What friends can see: name, colour, rank, streak, XP, this week's XP and which days someone logged.
 Never food, weight, health data or chats.
 
 ## Release checklist
 
-1. **Database:** `npx supabase db push` (additive; 1.0 keeps working).
+1. **Database:** `npx supabase db push --project-ref zkdvvnrjpcodmvqdbbck` (additive; 1.0 keeps working). Includes `20261021000000_social.sql` (done) and `20261022000000_rewards.sql` (referrals, XP trade, more challenges).
 2. **Nudge function:** `npx supabase functions deploy nudge`.
 3. **Push key (you, once):** developer.apple.com → Certificates, IDs & Profiles → Keys → **+** →
    tick **Apple Push Notifications service (APNs)** → Continue → Register → download the `.p8`

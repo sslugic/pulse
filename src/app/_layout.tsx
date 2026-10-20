@@ -12,6 +12,7 @@ import { BootScreen } from '@/components/boot-screen';
 import { RewardToast } from '@/components/reward-toast';
 import { ShareCardHost } from '@/components/share-card';
 import { C } from '@/constants/theme';
+import '@/lib/referrals';
 import { refreshSquad, scheduleSync } from '@/lib/social';
 import { actions, hydrate, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
@@ -98,6 +99,7 @@ export default function RootLayout() {
               <Stack.Screen name="blocked" options={{ presentation: 'modal' }} />
               <Stack.Screen name="add/[code]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="join/[code]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="r/[code]" options={{ presentation: 'modal' }} />
             </Stack.Protected>
             <Stack.Protected guard={!onboarded}>
               <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />

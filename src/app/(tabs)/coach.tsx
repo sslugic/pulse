@@ -18,6 +18,7 @@ import { audioMime, pickImage, readBase64, VOICE_PRESET } from '@/lib/media';
 import { t } from '@/lib/i18n';
 import { HEALTH_DISCLAIMER } from '@/lib/legal';
 import { personaById } from '@/lib/personas';
+import { duckMusic } from '@/lib/sound';
 import { actions, useAiReady, useStore } from '@/lib/store';
 import type { ChatMessage, Entry } from '@/lib/types';
 import { stopSpeaking, useSpeakingId } from '@/lib/voice';
@@ -135,12 +136,14 @@ export default function Coach() {
         Alert.alert(t('coach.micNeededTitle'), t('coach.micNeededMessage'));
         return;
       }
+      duckMusic('record', true);
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
       await recorder.prepareToRecordAsync();
       recorder.record();
       tap();
     } catch (err) {
       console.warn('[voice] start failed', err);
+      duckMusic('record', false);
       Alert.alert(t('coach.recordStartFailed'), (err as Error).message);
     }
   }
@@ -149,6 +152,7 @@ export default function Coach() {
     try {
       await recorder.stop();
       await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
+      duckMusic('record', false);
       tap();
       const uri = recorder.uri;
       if (!send || !uri) return;

@@ -120,3 +120,21 @@ Pro is the better business, so make it the default suggestion on the Credits scr
    credit, raise feature costs.
 
 The model script is in `docs/credit-economics.py`.
+
+## Free credits (Pulse 1.1)
+
+One free credit costs about **$0.004** of AI at 2027 prices (typical user: $1.03 of AI for ~250
+credits a month).
+
+| Source | Amount | Limit | Cost to us |
+|---|---|---|---|
+| Sign-up bonus | 50 | once | ~$0.20 per account |
+| Referral, new player | +25 | once, within 14 days of signing up | ~$0.10 |
+| Referral, referrer | +25 per friend | 10 friends per 30 days (250 credits) | ≤ ~$1.00 a month |
+| XP trade-in | 1,000 XP → 10 credits | 20 credits a week, accounts ≥ 7 days old | ≤ ~$0.35 a month |
+
+A daily player earns ~700 XP a week, so XP trading gives them ~30 credits a month (~$0.12), about
+12% of a typical month's use: enough to feel rewarding without replacing a purchase. A referral
+costs ~$0.20 in credits for both sides, a cheap way to get a new user. XP is counted on the device;
+the weekly cap keeps the worst case from a modified app to ~$0.35 a month. The rules live in
+`supabase/migrations/20261022000000_rewards.sql`.

@@ -6,6 +6,7 @@ import { FullWindowOverlay } from 'react-native-screens';
 
 import { C } from '@/constants/theme';
 import { t } from '@/lib/i18n';
+import { playSfx } from '@/lib/sound';
 import { actions, useStore } from '@/lib/store';
 
 import { TokenCoin } from './quests-card';
@@ -19,6 +20,7 @@ export function RewardToast() {
 
   useEffect(() => {
     if (!reward) return;
+    playSfx('reward');
     const id = reward.id;
     const timer = setTimeout(() => actions.clearReward(id), 1800);
     return () => clearTimeout(timer);

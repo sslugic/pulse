@@ -11,6 +11,11 @@ const en = {
   streakSaved_other: '🧊 STREAK SAVED · {count} FREEZES USED',
   fromMealPlan: 'From your meal plan',
   fromWorkoutPlan: 'From your workout plan',
+  popupTitle: 'REWARDS WAITING!',
+  popupBody_one: 'You have {count} chest to open.',
+  popupBody_other: 'You have {count} chests to open.',
+  popupOpen: 'OPEN',
+  popupLater: 'Later',
 } as const;
 
 const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<keyof typeof en, string>>> = {
@@ -27,6 +32,11 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     streakSaved_other: '🧊 RACHA SALVADA · {count} CONGELADORES USADOS',
     fromMealPlan: 'De tu plan de comidas',
     fromWorkoutPlan: 'De tu plan de entreno',
+    popupTitle: '¡PREMIOS ESPERANDO!',
+    popupBody_one: 'Tienes {count} cofre por abrir.',
+    popupBody_other: 'Tienes {count} cofres por abrir.',
+    popupOpen: 'ABRIR',
+    popupLater: 'Luego',
   },
   de: {
     workoutPlanDone: 'TRAININGSPLAN ERLEDIGT',
@@ -40,6 +50,11 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     streakSaved_other: '🧊 SERIE GERETTET · {count} FREEZES GENUTZT',
     fromMealPlan: 'Aus deinem Ernährungsplan',
     fromWorkoutPlan: 'Aus deinem Trainingsplan',
+    popupTitle: 'BELOHNUNGEN WARTEN!',
+    popupBody_one: 'Du hast {count} Truhe zum Öffnen.',
+    popupBody_other: 'Du hast {count} Truhen zum Öffnen.',
+    popupOpen: 'ÖFFNEN',
+    popupLater: 'Später',
   },
   fr: {
     workoutPlanDone: 'PLAN D’ENTRAÎNEMENT FAIT',
@@ -53,6 +68,11 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     streakSaved_other: '🧊 SÉRIE SAUVÉE · {count} GELS UTILISÉS',
     fromMealPlan: 'De ton plan repas',
     fromWorkoutPlan: 'De ton plan d’entraînement',
+    popupTitle: 'DES RÉCOMPENSES T’ATTENDENT !',
+    popupBody_one: 'Tu as {count} coffre à ouvrir.',
+    popupBody_other: 'Tu as {count} coffres à ouvrir.',
+    popupOpen: 'OUVRIR',
+    popupLater: 'Plus tard',
   },
   it: {
     workoutPlanDone: 'PIANO ALLENAMENTO FATTO',
@@ -66,6 +86,11 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     streakSaved_other: '🧊 SERIE SALVATA · {count} FREEZE USATI',
     fromMealPlan: 'Dal tuo piano pasti',
     fromWorkoutPlan: 'Dal tuo piano allenamento',
+    popupTitle: 'PREMI IN ATTESA!',
+    popupBody_one: 'Hai {count} forziere da aprire.',
+    popupBody_other: 'Hai {count} forzieri da aprire.',
+    popupOpen: 'APRI',
+    popupLater: 'Più tardi',
   },
   pt: {
     workoutPlanDone: 'PLANO DE TREINO FEITO',
@@ -79,6 +104,11 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     streakSaved_other: '🧊 SEQUÊNCIA SALVA · {count} CONGELAMENTOS USADOS',
     fromMealPlan: 'Do seu plano de refeições',
     fromWorkoutPlan: 'Do seu plano de treino',
+    popupTitle: 'PRÊMIOS TE ESPERANDO!',
+    popupBody_one: 'Você tem {count} baú para abrir.',
+    popupBody_other: 'Você tem {count} baús para abrir.',
+    popupOpen: 'ABRIR',
+    popupLater: 'Depois',
   },
 };
 export default strings;
