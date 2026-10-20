@@ -16,8 +16,11 @@ const FEATURE_LABELS: Record<string, string> = {
   coach: 'Coach reply (text)',
   coach_media: 'Coach reply (voice note or photo)',
   voice: 'Reply read aloud',
-  meal_plan: 'Meal plan',
-  workout_plan: 'Workout plan',
+  meal_plan: 'Meal plan (1 day)',
+  meal_plan_3d: 'Meal plan (3 days)',
+  workout_plan: 'Workout plan (1 day)',
+  workout_plan_3d: 'Workout plan (3 days)',
+  workout_plan_7d: 'Workout plan (7 days)',
   recap: 'Weekly recap',
   wellbeing: 'Stress and sleep analysis',
   goal_plan: 'Nutrition targets from a goal',
@@ -124,7 +127,7 @@ export default function CreditsScreen() {
                         {pro.title || 'Pulse Pro'}
                       </T>
                       <T size={12} color={C.textDim}>
-                        {pro.description || '1,000 AI credits every month'}
+                        {pro.description || '600 AI credits every month'}
                       </T>
                     </View>
                     <T size={16} rounded color={C.lime}>

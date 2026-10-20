@@ -45,7 +45,28 @@ export class AiError extends Error {
 }
 
 /** What an AI call is for; the server prices each one (see supabase feature_costs). */
-export type Feature = 'coach' | 'coach_media' | 'voice' | 'insight' | 'wellbeing' | 'meal_plan' | 'workout_plan' | 'recap' | 'estimate' | 'goal_plan';
+export type Feature =
+  | 'coach'
+  | 'coach_media'
+  | 'voice'
+  | 'insight'
+  | 'wellbeing'
+  | 'meal_plan'
+  | 'meal_plan_3d'
+  | 'workout_plan'
+  | 'workout_plan_3d'
+  | 'workout_plan_7d'
+  | 'recap'
+  | 'estimate'
+  | 'goal_plan';
+
+/**
+ * Structured or short jobs run on Flash-Lite with minimal thinking: about a third of the cost of Flash
+ * (see docs/CREDIT-ECONOMICS.md). The Coach and goal plans stay on the main model.
+ */
+export const LITE_MODEL = 'gemini-3.5-flash-lite';
+const LITE_FEATURES = new Set<Feature>(['insight', 'wellbeing', 'meal_plan', 'meal_plan_3d', 'workout_plan', 'workout_plan_3d', 'workout_plan_7d', 'recap', 'estimate']);
+const modelFor = (feature: Feature, model: string) => (LITE_FEATURES.has(feature) ? LITE_MODEL : model);
 
 let balanceListener: ((credits: number) => void) | null = null;
 /** Called with the new credit balance after every signed-in AI call. */
@@ -206,17 +227,15 @@ RECENT ENTRIES:
 ${recent || '(none)'}`;
 }
 
-function systemPrompt(profile: Profile, entries: Entry[]) {
-  const persona = personaById(profile.persona);
-  return `You are ${persona.name}, an AI fitness and nutrition coach inside a mobile app. Your personality: ${persona.style} Stay fully in character in every reply. Your replies are shown in a chat and read out loud, so write the way this coach talks.
+// The rules never change between users or requests, so they go first: Gemini caches a repeated
+// prompt prefix automatically and bills it at a tenth of the price. Per-user parts come after.
+const COACH_RULES = `You are an AI fitness and nutrition coach inside a mobile app. Your replies are shown in a chat and read out loud, so write the way your persona (below) talks.
 The user logs by talking, typing, or sending photos, and also asks you questions. Your job: turn whatever they log into structured log entries with realistic estimates, and answer their fitness questions like a real coach who knows their numbers.
-
-${userContext(profile, entries)}
 
 RULES
 - Every "meal" entry, including a corrected or re-logged one, MUST include nutrition (calories, protein, carbs, fat) for the full amount. Only fill the fields that belong to an entry's kind.
 - Food photo or description -> one "meal" entry per meal (not per ingredient). List components in "items" with portion estimates. Estimate portions from visual cues (plate size, utensils). Fill nutrition incl. fiber/sugar/sodium.
-- Exercise (text, voice, or a photo of a workout, machine display, or smartwatch screen) -> "exercise" entry. Compute caloriesBurned with MET x body weight (${profile.weightKg} kg) x hours unless the screen shows a number. Infer a sensible duration if missing and say you assumed it.
+- Exercise (text, voice, or a photo of a workout, machine display, or smartwatch screen) -> "exercise" entry. Compute caloriesBurned with MET x body weight (from USER PROFILE) x hours unless the screen shows a number. Infer a sensible duration if missing and say you assumed it.
 - "drank a glass of water" -> water entry (glass = 250 ml, bottle = 500 ml). Coffee/tea/drinks with calories are meals; plain water is water.
 - Weigh-ins -> weight entry in kg (convert from lb). Weights for different days are separate entries, each with its own daysAgo ("245 yesterday and 247 today" -> 245 with daysAgo 1, 247 with daysAgo 0).
 - Several things in one message -> several entries.
@@ -234,24 +253,33 @@ RULES
 - Never ask follow-up questions just to get more precision; make your best estimate and mention the main assumption.
 - Every reply starts with the answer itself. Never introduce yourself, your name or your voice, never greet, and never open with filler like "Sure!", "Great question!" or "As your coach".
 - reply when logging: 1-3 short sentences, friendly, with one useful insight (e.g. remaining calories or protein).
-- reply when answering a question: as long as the answer needs, usually 2-6 sentences; a workout or plan can run longer. Steps or exercises may go on separate lines starting with "- ". No markdown headings, bold or tables. Spell out units the first time if it helps it read aloud. Use ${profile.units} units.`;
+- reply when answering a question: as long as the answer needs, usually 2-6 sentences; a workout or plan can run longer. Steps or exercises may go on separate lines starting with "- ". No markdown headings, bold or tables. Spell out units the first time if it helps it read aloud. Use the units the user prefers (USER PROFILE).`;
+
+function systemPrompt(profile: Profile, entries: Entry[]) {
+  const persona = personaById(profile.persona);
+  return `${COACH_RULES}
+
+PERSONA: You are ${persona.name}. Your personality: ${persona.style} Stay fully in character in every reply.
+
+${userContext(profile, entries)}`;
 }
 
-// Gemini 3 accepts a thinking level; older models reject it, so we drop it on that error.
-let thinkingSupported = true;
+// Gemini 3 accepts a thinking level; older models reject it, so we drop it for that model on that error.
+const noThinking = new Set<string>();
 
-function requestBody(body: Record<string, unknown>) {
+function requestBody(body: Record<string, unknown>, model: string, feature: Feature) {
+  const level = LITE_FEATURES.has(feature) ? 'minimal' : 'low';
   const generationConfig = {
     ...(body.generationConfig as object),
-    ...(thinkingSupported ? { thinkingConfig: { thinkingLevel: 'low' } } : {}),
+    ...(noThinking.has(model) ? {} : { thinkingConfig: { thinkingLevel: level } }),
   };
   return JSON.stringify({ ...body, generationConfig });
 }
 
-function requestError(status: number, json: { error?: { message?: string } }) {
+function requestError(status: number, json: { error?: { message?: string } }, model: string) {
   const msg = json?.error?.message ?? `Request failed (${status})`;
-  if (status === 400 && thinkingSupported && /thinking/i.test(msg)) {
-    thinkingSupported = false;
+  if (status === 400 && !noThinking.has(model) && /thinking/i.test(msg)) {
+    noThinking.add(model);
     return new AiError('retry-without-thinking');
   }
   if (/API key/i.test(msg)) return new AiError('That API key was rejected. Check it in Profile.', false);
@@ -289,12 +317,13 @@ async function withRetry(attempt: (signal: AbortSignal) => Promise<string>, time
 }
 
 /** POST generateContent and return the whole text answer. */
-function generate(apiKey: string, model: string, body: Record<string, unknown>, timeoutMs: number, feature: Feature): Promise<string> {
+function generate(apiKey: string, mainModel: string, body: Record<string, unknown>, timeoutMs: number, feature: Feature): Promise<string> {
   const id = requestId();
+  const model = modelFor(feature, mainModel);
   return withRetry(async (signal) => {
-    const res = await aiFetch({ apiKey, model, method: 'generateContent', body: requestBody(body), feature, id, signal });
+    const res = await aiFetch({ apiKey, model, method: 'generateContent', body: requestBody(body, model, feature), feature, id, signal });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw requestError(res.status, json);
+    if (!res.ok) throw requestError(res.status, json, model);
     const text = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
     if (!text) throw new AiError('Gemini returned an empty answer.');
     return text;
@@ -314,8 +343,8 @@ function generateStream(
   const id = requestId();
   return withRetry(
     async (signal) => {
-      const res = await aiFetch({ apiKey, model, method: 'streamGenerateContent', body: requestBody(body), feature, id, signal }, streamingFetch as unknown as typeof fetch);
-      if (!res.ok) throw requestError(res.status, await res.json().catch(() => ({})));
+      const res = await aiFetch({ apiKey, model, method: 'streamGenerateContent', body: requestBody(body, model, feature), feature, id, signal }, streamingFetch as unknown as typeof fetch);
+      if (!res.ok) throw requestError(res.status, await res.json().catch(() => ({})), model);
       const reader = res.body?.getReader();
       if (!reader) throw new AiError('Streaming is not available.');
       const decoder = new TextDecoder();
@@ -771,7 +800,7 @@ Use ${profile.units} units for ingredient amounts.${prefs.trim() ? `\nUSER PREFE
       },
     },
     60_000,
-    'meal_plan',
+    span === 'today' ? 'meal_plan' : 'meal_plan_3d',
   );
   const j = JSON.parse(raw) as MealPlan;
   return { summary: j.summary ?? '', days: j.days ?? [], grocery: j.grocery ?? [] };
@@ -885,7 +914,7 @@ summary: one or two sentences in character on how this plan serves the goal. Use
       },
     },
     60_000,
-    'workout_plan',
+    days <= 1 ? 'workout_plan' : days <= 3 ? 'workout_plan_3d' : 'workout_plan_7d',
   );
   const j = JSON.parse(raw);
   return { summary: String(j.summary ?? ''), days: (j.days ?? []).slice(0, days) };

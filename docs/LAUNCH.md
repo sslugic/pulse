@@ -61,8 +61,8 @@ In App Store Connect → your app → Monetization:
 |---|---|---|---|
 | Consumable | `pulse_credits_100` | $1.99 | 100 credits |
 | Consumable | `pulse_credits_500` | $7.99 | 500 credits |
-| Consumable | `pulse_credits_1500` | $19.99 | 1,500 credits |
-| Auto-renewable subscription (group "Pulse Pro") | `pulse_pro_monthly` | $9.99 / month | 1,000 credits each renewal |
+| Consumable | `pulse_credits_1500` | $24.99 | 1,500 credits |
+| Auto-renewable subscription (group "Pulse Pro") | `pulse_pro_monthly` | $9.99 / month | 600 credits each renewal |
 
 Product IDs must match the `products` table. Each product needs a display name, description and
 a review screenshot (the Credits screen). Also sign the Paid Apps agreement and add banking and
