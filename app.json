@@ -2,7 +2,7 @@
   "expo": {
     "name": "Pulse",
     "slug": "pulse",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "pulse",
@@ -17,7 +17,7 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "appleTeamId": "8SX4DK48U6",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "usesAppleSignIn": true,
       "supportsTablet": false
     },

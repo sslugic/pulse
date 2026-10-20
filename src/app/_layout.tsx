@@ -2,14 +2,17 @@ import { Bangers_400Regular } from '@expo-google-fonts/bangers';
 import { PermanentMarker_400Regular } from '@expo-google-fonts/permanent-marker';
 import { RussoOne_400Regular } from '@expo-google-fonts/russo-one';
 import { useFonts } from 'expo-font';
-import { DarkTheme, Stack, ThemeProvider } from 'expo-router';
+import * as Notifications from 'expo-notifications';
+import { DarkTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 
 import { BootScreen } from '@/components/boot-screen';
 import { RewardToast } from '@/components/reward-toast';
+import { ShareCardHost } from '@/components/share-card';
 import { C } from '@/constants/theme';
+import { refreshSquad, scheduleSync } from '@/lib/social';
 import { actions, hydrate, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 import { syncWidget } from '@/lib/widget-sync';
@@ -32,6 +35,21 @@ export default function RootLayout() {
   useEffect(() => {
     if (ready) syncWidget();
   }, [ready, entries, game, profile, todayKey]);
+  // Friends see new XP and streaks a few seconds after a log.
+  useEffect(() => {
+    if (ready) scheduleSync();
+  }, [ready, entries, game.claims]);
+  // A tapped nudge notification opens Squad.
+  useEffect(() => {
+    const open = (r: Notifications.NotificationResponse | null) => {
+      if (r?.notification.request.content.data?.kind !== 'nudge') return;
+      refreshSquad();
+      router.navigate('/(tabs)/squad');
+    };
+    Notifications.getLastNotificationResponseAsync().then(open).catch(() => {});
+    const sub = Notifications.addNotificationResponseReceivedListener(open);
+    return () => sub.remove();
+  }, []);
   const [fontsLoaded, fontError] = useFonts({ Bangers_400Regular, PermanentMarker_400Regular, RussoOne_400Regular });
 
   // Swap the static native splash for the animated boot screen as soon as fonts are in.
@@ -74,13 +92,19 @@ export default function RootLayout() {
               <Stack.Screen name="scan" options={{ presentation: 'fullScreenModal' }} />
               <Stack.Screen name="progress-photos" options={{ presentation: 'modal' }} />
               <Stack.Screen name="season" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="credits" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="credits" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="crew/[id]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="challenge-new" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="blocked" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="add/[code]" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="join/[code]" options={{ presentation: 'modal' }} />
             </Stack.Protected>
             <Stack.Protected guard={!onboarded}>
               <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
             </Stack.Protected>
           </Stack>
           {onboarded && <RewardToast />}
+          <ShareCardHost />
         </ThemeProvider>
       )}
       {booting && <BootScreen ready={ready} onDone={endBoot} />}

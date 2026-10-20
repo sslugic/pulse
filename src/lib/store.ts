@@ -654,6 +654,24 @@ export const actions = {
     set((s) => ({ game: { ...s.game, unlocked: [...s.game.unlocked, `chest-${tier}:${now}`], chests: [...(s.game.chests ?? []), { id, tier, from: 'shop', at: now }] } }));
     return id;
   },
+  /**
+   * Awards a chest from Squad (a won challenge or a top-3 week), once per `claimId`. Returns the
+   * chest's id so the screen can open it straight away, or null if it was already claimed.
+   */
+  grantChest(tier: ChestTier, claimId: string, from: 'challenge' | 'league') {
+    if (state.game.claims.some((c) => c.questId === claimId)) return null;
+    const now = Date.now();
+    const id = `c${now}`;
+    set((s) => ({
+      game: {
+        ...s.game,
+        claims: [...s.game.claims, { day: dayKey(now), questId: claimId, xp: 0, tokens: 0, at: now }],
+        chests: [...(s.game.chests ?? []), { id, tier, from, at: now }],
+      },
+    }));
+    celebrate();
+    return id;
+  },
   /** Claims a finished season challenge; the last one also pays the season badge. */
   claimSeason(challengeId: string) {
     const s = season(state.entries, state.profile, state.game.claims);

@@ -12,6 +12,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="index" />
         <Tabs.Screen name="coach" />
         <Tabs.Screen name="journal" />
+        <Tabs.Screen name="squad" />
         <Tabs.Screen name="arcade" />
         <Tabs.Screen name="trends" />
         <Tabs.Screen name="profile" />

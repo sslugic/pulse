@@ -8,7 +8,8 @@ import type { ChestTier } from '@/lib/arcade';
 import { CHEST_LOOK, type Loot } from '@/lib/brain';
 import { tap } from '@/lib/haptics';
 import { t } from '@/lib/i18n';
-import { actions } from '@/lib/store';
+import { shareCard } from '@/lib/share-card';
+import { actions, getState } from '@/lib/store';
 
 import { Icon } from './icon';
 import { TokenCoin } from './quests-card';
@@ -124,6 +125,22 @@ function LootRow({ l, i }: { l: Loot; i: number }) {
   }
 }
 
+/** One line of loot for a share card. */
+function lootLine(l: Loot) {
+  switch (l.kind) {
+    case 'tokens':
+      return t('arcade.lootTokens', { n: l.amount });
+    case 'xp':
+      return t('arcade.lootXp', { n: l.amount });
+    case 'freeze':
+      return `🧊 ${t('arcade.streakFreeze')}`;
+    case 'doubler':
+      return `⚡ ${t('arcade.tokenDoubler')}`;
+    case 'game':
+      return t('arcade.lootGame', { game: l.game.title });
+  }
+}
+
 /**
  * Full-screen chest opening: the chest bounces until tapped, shakes, pops open and the loot slides in
  * one item at a time.
@@ -165,8 +182,19 @@ function ChestModal({ chest, day, onClose }: { chest: { id: string; tier: ChestT
             {loot.map((l, i) => (
               <LootRow key={i} l={l} i={i} />
             ))}
-            <Animated.View entering={FadeInDown.delay(300 + loot.length * 280)}>
+            <Animated.View entering={FadeInDown.delay(300 + loot.length * 280)} style={{ gap: 12 }}>
               <ArcadeButton label={t('arcade.collect')} size="md" onPress={onClose} style={{ marginTop: 8 }} />
+              {loot.length > 0 && (
+                <Pressable
+                  onPress={() => shareCard({ kind: 'chest', tier: chest.tier, lines: loot.map(lootLine), name: getState().profile.name })}
+                  style={styles.share}
+                  accessibilityRole="button">
+                  <Icon name="share" size={16} color={C.text} />
+                  <T size={14} rounded color={C.text}>
+                    {t('share.shareThis')}
+                  </T>
+                </Pressable>
+              )}
             </Animated.View>
           </View>
         ) : (
@@ -214,6 +242,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     backgroundColor: C.surface,
   },
+  share: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 10 },
   lootIcon: {
     width: 44,
     height: 44,
