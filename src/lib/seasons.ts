@@ -1,7 +1,7 @@
 import type { IconName } from '@/components/icon';
 import { C } from '@/constants/theme';
 
-import { dayKey, summarize, targets as currentTargets } from './nutrition';
+import { dayKey, loggedDays, summarize, targets as currentTargets } from './nutrition';
 import type { Claim } from './quests';
 import type { Entry, Profile } from './types';
 
@@ -52,7 +52,7 @@ export function season(entries: Entry[], profile: Profile, claims: Claim[], now 
   const t = currentTargets(profile);
 
   const monthEntries = entries.filter((e) => dayKey(e.createdAt).startsWith(month));
-  const days = [...new Set(monthEntries.map((e) => dayKey(e.createdAt)))];
+  const days = [...loggedDays(monthEntries)];
   const sums = days.map((k) => summarize(entries, k));
   const monthClaims = claims.filter((c) => c.day.startsWith(month));
 

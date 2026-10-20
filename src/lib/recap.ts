@@ -1,4 +1,4 @@
-import { dayKey, lastNDays, summarize, targets as currentTargets } from './nutrition';
+import { dayKey, lastNDays, loggedDays, summarize, targets as currentTargets } from './nutrition';
 import type { Claim } from './quests';
 import { sceneFor, type SceneElement } from './scene';
 import type { Entry, Profile } from './types';
@@ -48,7 +48,7 @@ export function weekStats(entries: Entry[], profile: Profile, claims: Claim[], e
   const s: WeekStats = {
     from: keys[0],
     to: keys[keys.length - 1],
-    daysLogged: new Set(week.map((e) => dayKey(e.createdAt))).size,
+    daysLogged: loggedDays(week).size,
     meals: days.reduce((n, d) => n + d.meals, 0),
     avgEaten: Math.round(avg(logged.map((d) => d.eaten)) ?? 0),
     proteinDays: days.filter((d) => d.protein >= t.protein * 0.9).length,

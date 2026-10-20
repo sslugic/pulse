@@ -9,9 +9,9 @@ import { deleteJournalPhoto, pickImage, saveJournalPhoto, saveProgressPhoto } fr
 import { celebrate } from './haptics';
 import { deleteAccount, fetchBalance, fetchCosts, fetchSubscription, loadBackup, onSessionChange, saveBackup, signInWithApple, signOut } from './cloud';
 import { linkPurchases, unlinkPurchases } from './purchases';
-import { connectHealth, healthAvailable, pullHealth } from './health';
+import { activeEnergyByDay, connectHealth, healthAvailable, pullHealth } from './health';
 import { cancelReminders, enableReminders, scheduleReminder } from './reminders';
-import { dayKey, macroTargets, recommendedTargets } from './nutrition';
+import { dayKey, loggedDays, macroTargets, recommendedTargets } from './nutrition';
 import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, MAX_FREEZES, SHOP, gameById, isUnlocked, type BrainId, type ChestTier, type GameId } from './arcade';
 import { BEST_BONUS, CHESTS_PER_DAY, PAID_WINS_PER_DAY, WIN_TOKENS, WIN_XP, chestFor, chestsEarnedToday, dailyChestId, rollLoot, winsToday, type Loot, type RunResult } from './brain';
 import { season, SEASON_BADGE_REWARD, SEASON_REWARD } from './seasons';
@@ -305,6 +305,60 @@ function matchToPlans(entry: Entry, announce: boolean) {
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
+/**
+ * One "Everyday activity" entry per day for Health's active energy that isn't already in an
+ * imported workout, e.g. a walk the iPhone tracked on its own. It only adds calories burned (no XP,
+ * streak or workout), and is updated in place as the day goes on.
+ */
+async function syncEverydayActivity(since: Date) {
+  const byDay = await activeEnergyByDay(new Date(Math.max(since.getTime(), Date.now() - 7 * 86400_000)));
+  for (const [day, active] of byDay) {
+    const id = `active:${day}`;
+    const workouts = state.entries.filter((e) => e.kind === 'exercise' && !e.passive && e.healthId && dayKey(e.createdAt) === day).reduce((n, e) => n + (e.caloriesBurned ?? 0), 0);
+    const extra = Math.max(0, active - workouts);
+    const existing = state.entries.find((e) => e.healthId === id);
+    if (existing) {
+      if (existing.caloriesBurned !== extra) actions.updateEntry(existing.id, { caloriesBurned: extra });
+    } else if (extra >= 15) {
+      // Pinned to the end of that day (or now, for today) so it sits under the day's real logs.
+      const end = new Date(day + 'T23:59');
+      const entry: Entry = {
+        id: uid(),
+        kind: 'exercise',
+        title: 'Everyday activity',
+        emoji: '🚶',
+        createdAt: Math.min(end.getTime(), Date.now()),
+        caloriesBurned: extra,
+        durationMin: 0,
+        intensity: 'low',
+        source: 'quick',
+        note: 'Active energy from Apple Health (walks, stairs, moving around)',
+        healthId: id,
+        passive: true,
+      };
+      set((s) => ({ entries: [entry, ...s.entries].sort((a, b) => b.createdAt - a.createdAt) }));
+    }
+  }
+}
+
+let healthSyncing: Promise<number> | null = null;
+
+async function runHealthSync() {
+  const h = state.settings.health!;
+  const since = new Date(h.lastSync ? h.lastSync - 6 * 3600_000 : Date.now() - 7 * 86400_000);
+  const known = new Set(state.entries.flatMap((e) => (e.healthId ? [e.healthId] : [])));
+  try {
+    const fresh = await pullHealth(since, known);
+    fresh.sort((a, b) => a.createdAt - b.createdAt).forEach((e) => actions.addEntry(e));
+    await syncEverydayActivity(since);
+    set((s) => ({ settings: { ...s.settings, health: { on: true, lastSync: Date.now() } } }));
+    return fresh.length;
+  } catch (err) {
+    console.warn('[health] sync failed', err);
+    return 0;
+  }
+}
+
 // Logs that land together (one Coach reply can add several) share one pop-up.
 function pushReward(xp: number, tokens: number, label: string, always = false) {
   if (xp <= 0 && tokens <= 0 && !always) return;
@@ -402,17 +456,10 @@ export const actions = {
   async syncHealth() {
     const h = state.settings.health;
     if (!h?.on || !healthAvailable()) return 0;
-    const since = new Date(h.lastSync ? h.lastSync - 6 * 3600_000 : Date.now() - 7 * 86400_000);
-    const known = new Set(state.entries.flatMap((e) => (e.healthId ? [e.healthId] : [])));
-    try {
-      const fresh = await pullHealth(since, known);
-      fresh.sort((a, b) => a.createdAt - b.createdAt).forEach((e) => actions.addEntry(e));
-      set((s) => ({ settings: { ...s.settings, health: { on: true, lastSync: Date.now() } } }));
-      return fresh.length;
-    } catch (err) {
-      console.warn('[health] sync failed', err);
-      return 0;
-    }
+    // Launch, HQ and coming back to the app can all ask at once; one sync at a time.
+    if (healthSyncing) return healthSyncing;
+    healthSyncing = runHealthSync().finally(() => (healthSyncing = null));
+    return healthSyncing;
   },
   setCoachVoice(coachVoice: string) {
     set((s) => ({ settings: { ...s.settings, coachVoice } }));
@@ -644,7 +691,7 @@ export const actions = {
     const { game, entries } = state;
     let freezes = game.freezes ?? 0;
     if (!freezes || !entries.length) return;
-    const logged = new Set([...entries.map((e) => dayKey(e.createdAt)), ...(game.frozenDays ?? [])]);
+    const logged = new Set([...loggedDays(entries), ...(game.frozenDays ?? [])]);
     const gap: string[] = [];
     const d = new Date();
     d.setDate(d.getDate() - 1);

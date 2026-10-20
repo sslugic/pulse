@@ -39,6 +39,8 @@ export function EntryRow({ entry, compact }: { entry: Entry; compact?: boolean }
   const sub =
     entry.kind === 'meal' && entry.nutrition
       ? `P ${Math.round(entry.nutrition.protein)}g · C ${Math.round(entry.nutrition.carbs)}g · F ${Math.round(entry.nutrition.fat)}g`
+      : entry.passive
+        ? 'From Apple Health · updates through the day'
       : entry.kind === 'exercise'
         ? `${entry.durationMin ?? '?'} min${entry.intensity ? ` · ${entry.intensity}` : ''}`
         : entry.kind === 'water' ? 'Hydration'

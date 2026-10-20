@@ -38,6 +38,7 @@ export interface Entry {
   photo?: string; // journal photo, path relative to the documents directory
   scene?: string[]; // journal: elements to illustrate the moment, from SCENE_NAMES
   healthId?: string; // set when imported from Apple Health, so syncs don't duplicate
+  passive?: boolean; // everyday activity from Apple Health: adds calories burned, but isn't a log (no XP, streak or workout)
   note?: string;
   confidence?: number; // 0..1 from the AI
   source: 'text' | 'voice' | 'photo' | 'quick';

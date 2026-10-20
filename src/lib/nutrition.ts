@@ -94,6 +94,7 @@ export function summarize(entries: Entry[], key: string): DaySummary {
       s.meals++;
     } else if (e.kind === 'exercise') {
       s.burned += e.caloriesBurned ?? 0;
+      if (e.passive) continue;
       s.activeMin += e.durationMin ?? 0;
       s.workouts++;
     } else if (e.kind === 'water') {
@@ -114,8 +115,11 @@ export function lastNDays(n: number, from = new Date()) {
 }
 
 /** Consecutive logged days up to today (or yesterday). Days covered by a streak freeze count as logged. */
+/** Days the player actually logged something (Health's everyday activity doesn't count). */
+export const loggedDays = (entries: Entry[]) => new Set(entries.flatMap((e) => (e.passive ? [] : [dayKey(e.createdAt)])));
+
 export function streak(entries: Entry[], frozen: string[] = []) {
-  const days = new Set([...entries.map((e) => dayKey(e.createdAt)), ...frozen]);
+  const days = new Set([...loggedDays(entries), ...frozen]);
   let n = 0;
   const d = new Date();
   if (!days.has(dayKey(d))) d.setDate(d.getDate() - 1); // today not logged yet doesn't break it
