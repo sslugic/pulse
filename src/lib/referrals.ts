@@ -99,15 +99,26 @@ export interface TradeStatus {
   eligible: boolean;
 }
 
+/** XP the player can spend on unlocks right now: lifetime XP minus what was traded or spent. */
+export async function spendableXp() {
+  const local = totalXp() - (getState().game.xpSpent ?? 0);
+  if (!supabase || !currentSession()) return Math.max(0, local);
+  const { data, error } = await supabase.rpc('xp_trade_status');
+  // A server without XP trading yet has nothing traded.
+  const traded = error ? 0 : ((data as { xp_spent: number }[])[0]?.xp_spent ?? 0);
+  return Math.max(0, local - traded);
+}
+
 export async function xpTradeStatus(): Promise<TradeStatus> {
   const rows = await rpc<{ xp_spent: number; credits_this_week: number; eligible: boolean }[]>('xp_trade_status');
   const r = rows[0];
-  return { available: Math.max(0, totalXp() - r.xp_spent), creditsThisWeek: r.credits_this_week, eligible: r.eligible };
+  return { available: Math.max(0, totalXp() - (getState().game.xpSpent ?? 0) - r.xp_spent), creditsThisWeek: r.credits_this_week, eligible: r.eligible };
 }
 
 /** Trades 1,000 XP for 10 credits. Returns the new balance. */
 export async function tradeXp() {
-  const balance = await rpc<number>('redeem_xp', { p_total_xp: totalXp() });
+  // XP spent on unlocks in the app is taken off first, so the same XP can't be spent twice.
+  const balance = await rpc<number>('redeem_xp', { p_total_xp: totalXp() - (getState().game.xpSpent ?? 0) });
   await actions.refreshAccount();
   return balance;
 }

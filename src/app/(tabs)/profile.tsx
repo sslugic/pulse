@@ -142,6 +142,7 @@ export default function ProfileScreen() {
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <Chip label={t('crew.music')} icon="music" active={settings.music !== false} onPress={() => actions.setSound({ music: settings.music === false })} />
             <Chip label={t('crew.sfx')} icon="speaker" active={settings.sfx !== false} onPress={() => actions.setSound({ sfx: settings.sfx === false })} />
+            <Chip label={t('crew.jukebox')} icon="chevron" onPress={() => router.push('/music')} />
           </View>
           <T size={12} color={C.textMute}>
             {t('crew.soundNote')}

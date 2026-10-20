@@ -1,11 +1,15 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { AppState, Platform } from 'react-native';
 
-// Arcade music and reward sounds (made by scripts/make-sounds.py). Music loops quietly while the app
-// is open and is on by default; both can be switched off in Crew. Sounds follow the ringer switch and
-// mix with whatever else is playing, and the music pauses while the Coach talks or you record.
+import { DEFAULT_TRACK, TRACK_FILES, type TrackId } from './music';
 
-const MUSIC_VOLUME = 0.22;
+// Background music (scripts/make-music.py) and reward sounds (scripts/make-sounds.py). Music loops
+// while the app is open and is on by default; the track, its volume, and both on/off switches live in
+// Crew. Sounds follow the ringer switch and mix with whatever else is playing, and the music pauses
+// while the Coach talks or you record.
+
+/** Loudest the music gets at 100% on the volume control, so it stays background music. */
+const MUSIC_MAX = 0.45;
 const SFX_VOLUME = 0.7;
 
 export type Sfx = 'chest' | 'reward' | 'fanfare' | 'nudge';
@@ -19,6 +23,11 @@ const SFX: Record<Sfx, number> = {
 
 let musicOn = true;
 let sfxOn = true;
+let track: TrackId = DEFAULT_TRACK;
+let volume = 0.5;
+/** A track being previewed in the jukebox, played instead of the chosen one. */
+let preview: TrackId | null = null;
+let loaded: TrackId | null = null;
 let active = AppState.currentState === 'active';
 /** Reasons the music is paused for now (the Coach speaking, a recording). */
 const ducks = new Set<string>();
@@ -31,14 +40,20 @@ const ambient = () =>
 
 function sync() {
   if (Platform.OS === 'web') return;
-  const shouldPlay = musicOn && active && ducks.size === 0;
+  const shouldPlay = (musicOn || !!preview) && active && ducks.size === 0;
+  const want = preview ?? track;
   try {
     if (shouldPlay) {
       if (!music) {
-        music = createAudioPlayer(require('@/assets/audio/arcade-loop.wav'));
+        music = createAudioPlayer(TRACK_FILES[want]);
         music.loop = true;
-        music.volume = MUSIC_VOLUME;
+        loaded = want;
+      } else if (loaded !== want) {
+        music.replace(TRACK_FILES[want]);
+        music.loop = true;
+        loaded = want;
       }
+      music.volume = MUSIC_MAX * volume;
       ambient().then(() => music?.play());
     } else music?.pause();
   } catch (e) {
@@ -47,9 +62,17 @@ function sync() {
 }
 
 /** Applies the player's settings (called on launch and whenever they change). */
-export function configureSound(opts: { music: boolean; sfx: boolean }) {
+export function configureSound(opts: { music: boolean; sfx: boolean; track?: TrackId; volume?: number }) {
   musicOn = opts.music;
   sfxOn = opts.sfx;
+  track = opts.track ?? DEFAULT_TRACK;
+  volume = Math.min(1, Math.max(0, opts.volume ?? 0.5));
+  sync();
+}
+
+/** Plays a track in the jukebox without choosing it; null goes back to the chosen one. */
+export function previewTrack(id: TrackId | null) {
+  preview = id;
   sync();
 }
 
