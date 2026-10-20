@@ -253,6 +253,26 @@ function fillExercise<T extends Partial<Entry>>(e: T, weightKg: number): T {
   return { ...e, durationMin: minutes, caloriesBurned: Math.round(MET[e.intensity ?? 'moderate'] * weightKg * (minutes / 60)) };
 }
 
+// The Coach often says the burn in its reply ("about 250 kcal burned") but leaves the field empty.
+// When exactly one workout is missing its calories, take the number from the sentence that talks about
+// burning, so the card matches what was said. A range ("200-250 kcal") uses its middle.
+const BURN_WORD = /burn|quem|verbrann|verbrau|brûl|brul|bruci|queim/i;
+const KCAL = /(\d{2,4})(?:\s*(?:-|–|to|a|bis|à)\s*(\d{2,4}))?\s*(?:kcal|cal|kalorien)/gi;
+function burnFromReply<T extends Partial<Entry>>(entries: T[], reply: string): T[] {
+  const missing = entries.filter((e) => e.kind === 'exercise' && !((e.caloriesBurned ?? 0) > 0));
+  if (missing.length !== 1) return entries;
+  for (const sentence of reply.split(/(?<=[.!?])\s+/)) {
+    const at = sentence.search(BURN_WORD);
+    if (at < 0) continue;
+    // The number nearest the burn word, so "1500 kcal left after burning 300 kcal" picks 300.
+    const m = [...sentence.matchAll(KCAL)].sort((a, b) => Math.abs(a.index - at) - Math.abs(b.index - at))[0];
+    if (!m) continue;
+    const kcal = Math.round(m[2] ? (Number(m[1]) + Number(m[2])) / 2 : Number(m[1]));
+    return entries.map((e) => (e === missing[0] ? { ...e, caloriesBurned: kcal } : e));
+  }
+  return entries;
+}
+
 /**
  * When a Coach entry happened. A named day ("yesterday") moves the entry back whole days, keeping the
  * replaced entry's time of day if there is one; a plain correction keeps the replaced entry's time.
@@ -1016,7 +1036,7 @@ export const actions = {
       result.removeEntryIds.forEach(actions.removeEntry);
       if (result.goalUpdate) actions.setGoal(result.goalUpdate.goal, result.goalUpdate.pace, result.goalUpdate.note);
       const source: Entry['source'] = input.audio ? 'voice' : input.image ? 'photo' : 'text';
-      const added = result.entries.map(cleanEntry).map(fillJournal).map((e) => fillExercise(e, s.profile.weightKg)).map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
+      const added = burnFromReply(result.entries.map(cleanEntry), result.reply).map(fillJournal).map((e) => fillExercise(e, s.profile.weightKg)).map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
         actions.addEntry({
           ...e,
           source,
