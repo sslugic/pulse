@@ -20,5 +20,7 @@ import account from './account';
 import credits from './credits';
 import plans from './plans';
 import errors from './errors';
+import labels from './labels';
+import rewards from './rewards';
 
-export const STRINGS = { common, log, hq, quests, wellbeing, coach, journal, stats, recap, goals, photos, scan, arcade, ranks, season, crew, onboarding, account, credits, plans, errors };
+export const STRINGS = { common, log, hq, quests, wellbeing, coach, journal, stats, recap, goals, photos, scan, arcade, ranks, season, crew, onboarding, account, credits, plans, errors, rewards, labels };

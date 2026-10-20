@@ -9,6 +9,7 @@ import { Card, Chip, T, tap } from '@/components/ui';
 import { ArcadeButton, Comic } from '@/components/underground';
 import { C, Space } from '@/constants/theme';
 import { lookupBarcode, type FoodProduct } from '@/lib/barcode';
+import { t } from '@/lib/i18n';
 import { actions } from '@/lib/store';
 
 const PORTIONS = [0.5, 1, 1.5, 2];
@@ -62,7 +63,7 @@ export default function ScanScreen() {
       },
       items: [{ name: product.name, amount: `${portion} × ${product.servingLabel}`, calories: Math.round(n.calories * portion) }],
       source: 'photo',
-      note: 'Scanned barcode',
+      note: t('scan.scannedNote'),
     });
     router.back();
   };
@@ -80,16 +81,16 @@ export default function ScanScreen() {
         />
       ) : (
         <View style={[StyleSheet.absoluteFill, styles.center, { padding: Space.lg, gap: 16 }]}>
-          <Comic size={28}>CAMERA NEEDED</Comic>
+          <Comic size={28}>{t('scan.cameraNeeded')}</Comic>
           <T size={14} color={C.textDim} style={{ textAlign: 'center' }}>
-            Pulse needs the camera to read barcodes on packaged food.
+            {t('scan.cameraNeededBody')}
           </T>
-          <ArcadeButton label="ALLOW CAMERA" size="md" onPress={requestPermission} />
+          <ArcadeButton label={t('scan.allowCamera')} size="md" onPress={requestPermission} />
         </View>
       )}
 
       <View style={[styles.top, { paddingTop: insets.top + 8 }]}>
-        <Comic size={26}>SCAN BARCODE</Comic>
+        <Comic size={26}>{t('scan.title')}</Comic>
         <GlassButton icon="close" onPress={() => router.back()} />
       </View>
 
@@ -101,7 +102,7 @@ export default function ScanScreen() {
               <ActivityIndicator color={C.lime} />
             ) : (
               <T size={13} rounded color={status === 'scanning' ? C.text : C.orange}>
-                {status === 'scanning' ? 'POINT AT A BARCODE' : status === 'notfound' ? 'NOT IN THE FOOD DATABASE' : 'COULDN’T LOOK THAT UP'}
+                {status === 'scanning' ? t('scan.pointAtBarcode') : status === 'notfound' ? t('scan.notFound') : t('scan.lookupFailed')}
               </T>
             )}
           </View>
@@ -111,9 +112,9 @@ export default function ScanScreen() {
       {(status === 'notfound' || status === 'error') && !product && (
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
           <T size={13} color={C.textDim} style={{ textAlign: 'center' }}>
-            {status === 'notfound' ? 'Try snapping the nutrition label with the Coach instead.' : 'Check your connection and try again.'}
+            {status === 'notfound' ? t('scan.notFoundHint') : t('scan.errorHint')}
           </T>
-          <ArcadeButton label="SCAN AGAIN" size="md" onPress={rescan} />
+          <ArcadeButton label={t('scan.scanAgain')} size="md" onPress={rescan} />
         </View>
       )}
 
@@ -130,14 +131,14 @@ export default function ScanScreen() {
                 {product.name}
               </T>
               <T size={12} color={C.textDim}>
-                Per serving: {product.servingLabel}
+                {t('scan.perServing', { serving: product.servingLabel })}
               </T>
             </View>
             <View style={styles.macros}>
-              <Macro label="KCAL" value={product.perServing.calories * portion} color={C.text} />
-              <Macro label="PROTEIN" value={product.perServing.protein * portion} color={C.protein} unit="g" />
-              <Macro label="CARBS" value={product.perServing.carbs * portion} color={C.carbs} unit="g" />
-              <Macro label="FAT" value={product.perServing.fat * portion} color={C.fat} unit="g" />
+              <Macro label={t('scan.kcal')} value={product.perServing.calories * portion} color={C.text} />
+              <Macro label={t('scan.protein')} value={product.perServing.protein * portion} color={C.protein} unit="g" />
+              <Macro label={t('scan.carbs')} value={product.perServing.carbs * portion} color={C.carbs} unit="g" />
+              <Macro label={t('scan.fat')} value={product.perServing.fat * portion} color={C.fat} unit="g" />
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               {PORTIONS.map((p) => (
@@ -146,8 +147,8 @@ export default function ScanScreen() {
             </View>
           </Card>
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <ArcadeButton label="RESCAN" size="md" colors={['#5E6468', '#3A3F43']} textColor="#fff" onPress={rescan} style={{ flex: 1 }} />
-            <ArcadeButton label="LOG IT" size="md" onPress={log} icon={<Icon name="check" size={20} color="#FF7A1A" weight="bold" />} style={{ flex: 2 }} />
+            <ArcadeButton label={t('scan.rescan')} size="md" colors={['#5E6468', '#3A3F43']} textColor="#fff" onPress={rescan} style={{ flex: 1 }} />
+            <ArcadeButton label={t('scan.logIt')} size="md" onPress={log} icon={<Icon name="check" size={20} color="#FF7A1A" weight="bold" />} style={{ flex: 2 }} />
           </View>
         </View>
       )}

@@ -1,4 +1,5 @@
 import { GAMES, MAX_FREEZES, isUnlocked, type BrainId, type ChestTier, type GameDef } from './arcade';
+import { t } from './i18n';
 import type { Claim, GameState } from './quests';
 
 // Brain Gym rewards: wins pay tokens and XP and drop a chest, a little like opening chests in Duolingo.
@@ -23,19 +24,19 @@ export type Loot = { kind: 'tokens'; amount: number } | { kind: 'xp'; amount: nu
 
 export const CHEST_LOOK: Record<ChestTier, { name: string; body: string; trim: string; glow: string }> = {
   wood: {
-    name: 'WOODEN CHEST',
+    name: t('arcade.chestWood'),
     body: '#8A5A2B',
     trim: '#C9A227',
     glow: '#FFB347',
   },
   silver: {
-    name: 'SILVER CHEST',
+    name: t('arcade.chestSilver'),
     body: '#7C8A96',
     trim: '#E8F2FF',
     glow: '#9CC8FF',
   },
   gold: {
-    name: 'GOLD CHEST',
+    name: t('arcade.chestGold'),
     body: '#C99A1A',
     trim: '#FFF1C2',
     glow: '#FFD84A',

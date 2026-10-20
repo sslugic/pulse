@@ -1,3 +1,4 @@
+import { t } from './i18n';
 import type { Entry, Goal, Pace, Profile, Targets } from './types';
 
 const ACTIVITY_FACTOR = { sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, athlete: 1.9 };
@@ -21,6 +22,11 @@ export const GOAL_INFO: Record<Goal, { label: string; blurb: string }> = {
 };
 
 export const PACE_INFO: Record<Pace, string> = { gentle: 'Gentle', standard: 'Standard', aggressive: 'Aggressive' };
+
+// GOAL_INFO and PACE_INFO stay in English because they go into AI prompts; screens use these.
+export const goalLabel = (g: Goal) => t(`labels.goal_${g}`);
+export const goalBlurb = (g: Goal) => t(`labels.blurb_${g}`);
+export const paceLabel = (p: Pace) => t(`labels.pace_${p}`);
 
 // Mifflin-St Jeor BMR
 export function bmr(p: Profile) {

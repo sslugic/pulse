@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { C } from '@/constants/theme';
+import { t } from '@/lib/i18n';
 import { SCENE_ELEMENTS, skyFor, type SceneElement } from '@/lib/scene';
 
 import { Icon } from './icon';
@@ -60,7 +61,7 @@ export function MomentArt({ scene, mood, photo, height = 150 }: { scene: SceneEl
         <View style={styles.badge}>
           <Icon name="camera" size={11} color={C.ink} weight="bold" />
           <T size={9} rounded color={C.ink}>
-            PHOTO MOMENT
+            {t('journal.photoMoment')}
           </T>
         </View>
       )}

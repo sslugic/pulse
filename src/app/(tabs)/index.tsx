@@ -20,6 +20,7 @@ import { dayKey, lastNDays, macroTargets, streak, summarize } from '@/lib/nutrit
 import { questXp, tokenBalance } from '@/lib/quests';
 import { crewRank, weekDots } from '@/lib/rank';
 import { actions, getState, useAiReady, useStore } from '@/lib/store';
+import { locale, t } from '@/lib/i18n';
 import { useTodayKey } from '@/lib/use-today';
 import { useSteps } from '@/lib/health';
 import { season } from '@/lib/seasons';
@@ -27,7 +28,7 @@ import { dayWellbeing } from '@/lib/wellbeing';
 
 function greeting() {
   const h = new Date().getHours();
-  return h < 5 ? 'Late night' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+  return h < 5 ? t('hq.lateNight') : h < 12 ? t('hq.goodMorning') : h < 18 ? t('hq.goodAfternoon') : t('hq.goodEvening');
 }
 
 export default function Today() {
@@ -95,19 +96,19 @@ export default function Today() {
               {profile.name ? `, ${profile.name.split(' ')[0]}` : ''}
             </T>
             <Comic size={34} color={C.text}>
-              PULSE HQ
+              {t('hq.title')}
             </Comic>
-            <Pressable onPress={() => router.push('/ranks')} accessibilityRole="button" accessibilityLabel={`${crew.rank}, see all ranks`} style={({ pressed }) => pressed && { opacity: 0.7 }}>
+            <Pressable onPress={() => router.push('/ranks')} accessibilityRole="button" accessibilityLabel={t('hq.seeAllRanks', { rank: crew.rank })} style={({ pressed }) => pressed && { opacity: 0.7 }}>
               <CrewBar label={crew.rank} progress={crew.progress} />
               <T size={10} rounded color={C.textMute} style={{ marginTop: 3, marginLeft: 4 }}>
-                {crew.next ? `${crew.toNext} XP TO ${crew.next.toUpperCase()} · TAP FOR RANKS` : 'MAX RANK · TAP FOR RANKS'}
+                {crew.next ? t('hq.xpToNext', { xp: crew.toNext, rank: crew.next.toUpperCase() }) : t('hq.maxRank')}
               </T>
             </Pressable>
           </View>
           <Pressable onPress={() => router.navigate('/profile')} style={{ alignItems: 'center', gap: 4 }}>
             <TagAvatar size={60} band={C.orange} letter={(profile.name || 'P')[0]} />
             <T size={12} rounded color={C.text}>
-              {(profile.name || 'Player').toUpperCase().slice(0, 10)}_{crew.level}
+              {(profile.name || t('hq.player')).toUpperCase().slice(0, 10)}_{crew.level}
             </T>
             <TokenCount value={tokens} size={13} />
           </Pressable>
@@ -118,10 +119,10 @@ export default function Today() {
           <View style={styles.streakBadge}>
             <Icon name="flame" size={16} color={C.orange} />
             <Comic size={days >= 10 ? 15 : 18} color={C.yellow}>
-              {`${days}-DAY`}
+              {t('hq.streakDays', { n: days })}
             </Comic>
             <Comic size={10} color={C.text}>
-              STREAK
+              {t('hq.streak')}
             </Comic>
             {!!game.freezes && (
               <View style={styles.freeze}>
@@ -133,7 +134,7 @@ export default function Today() {
           </View>
           <View style={styles.week}>
             {week.map((d, i) => (
-              <Pressable key={i} onPress={() => openDay(d.key)} accessibilityLabel={`Open ${d.key}`} hitSlop={4}>
+              <Pressable key={i} onPress={() => openDay(d.key)} accessibilityLabel={t('hq.openDay', { day: d.key })} hitSlop={4}>
                 <DripLetter letter={d.letter} on={d.on} color={d.today ? C.orange : C.lime} />
               </Pressable>
             ))}
@@ -145,7 +146,7 @@ export default function Today() {
           <View style={styles.todayRow}>
             <View style={{ flex: 1.3 }}>
               <T size={11} rounded color={C.textDim}>
-                {remaining < 0 ? 'KCAL OVER' : 'KCAL LEFT'}
+                {remaining < 0 ? t('hq.kcalOver') : t('hq.kcalLeft')}
               </T>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <T size={34} rounded color={remaining < 0 ? C.danger : C.text}>
@@ -154,48 +155,48 @@ export default function Today() {
                 <Icon name="flame" size={24} color={C.orange} />
               </View>
               <T size={10} color={C.textMute} weight="700">
-                OF {budget.toLocaleString()} TODAY
+                {t('hq.kcalOf', { n: budget.toLocaleString() })}
               </T>
             </View>
             <View style={styles.todayStat}>
               <T size={11} rounded color={C.textDim}>
-                EATEN
+                {t('hq.eaten')}
               </T>
               <T size={22} rounded color={C.eaten}>
                 {Math.round(today.eaten).toLocaleString()}
               </T>
               <T size={10} color={C.textMute} weight="700">
-                {today.meals} MEAL{today.meals === 1 ? '' : 'S'}
+                {t('hq.meals', { count: today.meals })}
               </T>
             </View>
             <View style={styles.todayStat}>
               <T size={11} rounded color={C.textDim}>
-                BURNED
+                {t('hq.burned')}
               </T>
               <T size={22} rounded color={C.burned}>
                 {Math.round(today.burned).toLocaleString()}
               </T>
               <T size={10} color={C.textMute} weight="700" numberOfLines={1}>
-                {steps != null ? `${steps.toLocaleString()} STEPS` : `${today.activeMin} MIN`}
+                {steps != null ? t('hq.steps', { n: steps.toLocaleString() }) : t('hq.minutes', { n: today.activeMin })}
               </T>
             </View>
           </View>
           <View style={styles.macroRow}>
-            <MiniMacro label="PROTEIN" value={today.protein} target={targets.protein} color={C.protein} />
-            <MiniMacro label="CARBS" value={today.carbs} target={targets.carbs} color={C.carbs} />
-            <MiniMacro label="FAT" value={today.fat} target={targets.fat} color={C.fat} />
+            <MiniMacro label={t('hq.protein')} value={today.protein} target={targets.protein} color={C.protein} />
+            <MiniMacro label={t('hq.carbs')} value={today.carbs} target={targets.carbs} color={C.carbs} />
+            <MiniMacro label={t('hq.fat')} value={today.fat} target={targets.fat} color={C.fat} />
           </View>
           <View style={styles.fuelActions}>
             <Pressable onPress={() => router.push('/plans')} style={styles.fuelBtn} accessibilityRole="button">
               <Icon name="fork" size={14} color={C.orange} />
               <T size={12} rounded color={C.orange}>
-                PLANS
+                {t('hq.plans')}
               </T>
             </Pressable>
             <Pressable onPress={() => router.push('/scan')} style={styles.fuelBtn} accessibilityRole="button">
               <Icon name="viewfinder" size={14} color={C.cyan} />
               <T size={12} rounded color={C.cyan}>
-                SCAN BARCODE
+                {t('hq.scanBarcode')}
               </T>
             </Pressable>
           </View>
@@ -214,14 +215,14 @@ export default function Today() {
         <QuestsCard todayKey={todayKey} />
 
         {/* Log */}
-        <SectionTitle right={<T size={12} rounded color={C.textMute}>{todays.length} ENTRIES</T>}>Today’s log</SectionTitle>
+        <SectionTitle right={<T size={12} rounded color={C.textMute}>{t('hq.entries', { count: todays.length })}</T>}>{t('hq.todaysLog')}</SectionTitle>
         {todays.length === 0 ? (
           <Card style={{ alignItems: 'center', paddingVertical: Space.xl, gap: 6 }}>
             <Comic size={24} color={C.lime}>
-              NOTHING LOGGED YET
+              {t('hq.nothingLogged')}
             </Comic>
             <T size={13} color={C.textDim} style={{ textAlign: 'center' }}>
-              Tap the + button and say “two eggs and toast”. The math is on us.
+              {t('hq.nothingLoggedHint')}
             </T>
           </Card>
         ) : (
@@ -243,10 +244,10 @@ export default function Today() {
             <TagAvatar size={44} band={C.violet} online={false} letter="C" />
             <View style={{ flex: 1, gap: 2 }}>
               <T size={12} rounded color={C.violet}>
-                COACH SAYS
+                {t('hq.coachSays')}
               </T>
               <T size={14} color={C.text} style={{ lineHeight: 20 }}>
-                {insight ?? 'Reading the signs of your day…'}
+                {insight ?? t('hq.insightLoading')}
               </T>
             </View>
           </Card>
@@ -259,7 +260,7 @@ export default function Today() {
               <T size={26}>{seasonNow.theme.emoji}</T>
               <View style={{ flex: 1 }}>
                 <T size={10} rounded color={C.textMute}>
-                  SEASON · {seasonNow.daysLeft} DAYS LEFT
+                  {t('hq.seasonDaysLeft', { n: seasonNow.daysLeft })}
                 </T>
                 <Comic size={20} color={seasonNow.theme.color}>
                   {seasonNow.theme.name}
@@ -279,18 +280,18 @@ export default function Today() {
           <Card style={{ gap: 10, marginTop: Space.sm }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <T size={13} rounded color={C.text}>
-                WEEKLY PROGRESS
+                {t('hq.weeklyProgress')}
               </T>
               <T size={11} rounded color={C.lime}>
-                SUBWAY TRACK
+                {t('hq.subwayTrack')}
               </T>
             </View>
             <Track days={track} onOpen={openDay} />
             <T size={11} color={C.textMute} weight="700">
-              {track.filter((d) => d.state === 'target').length}/7 ON TARGET · {track.filter((d) => d.state !== 'none').length}/7 LOGGED · TAP A DAY
+              {t('hq.trackSummary', { target: track.filter((d) => d.state === 'target').length, logged: track.filter((d) => d.state !== 'none').length })}
             </T>
           </Card>
-          <Sticker text="STAY HARD" color={C.violet} rotate={6} style={{ position: 'absolute', right: 6, top: -6 }} size={14} />
+          <Sticker text={t('hq.stayHard')} color={C.violet} rotate={6} style={{ position: 'absolute', right: 6, top: -6 }} size={14} />
         </View>
       </ScrollView>
     </View>
@@ -303,8 +304,9 @@ function CrewBar({ label, progress }: { label: string; progress: number }) {
   const lit = Math.max(1, Math.round(progress * cells));
   return (
     <View style={styles.crew}>
-      <T size={11} rounded color={C.text} style={{ width: 62, lineHeight: 12 }}>
-        {label.toUpperCase()}
+      {/* Rank names run longer in some languages: wrap on words only and shrink to fit. */}
+      <T size={11} rounded color={C.text} style={{ width: 74, lineHeight: 12 }} numberOfLines={3} adjustsFontSizeToFit minimumFontScale={0.7}>
+        {label.toLocaleUpperCase(locale)}
       </T>
       <View style={styles.cells}>
         {Array.from({ length: cells }).map((_, i) => {
@@ -317,6 +319,8 @@ function CrewBar({ label, progress }: { label: string; progress: number }) {
   );
 }
 
+const TRACK_STATE = { none: t('hq.trackNone'), logged: t('hq.trackLogged'), target: t('hq.trackTarget') };
+
 type TrackDay = { key: string; letter: string; state: 'none' | 'logged' | 'target'; today: boolean };
 
 /** Subway rails, one pair of sleepers per day: dark when nothing was logged, amber when logged, glowing lime on target. */
@@ -328,7 +332,7 @@ function Track({ days, onOpen }: { days: TrackDay[]; onOpen: (key: string) => vo
       {days.map((d) => {
         const lit = d.state === 'target' ? C.lime : d.state === 'logged' ? C.orange : null;
         return (
-          <Pressable key={d.key} onPress={() => onOpen(d.key)} style={styles.trackDay} accessibilityLabel={`${d.key}: ${d.state}`}>
+          <Pressable key={d.key} onPress={() => onOpen(d.key)} style={styles.trackDay} accessibilityLabel={`${d.key}: ${TRACK_STATE[d.state]}`}>
             <View style={styles.sleepers}>
               {[0, 1].map((i) => (
                 <View
@@ -354,18 +358,18 @@ function useInsight(count: number) {
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       const s = getState();
       try {
         const out = await dailyInsight({ apiKey: s.settings.apiKey, model: s.settings.model, profile: s.profile, entries: s.entries });
         if (!cancelled && out) setText(out);
       } catch {
-        if (!cancelled) setText('Log a meal or workout and I’ll start spotting patterns.');
+        if (!cancelled) setText(t('hq.insightFallback'));
       }
     }, 600);
     return () => {
       cancelled = true;
-      clearTimeout(t);
+      clearTimeout(timer);
     };
   }, [count, ready]);
   return text;

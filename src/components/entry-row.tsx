@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { C, Radius } from '@/constants/theme';
+import { locale, t } from '@/lib/i18n';
 import { journalPhotoUri } from '@/lib/media';
 import { fmtKg, fmtWater } from '@/lib/nutrition';
 import { moodEmoji } from '@/lib/wellbeing';
@@ -11,16 +12,19 @@ import type { Entry } from '@/lib/types';
 
 import { T, tap } from './ui';
 
+const SOURCE_KEY = { text: 'log.sourceText', voice: 'log.sourceVoice', photo: 'log.sourcePhoto', quick: 'log.sourceQuick' } as const;
+const INTENSITY_KEY = { low: 'log.intensityLow', moderate: 'log.intensityModerate', high: 'log.intensityHigh' } as const;
+
 const KIND_COLOR = { meal: C.eaten, exercise: C.burned, water: C.water, weight: C.violet, journal: C.pink } as const;
 
 function journalSub(e: Entry) {
   const bits = [
-    e.sleepHours != null && `Slept ${e.sleepHours}h`,
-    e.stress != null && `Stress ${Math.round(e.stress)}/10`,
-    e.energy != null && `Energy ${Math.round(e.energy)}/5`,
-    e.photo && 'Photo',
+    e.sleepHours != null && t('log.sleptHours', { h: e.sleepHours }),
+    e.stress != null && t('log.stressScore', { n: Math.round(e.stress) }),
+    e.energy != null && t('log.energyScore', { n: Math.round(e.energy) }),
+    e.photo && t('log.photo'),
   ].filter(Boolean);
-  return bits.length ? bits.join(' · ') : (e.tags ?? []).slice(0, 2).join(' · ') || 'Journal';
+  return bits.length ? bits.join(' · ') : (e.tags ?? []).slice(0, 2).join(' · ') || t('log.journal');
 }
 
 export function EntryRow({ entry, compact }: { entry: Entry; compact?: boolean }) {
@@ -38,16 +42,16 @@ export function EntryRow({ entry, compact }: { entry: Entry; compact?: boolean }
 
   const sub =
     entry.kind === 'meal' && entry.nutrition
-      ? `P ${Math.round(entry.nutrition.protein)}g · C ${Math.round(entry.nutrition.carbs)}g · F ${Math.round(entry.nutrition.fat)}g`
+      ? t('log.macroLine', { p: Math.round(entry.nutrition.protein), c: Math.round(entry.nutrition.carbs), f: Math.round(entry.nutrition.fat) })
       : entry.passive
-        ? 'From Apple Health · updates through the day'
+        ? t('log.fromHealthLive')
       : entry.kind === 'exercise'
-        ? `${entry.durationMin ?? '?'} min${entry.intensity ? ` · ${entry.intensity}` : ''}`
-        : entry.kind === 'water' ? 'Hydration'
+        ? `${t('log.minutes', { n: entry.durationMin ?? '?' })}${entry.intensity ? ` · ${t(INTENSITY_KEY[entry.intensity])}` : ''}`
+        : entry.kind === 'water' ? t('log.hydration')
         : entry.kind === 'journal' ? journalSub(entry)
-        : 'Weigh-in';
+        : t('log.weighIn');
 
-  const time = new Date(entry.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const time = new Date(entry.createdAt).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' });
 
   return (
     <Pressable
@@ -56,9 +60,9 @@ export function EntryRow({ entry, compact }: { entry: Entry; compact?: boolean }
         setOpen((o) => !o);
       }}
       onLongPress={() =>
-        Alert.alert('Remove entry?', entry.title, [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Remove', style: 'destructive', onPress: () => actions.removeEntry(entry.id) },
+        Alert.alert(t('log.removeTitle'), entry.title, [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('common.remove'), style: 'destructive', onPress: () => actions.removeEntry(entry.id) },
         ])
       }
       style={({ pressed }) => [styles.row, compact && styles.compact, pressed && { opacity: 0.8 }]}>
@@ -101,9 +105,9 @@ export function EntryRow({ entry, compact }: { entry: Entry; compact?: boolean }
           {entry.kind === 'meal' && entry.nutrition && (
             <T size={12} color={C.textMute}>
               {[
-                entry.nutrition.fiber != null && `Fiber ${Math.round(entry.nutrition.fiber)}g`,
-                entry.nutrition.sugar != null && `Sugar ${Math.round(entry.nutrition.sugar)}g`,
-                entry.nutrition.sodium != null && `Sodium ${Math.round(entry.nutrition.sodium)}mg`,
+                entry.nutrition.fiber != null && t('log.fiber', { n: Math.round(entry.nutrition.fiber) }),
+                entry.nutrition.sugar != null && t('log.sugar', { n: Math.round(entry.nutrition.sugar) }),
+                entry.nutrition.sodium != null && t('log.sodium', { n: Math.round(entry.nutrition.sodium) }),
               ]
                 .filter(Boolean)
                 .join(' · ')}
@@ -117,10 +121,10 @@ export function EntryRow({ entry, compact }: { entry: Entry; compact?: boolean }
           {!!entry.photo && <Image source={{ uri: journalPhotoUri(entry.photo) }} style={styles.photo} contentFit="cover" />}
           {!!entry.tags?.length && (
             <View style={styles.tags}>
-              {entry.tags.map((t) => (
-                <View key={t} style={styles.tag}>
+              {entry.tags.map((tag) => (
+                <View key={tag} style={styles.tag}>
                   <T size={11} weight="700" color={C.pink}>
-                    {t}
+                    {tag}
                   </T>
                 </View>
               ))}
@@ -132,8 +136,8 @@ export function EntryRow({ entry, compact }: { entry: Entry; compact?: boolean }
             </T>
           )}
           <T size={11} color={C.textMute} style={{ marginTop: 4 }}>
-            {entry.confidence != null ? `AI confidence ${Math.round(entry.confidence * 100)}% · ` : ''}via {entry.source} · hold to
-            remove
+            {entry.confidence != null ? t('log.aiConfidence', { pct: Math.round(entry.confidence * 100) }) : ''}
+            {t('log.viaHoldToRemove', { source: t(SOURCE_KEY[entry.source]) })}
           </T>
         </View>
       )}

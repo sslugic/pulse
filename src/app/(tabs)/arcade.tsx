@@ -11,12 +11,15 @@ import { TokenCoin, TokenCount } from '@/components/quests-card';
 import { Bar, Card, SectionTitle, T } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Space } from '@/constants/theme';
-import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, GAMES, MAX_FREEZES, SHOP, gameById, isUnlocked, type BrainId, type ChillId, type GameDef, type GameId } from '@/lib/arcade';
+import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, GAMES, MAX_FREEZES, SHOP, gameById, isUnlocked, type BrainId, type ChestTier, type ChillId, type GameDef, type GameId } from '@/lib/arcade';
 import { CHEST_LOOK, PAID_WINS_PER_DAY, WIN_TOKENS, dailyChestId, stars, winsToday, type Chest } from '@/lib/brain';
+import { locale, t } from '@/lib/i18n';
 import { tokenBalance } from '@/lib/quests';
 import { actions, getState, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
-import { dayWellbeing, LEVEL_COLOR } from '@/lib/wellbeing';
+import { dayWellbeing, LEVEL_COLOR, LEVEL_LABEL } from '@/lib/wellbeing';
+
+const TIER_LABEL: Record<ChestTier, string> = { wood: t('arcade.tierWood'), silver: t('arcade.tierSilver'), gold: t('arcade.tierGold') };
 
 const PLAY: Record<ChillId, () => React.JSX.Element> = { breathe: BreatheGame, fidget: FidgetGame, bubbles: BubbleGame, shredder: ShredderGame, memory: MemoryGame, spray: SprayGame };
 
@@ -60,15 +63,15 @@ export default function ArcadeScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
-              One-minute resets
+              {t('arcade.oneMinuteResets')}
             </T>
-            <Comic size={38}>STRESS ARCADE</Comic>
+            <Comic size={38}>{t('arcade.title')}</Comic>
           </View>
           <View style={{ alignItems: 'flex-end', gap: 4, paddingTop: 6 }}>
             <TokenCount value={balance} size={16} />
             {!!game.doubler && (
               <T size={11} rounded color={C.orange}>
-                {`⚡ ×2 FOR ${game.doubler} WIN${game.doubler === 1 ? '' : 'S'}`}
+                {t('arcade.doublerWins', { count: game.doubler })}
               </T>
             )}
           </View>
@@ -86,32 +89,32 @@ export default function ArcadeScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <View style={{ flex: 1, gap: 2 }}>
               <T size={12} rounded color={w.level ? LEVEL_COLOR[w.level] : C.textDim}>
-                {w.stress != null ? `STRESS ${w.stress} · ${w.level?.toUpperCase()}` : 'NO STRESS SCORE YET'}
+                {w.stress != null ? t('arcade.stressScore', { score: w.stress, level: w.level ? LEVEL_LABEL[w.level].toLocaleUpperCase(locale) : '' }) : t('arcade.noStressScore')}
               </T>
               <T size={13} color={C.textDim} style={{ lineHeight: 18 }}>
                 {high
-                  ? 'Your strain is running high today. A minute of slow breathing is the quickest way to bring it down.'
+                  ? t('arcade.stressHigh')
                   : w.stress != null
-                    ? 'Play a minute whenever you need a break.'
-                    : 'Tell the Coach how you slept and feel to get a stress score.'}
+                    ? t('arcade.stressPlay')
+                    : t('arcade.stressNone')}
               </T>
             </View>
           </View>
           <T size={11} color={earnedToday ? C.lime : C.textMute} weight="700">
-            {earnedToday ? 'TODAY’S CHILL XP COLLECTED' : `FINISH A CHILL MINUTE FOR +${ARCADE_XP} XP TODAY`}
+            {earnedToday ? t('arcade.chillXpCollected') : t('arcade.chillXpTodo', { xp: ARCADE_XP })}
           </T>
         </Card>
 
         <SectionTitle
           right={
             <T size={12} rounded color={wins >= PAID_WINS_PER_DAY ? C.textMute : C.lime}>
-              {`${Math.min(wins, PAID_WINS_PER_DAY)}/${PAID_WINS_PER_DAY} PAID WINS`}
+              {t('arcade.paidWins', { wins: Math.min(wins, PAID_WINS_PER_DAY), max: PAID_WINS_PER_DAY })}
             </T>
           }>
-          Brain Gym
+          {t('arcade.brainGym')}
         </SectionTitle>
         <T size={13} color={C.textDim} style={{ lineHeight: 18, marginTop: -4 }}>
-          {`Sharpen memory and focus. Win a round for +${WIN_TOKENS} tokens and a chest.`}
+          {t('arcade.brainGymIntro', { tokens: WIN_TOKENS })}
         </T>
         {sortedGames
           .filter((g) => g.kind === 'brain')
@@ -129,9 +132,9 @@ export default function ArcadeScreen() {
             />
           ))}
 
-        <SectionTitle>Chill Zone</SectionTitle>
+        <SectionTitle>{t('arcade.chillZone')}</SectionTitle>
         <T size={13} color={C.textDim} style={{ lineHeight: 18, marginTop: -4 }}>
-          One calm minute. No score, nothing to lose.
+          {t('arcade.chillIntro')}
         </T>
         {sortedGames
           .filter((g) => g.kind === 'chill')
@@ -148,7 +151,7 @@ export default function ArcadeScreen() {
           />
         ))}
 
-        <SectionTitle>Power-ups</SectionTitle>
+        <SectionTitle>{t('arcade.powerUps')}</SectionTitle>
         <PowerUps balance={balance} freezes={game.freezes ?? 0} />
         <Shop balance={balance} onChest={setOpening} />
 
@@ -187,10 +190,10 @@ function Treasure({ chests, day, played, dailyTaken, onOpen }: { chests: Chest[]
     <Card style={{ gap: 12 }} accent={chests.length || dailyReady ? C.yellow + 'CC' : undefined}>
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <T size={13} rounded color={C.text} style={{ flex: 1 }}>
-          {chests.length ? `YOUR CHESTS · ${chests.length}` : 'CHESTS'}
+          {chests.length ? t('arcade.yourChests', { count: chests.length }) : t('arcade.chests')}
         </T>
         <T size={11} rounded color={C.textMute}>
-          TAP TO OPEN
+          {t('arcade.tapToOpen')}
         </T>
       </View>
       <View style={styles.chestRow}>
@@ -203,30 +206,30 @@ function Treasure({ chests, day, played, dailyTaken, onOpen }: { chests: Chest[]
             }}
             style={[styles.chestSlot, !dailyReady && { opacity: 0.45 }]}
             accessibilityRole="button"
-            accessibilityLabel={dailyReady ? 'Open daily chest' : 'Daily chest, locked'}>
+            accessibilityLabel={dailyReady ? t('arcade.openDailyChest') : t('arcade.dailyChestLocked')}>
             <ChestArt tier="wood" size={58} bounce={dailyReady} />
             <T size={10} rounded color={dailyReady ? C.yellow : C.textMute}>
-              {dailyReady ? 'DAILY!' : 'DAILY'}
+              {dailyReady ? t('arcade.dailyReady') : t('arcade.daily')}
             </T>
           </Pressable>
         )}
         {chests.map((c) => (
-          <Pressable key={c.id} onPress={() => onOpen(c)} style={styles.chestSlot} accessibilityRole="button" accessibilityLabel={`Open ${CHEST_LOOK[c.tier].name.toLowerCase()}`}>
+          <Pressable key={c.id} onPress={() => onOpen(c)} style={styles.chestSlot} accessibilityRole="button" accessibilityLabel={t('arcade.openChestNamed', { name: CHEST_LOOK[c.tier].name.toLowerCase() })}>
             <ChestArt tier={c.tier} size={58} bounce />
             <T size={10} rounded color={CHEST_LOOK[c.tier].glow}>
-              {c.tier.toUpperCase()}
+              {TIER_LABEL[c.tier]}
             </T>
           </Pressable>
         ))}
       </View>
       <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
         {dailyReady
-          ? 'Your free daily chest is ready.'
+          ? t('arcade.dailyReadyText')
           : !dailyTaken
-            ? 'Finish any game today to unlock a free daily chest. Win Brain Gym rounds for silver and gold chests.'
+            ? t('arcade.dailyHint')
             : chests.length
-              ? 'Chests hold tokens, XP, streak freezes, doublers, and sometimes a free game.'
-              : 'Daily chest opened. Win Brain Gym rounds for silver and gold chests.'}
+              ? t('arcade.chestsHold')
+              : t('arcade.dailyOpened')}
       </T>
     </Card>
   );
@@ -238,8 +241,8 @@ function Shop({ balance, onChest }: { balance: number; onChest: (c: Chest) => vo
     {
       key: 'doubler',
       icon: <T size={26}>⚡</T>,
-      title: 'TOKEN DOUBLER',
-      text: `Your next ${SHOP.doubler.wins} Brain Gym wins pay double tokens.`,
+      title: t('arcade.tokenDoubler'),
+      text: t('arcade.doublerText', { wins: SHOP.doubler.wins }),
       price: SHOP.doubler.price,
       color: C.orange,
       buy: () => actions.buyDoubler(),
@@ -248,7 +251,7 @@ function Shop({ balance, onChest }: { balance: number; onChest: (c: Chest) => vo
       key: tier,
       icon: <ChestArt tier={tier} size={42} />,
       title: CHEST_LOOK[tier].name,
-      text: tier === 'gold' ? 'Big token haul, best odds of a free game.' : 'Tokens, XP and a shot at rare drops.',
+      text: tier === 'gold' ? t('arcade.goldChestText') : t('arcade.silverChestText'),
       price: tier === 'gold' ? SHOP.chestGold.price : SHOP.chestSilver.price,
       color: CHEST_LOOK[tier].glow,
       buy: () => {
@@ -270,7 +273,7 @@ function Shop({ balance, onChest }: { balance: number; onChest: (c: Chest) => vo
               </T>
             </View>
           </View>
-          <ArcadeButton label={`BUY · ${it.price}`} size="md" disabled={balance < it.price} icon={<TokenCoin size={20} />} onPress={it.buy} />
+          <ArcadeButton label={t('arcade.buy', { price: it.price })} size="md" disabled={balance < it.price} icon={<TokenCoin size={20} />} onPress={it.buy} />
         </Card>
       ))}
     </View>
@@ -288,18 +291,18 @@ function PowerUps({ balance, freezes }: { balance: number; freezes: number }) {
           <T size={26}>🧊</T>
         </View>
         <View style={{ flex: 1, gap: 2 }}>
-          <Comic size={20}>STREAK FREEZE</Comic>
+          <Comic size={20}>{t('arcade.streakFreeze')}</Comic>
           <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
-            Miss a day and a freeze is used automatically so your streak survives. Hold up to {MAX_FREEZES}.
+            {t('arcade.freezeText', { max: MAX_FREEZES })}
           </T>
         </View>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <T size={13} rounded color={C.cyan} style={{ flex: 1 }}>
-          OWNED {freezes}/{MAX_FREEZES}
+          {t('arcade.owned', { n: freezes, max: MAX_FREEZES })}
         </T>
         <ArcadeButton
-          label={full ? 'FULL' : `BUY · ${FREEZE_PRICE}`}
+          label={full ? t('arcade.full') : t('arcade.buy', { price: FREEZE_PRICE })}
           size="md"
           disabled={full || !afford}
           colors={['#5FE2FF', '#1E8FE0']}
@@ -311,7 +314,7 @@ function PowerUps({ balance, freezes }: { balance: number; freezes: number }) {
       </View>
       {!full && !afford && (
         <T size={11} color={C.textMute} weight="700">
-          NEED {FREEZE_PRICE - balance} MORE TOKENS
+          {t('arcade.needTokens', { n: FREEZE_PRICE - balance })}
         </T>
       )}
     </Card>
@@ -321,16 +324,16 @@ function PowerUps({ balance, freezes }: { balance: number; freezes: number }) {
 /** Plain-language explainer: tokens come from HQ quests, and each game is bought once. */
 function HowItWorks({ balance }: { balance: number }) {
   const steps = [
-    { n: '1', text: 'Clear daily quests on HQ. Each pays tokens: easy +5, medium +10, hard +20.' },
-    { n: '2', text: `Win Brain Gym rounds: +${WIN_TOKENS} tokens and a chest each, ${PAID_WINS_PER_DAY} paid wins a day. Beat your best for a bonus.` },
-    { n: '3', text: 'Open chests for tokens, XP, streak freezes, doublers and the odd free game.' },
-    { n: '4', text: 'Spend tokens here to unlock games and power-ups. Games are yours forever.' },
+    { n: '1', text: t('arcade.howStep1') },
+    { n: '2', text: t('arcade.howStep2', { tokens: WIN_TOKENS, wins: PAID_WINS_PER_DAY }) },
+    { n: '3', text: t('arcade.howStep3') },
+    { n: '4', text: t('arcade.howStep4') },
   ];
   return (
     <Card style={{ gap: 10, marginTop: Space.sm }} accent={C.yellow + '99'}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
         <T size={13} rounded color={C.text} style={{ flex: 1 }}>
-          HOW TO EARN TOKENS
+          {t('arcade.howTitle')}
         </T>
         <TokenCount value={balance} />
       </View>
@@ -349,7 +352,7 @@ function HowItWorks({ balance }: { balance: number }) {
       <Pressable onPress={() => router.navigate('/')} style={styles.cta} accessibilityRole="button">
         <Icon name="target" size={14} color={C.yellow} />
         <T size={12} rounded color={C.yellow}>
-          GO TO TODAY’S QUESTS
+          {t('arcade.goToQuests')}
         </T>
         <Icon name="chevron" size={12} color={C.yellow} />
       </Pressable>
@@ -389,7 +392,7 @@ function Cabinet({
             {suggested && (
               <View style={[styles.tag, { backgroundColor: C.orange }]}>
                 <T size={9} rounded color={C.ink}>
-                  TRY THIS
+                  {t('arcade.tryThis')}
                 </T>
               </View>
             )}
@@ -403,19 +406,19 @@ function Cabinet({
         <View style={styles.brainMeta}>
           <Stars n={best ? stars(g, best) : 0} size={16} />
           <T size={12} rounded color={C.textDim} style={{ flex: 1 }}>
-            {best ? `BEST ${best} ${g.unit}` : 'NO RUNS YET'}
+            {best ? t('arcade.bestScore', { score: best, unit: g.unit ?? '' }) : t('arcade.noRunsYet')}
           </T>
           <T size={12} rounded color={C.lime}>
-            {`WIN AT ${g.win}`}
+            {t('arcade.winAt', { n: g.win ?? 0 })}
           </T>
         </View>
       )}
       {open ? (
-        <ArcadeButton label={brain ? 'PLAY' : 'PLAY 1 MIN'} size="md" colors={Gradients.brand} textColor="#fff" onPress={onPlay} />
+        <ArcadeButton label={brain ? t('arcade.play') : t('arcade.play1Min')} size="md" colors={Gradients.brand} textColor="#fff" onPress={onPlay} />
       ) : (
         <View style={{ gap: 8 }}>
           {balance >= g.price ? (
-            <ArcadeButton label={`UNLOCK FOR ${g.price}`} size="md" onPress={onUnlock} icon={<TokenCoin size={22} />} />
+            <ArcadeButton label={t('arcade.unlockFor', { price: g.price })} size="md" onPress={onUnlock} icon={<TokenCoin size={22} />} />
           ) : (
             <>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -429,9 +432,8 @@ function Cabinet({
                 <TokenCoin size={14} />
               </View>
               <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
-                {short ? 'Not enough tokens yet. ' : ''}
-                {g.price - balance} more tokens to unlock. That’s about {Math.max(1, Math.ceil((g.price - balance) / 10))} medium quest
-                {Math.ceil((g.price - balance) / 10) === 1 ? '' : 's'} on HQ.
+                {short ? `${t('arcade.notEnoughTokens')} ` : ''}
+                {t('arcade.moreToUnlock', { n: g.price - balance, count: Math.max(1, Math.ceil((g.price - balance) / 10)) })}
               </T>
             </>
           )}

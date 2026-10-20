@@ -1,23 +1,24 @@
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { C, Radius } from '@/constants/theme';
+import { t } from '@/lib/i18n';
 import type { Activity, Goal, Profile } from '@/lib/types';
 
 import { Chip, T } from './ui';
 
 export const GOALS: { v: Goal; label: string }[] = [
-  { v: 'lose', label: '🔥 Lose fat' },
-  { v: 'recomp', label: '⚡ Build muscle & lose fat' },
-  { v: 'maintain', label: '⚖️ Maintain' },
-  { v: 'gain', label: '💪 Build muscle' },
+  { v: 'lose', label: t('crew.goalLose') },
+  { v: 'recomp', label: t('crew.goalRecomp') },
+  { v: 'maintain', label: t('crew.goalMaintain') },
+  { v: 'gain', label: t('crew.goalGain') },
 ];
 
 export const ACTIVITIES: { v: Activity; label: string }[] = [
-  { v: 'sedentary', label: 'Desk life' },
-  { v: 'light', label: 'Light' },
-  { v: 'moderate', label: 'Moderate' },
-  { v: 'active', label: 'Active' },
-  { v: 'athlete', label: 'Athlete' },
+  { v: 'sedentary', label: t('crew.activitySedentary') },
+  { v: 'light', label: t('crew.activityLight') },
+  { v: 'moderate', label: t('crew.activityModerate') },
+  { v: 'active', label: t('crew.activityActive') },
+  { v: 'athlete', label: t('crew.activityAthlete') },
 ];
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -36,7 +37,7 @@ export function NumInput({ value, onChange, suffix }: { value: number; onChange:
     <View style={styles.num}>
       <TextInput
         value={value ? String(value) : ''}
-        onChangeText={(t) => onChange(Number(t.replace(/[^0-9.]/g, '')) || 0)}
+        onChangeText={(s) => onChange(Number(s.replace(/[^0-9.]/g, '')) || 0)}
         keyboardType="decimal-pad"
         style={styles.numText}
         selectTextOnFocus
@@ -53,26 +54,26 @@ export function ProfileFields({ p, set, showGoal = true }: { p: Profile; set: (p
   const imp = p.units === 'imperial';
   return (
     <View style={{ gap: 18 }}>
-      <Field label="Units">
+      <Field label={t('crew.fieldUnits')}>
         <View style={styles.row}>
-          <Chip label="Metric" active={!imp} onPress={() => set({ units: 'metric' })} />
-          <Chip label="Imperial" active={imp} onPress={() => set({ units: 'imperial' })} />
+          <Chip label={t('crew.unitsMetric')} active={!imp} onPress={() => set({ units: 'metric' })} />
+          <Chip label={t('crew.unitsImperial')} active={imp} onPress={() => set({ units: 'imperial' })} />
         </View>
       </Field>
-      <Field label="Sex">
+      <Field label={t('crew.fieldSex')}>
         <View style={styles.row}>
-          <Chip label="Male" active={p.sex === 'male'} onPress={() => set({ sex: 'male' })} />
-          <Chip label="Female" active={p.sex === 'female'} onPress={() => set({ sex: 'female' })} />
+          <Chip label={t('crew.sexMale')} active={p.sex === 'male'} onPress={() => set({ sex: 'male' })} />
+          <Chip label={t('crew.sexFemale')} active={p.sex === 'female'} onPress={() => set({ sex: 'female' })} />
         </View>
       </Field>
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
-          <Field label="Age">
-            <NumInput value={p.age} onChange={(age) => set({ age })} suffix="yrs" />
+          <Field label={t('crew.fieldAge')}>
+            <NumInput value={p.age} onChange={(age) => set({ age })} suffix={t('crew.ageSuffix')} />
           </Field>
         </View>
         <View style={{ flex: 1 }}>
-          <Field label="Height">
+          <Field label={t('crew.fieldHeight')}>
             <NumInput
               value={imp ? Math.round(p.heightCm / 2.54) : p.heightCm}
               onChange={(n) => set({ heightCm: imp ? Math.round(n * 2.54) : n })}
@@ -81,7 +82,7 @@ export function ProfileFields({ p, set, showGoal = true }: { p: Profile; set: (p
           </Field>
         </View>
         <View style={{ flex: 1 }}>
-          <Field label="Weight">
+          <Field label={t('crew.fieldWeight')}>
             <NumInput
               value={imp ? Math.round(p.weightKg * 2.20462) : p.weightKg}
               onChange={(n) => set({ weightKg: imp ? Math.round((n / 2.20462) * 10) / 10 : n })}
@@ -91,7 +92,7 @@ export function ProfileFields({ p, set, showGoal = true }: { p: Profile; set: (p
         </View>
       </View>
       {showGoal && (
-        <Field label="Goal">
+        <Field label={t('crew.fieldGoal')}>
           <View style={styles.wrap}>
             {GOALS.map((g) => (
               <Chip key={g.v} label={g.label} active={p.goal === g.v} onPress={() => set({ goal: g.v })} />
@@ -99,7 +100,7 @@ export function ProfileFields({ p, set, showGoal = true }: { p: Profile; set: (p
           </View>
         </Field>
       )}
-      <Field label="Activity level">
+      <Field label={t('crew.fieldActivity')}>
         <View style={styles.wrap}>
           {ACTIVITIES.map((a) => (
             <Chip key={a.v} label={a.label} active={p.activity === a.v} color={C.cyan} onPress={() => set({ activity: a.v })} />

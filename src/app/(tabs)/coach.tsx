@@ -15,6 +15,7 @@ import { Chip, T, tap } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { audioMime, pickImage, readBase64, VOICE_PRESET } from '@/lib/media';
+import { t } from '@/lib/i18n';
 import { HEALTH_DISCLAIMER } from '@/lib/legal';
 import { personaById } from '@/lib/personas';
 import { actions, useAiReady, useStore } from '@/lib/store';
@@ -22,21 +23,21 @@ import type { ChatMessage, Entry } from '@/lib/types';
 import { stopSpeaking, useSpeakingId } from '@/lib/voice';
 
 const SUGGESTIONS = [
-  '😴 Slept badly, about 5 hours',
-  '😤 Stressful day at work',
-  '😄 Feeling great today',
-  '☕ Flat white',
-  '🥣 Oats with berries',
-  '🍌 A banana',
-  '🏃 30 min run',
-  '🏋️ 45 min weights',
-  '🚶 10k steps walk',
-  '💧 Big glass of water',
-  '📊 How am I doing today?',
-  '💬 Plan me a 20 min home workout',
-  '💬 How much protein do I need?',
-  '💬 Best cardio for fat loss?',
-  '💬 How do I fix sore legs?',
+  t('coach.suggestSleptBadly'),
+  t('coach.suggestStressfulDay'),
+  t('coach.suggestFeelingGreat'),
+  t('coach.suggestFlatWhite'),
+  t('coach.suggestOats'),
+  t('coach.suggestBanana'),
+  t('coach.suggestRun'),
+  t('coach.suggestWeights'),
+  t('coach.suggestWalk'),
+  t('coach.suggestWater'),
+  t('coach.suggestHowAmIDoing'),
+  t('coach.suggestHomeWorkout'),
+  t('coach.suggestProtein'),
+  t('coach.suggestCardio'),
+  t('coach.suggestSoreLegs'),
 ];
 
 const MAX_RECORDING_S = 90;
@@ -100,9 +101,9 @@ export default function Coach() {
 
   function guardKey() {
     if (hasKey) return true;
-    Alert.alert('Sign in to use the Coach', 'Sign in with Apple in Crew → Account. You start with 50 free AI credits.', [
-      { text: 'Later', style: 'cancel' },
-      { text: 'Open Crew', onPress: () => router.navigate('/profile') },
+    Alert.alert(t('coach.signInTitle'), t('coach.signInMessage'), [
+      { text: t('coach.later'), style: 'cancel' },
+      { text: t('coach.openCrew'), onPress: () => router.navigate('/profile') },
     ]);
     return false;
   }
@@ -131,7 +132,7 @@ export default function Coach() {
     try {
       const perm = await AudioModule.requestRecordingPermissionsAsync();
       if (!perm.granted) {
-        Alert.alert('Microphone access needed', 'Enable microphone access in Settings to log by voice.');
+        Alert.alert(t('coach.micNeededTitle'), t('coach.micNeededMessage'));
         return;
       }
       await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
@@ -140,7 +141,7 @@ export default function Coach() {
       tap();
     } catch (err) {
       console.warn('[voice] start failed', err);
-      Alert.alert('Could not start recording', (err as Error).message);
+      Alert.alert(t('coach.recordStartFailed'), (err as Error).message);
     }
   }
 
@@ -158,7 +159,7 @@ export default function Coach() {
       await actions.sendToCoach({ audio: { base64, mimeType: audioMime(uri) }, text: caption || undefined });
     } catch (err) {
       console.warn('[voice] stop failed', err);
-      Alert.alert('Could not send voice note', (err as Error).message);
+      Alert.alert(t('coach.voiceSendFailed'), (err as Error).message);
     }
   }
 
@@ -172,7 +173,7 @@ export default function Coach() {
         <View style={{ flex: 1 }}>
           <Comic size={30}>{`${persona.name.toUpperCase()} ${persona.emoji}`}</Comic>
           <T size={12} rounded color={thinking ? C.lime : C.textDim}>
-            {thinking ? 'ANALYZING…' : speakingId ? 'TALKING…' : 'LOG IT OR ASK ME ANYTHING.'}
+            {thinking ? t('coach.statusAnalyzing') : speakingId ? t('coach.statusTalking') : t('coach.statusIdle')}
           </T>
         </View>
         <GlassButton
@@ -187,9 +188,9 @@ export default function Coach() {
             size={38}
             color={C.textDim}
             onPress={() =>
-              Alert.alert('Clear conversation?', 'Your logged entries stay.', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Clear', style: 'destructive', onPress: actions.clearChat },
+              Alert.alert(t('coach.clearTitle'), t('coach.clearMessage'), [
+                { text: t('coach.cancel'), style: 'cancel' },
+                { text: t('coach.clear'), style: 'destructive', onPress: actions.clearChat },
               ])
             }
           />
@@ -202,18 +203,18 @@ export default function Coach() {
             <Icon name="sparkles" size={44} color={C.lime} animation={{ effect: { type: 'pulse' }, repeating: true }} />
           </LinearGradient>
           <T size={26} weight="800" rounded style={{ textAlign: 'center' }}>
-            WHAT DID YOU EAT{'\n'}OR DO TODAY?
+            {t('coach.emptyTitle')}
           </T>
           <T size={14} color={C.textDim} style={{ textAlign: 'center', maxWidth: 300 }}>
-            No forms, no searching. Tap the mic and talk, or snap your plate or the treadmill screen. Ask me anything about training, food or recovery and I’ll talk back.
+            {t('coach.emptyBody')}
           </T>
           <T size={11} color={C.textMute} style={{ textAlign: 'center', maxWidth: 320, lineHeight: 15 }}>
             {HEALTH_DISCLAIMER}
           </T>
           <View style={styles.bigActions}>
-            <BigAction icon="mic" label="Talk" colors={Gradients.violet} onPress={startRecording} />
-            <BigAction icon="camera" label="Snap" colors={Gradients.warm} onPress={() => sendPhoto('camera')} />
-            <BigAction icon="photo" label="Library" colors={Gradients.cool} onPress={() => sendPhoto('library')} />
+            <BigAction icon="mic" label={t('coach.actionTalk')} colors={Gradients.violet} onPress={startRecording} />
+            <BigAction icon="camera" label={t('coach.actionSnap')} colors={Gradients.warm} onPress={() => sendPhoto('camera')} />
+            <BigAction icon="photo" label={t('coach.actionLibrary')} colors={Gradients.cool} onPress={() => sendPhoto('library')} />
           </View>
         </ScrollView>
       ) : (
@@ -239,7 +240,7 @@ export default function Coach() {
       <View style={[styles.composerWrap, { paddingBottom: 10 }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
           {repeats.map((r) => (
-            <Chip key={`r-${r}`} icon="repeat" label={r} onPress={() => sendText(`Same again: ${r}`)} />
+            <Chip key={`r-${r}`} icon="repeat" label={r} onPress={() => sendText(t('coach.sameAgain', { item: r }))} />
           ))}
           {SUGGESTIONS.map((s) => (
             <Chip key={s} label={s} onPress={() => sendText(s)} />
@@ -256,7 +257,7 @@ export default function Coach() {
               ref={inputRef}
               value={text}
               onChangeText={setText}
-              placeholder="Log a meal or ask me anything"
+              placeholder={t('coach.inputPlaceholder')}
               placeholderTextColor={C.textMute}
               style={styles.input}
               multiline
@@ -283,7 +284,7 @@ export default function Coach() {
   );
 }
 
-const PENDING_LABEL = { voice: 'Listening to your voice note', photo: 'Looking at your photo', text: 'Crunching the numbers' } as const;
+const PENDING_LABEL = { voice: t('coach.pendingVoice'), photo: t('coach.pendingPhoto'), text: t('coach.pendingText') } as const;
 
 function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map<string, Entry>; speaking: boolean }) {
   const mine = msg.role === 'user';
@@ -326,7 +327,7 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
                 style={({ pressed }) => [styles.retry, { backgroundColor: C.yellow }, pressed && { opacity: 0.7 }]}>
                 <Icon name="plus" size={14} color="#07080C" weight="bold" />
                 <T size={13} weight="800" color="#07080C">
-                  Get credits
+                  {t('coach.getCredits')}
                 </T>
               </Pressable>
             )}
@@ -339,7 +340,7 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
                 style={({ pressed }) => [styles.retry, pressed && { opacity: 0.7 }]}>
                 <Icon name="retry" size={14} color="#07080C" weight="bold" />
                 <T size={13} weight="800" color="#07080C">
-                  Try again
+                  {t('coach.tryAgain')}
                 </T>
               </Pressable>
             )}
@@ -361,7 +362,7 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
           style={({ pressed }) => [styles.listen, pressed && { opacity: 0.6 }]}>
           <Icon name={speaking ? 'stop' : 'speaker'} size={13} color={speaking ? C.lime : C.textMute} />
           <T size={11} weight="700" color={speaking ? C.lime : C.textMute} style={{ letterSpacing: 1 }}>
-            {speaking ? 'STOP' : 'LISTEN'}
+            {speaking ? t('coach.stop') : t('coach.listen')}
           </T>
         </Pressable>
       )}
@@ -370,7 +371,7 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4 }}>
             <Icon name="check" size={12} color={C.lime} weight="bold" />
             <T size={11} color={C.lime} weight="700" style={{ letterSpacing: 1 }}>
-              LOGGED
+              {t('coach.logged')}
             </T>
           </View>
           {logged.map((e) => (
@@ -401,7 +402,7 @@ function PendingStatus({ since, label }: { since: number; label: string }) {
       </View>
       {s >= 20 && (
         <T size={12} color={C.textMute}>
-          Gemini is slow right now — I’ll keep trying for a bit.
+          {t('coach.slowWarning')}
         </T>
       )}
     </View>
@@ -455,7 +456,7 @@ function RecordingBar({ seconds, metering, onCancel, onSend }: { seconds: number
         </T>
         {left <= 15 && (
           <T size={10} color={C.textMute} weight="600">
-            {left}s left
+            {t('coach.secondsLeft', { s: left })}
           </T>
         )}
       </View>

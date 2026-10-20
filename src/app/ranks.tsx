@@ -12,6 +12,7 @@ import { questXp } from '@/lib/quests';
 import { crewRank, RANKS, XP_SOURCES } from '@/lib/rank';
 import { actions, useStore } from '@/lib/store';
 import { tap } from '@/lib/haptics';
+import { locale, t } from '@/lib/i18n';
 
 const RANK_COLORS = [C.textDim, C.steelHi, C.orange, C.orange, C.yellow, C.yellow, C.lime, C.lime, C.cyan, C.cyan, C.blue, C.violet, C.pink, C.pink, '#E8B830'];
 
@@ -32,9 +33,9 @@ export default function RanksScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
-              Your progression
+              {t('ranks.subtitle')}
             </T>
-            <Comic size={38}>CREW RANKS</Comic>
+            <Comic size={38}>{t('ranks.title')}</Comic>
           </View>
           <GlassButton icon="close" onPress={() => router.back()} />
         </View>
@@ -43,7 +44,7 @@ export default function RanksScreen() {
           <View style={styles.between}>
             <View>
               <T size={11} rounded color={C.textDim}>
-                LEVEL {crew.level} OF {RANKS.length}
+                {t('ranks.levelOf', { level: crew.level, total: RANKS.length })}
               </T>
               <Comic size={30} color={RANK_COLORS[crew.level - 1]}>
                 {crew.rank.toUpperCase()}
@@ -51,16 +52,16 @@ export default function RanksScreen() {
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <T size={26} rounded color={C.lime}>
-                {crew.xp.toLocaleString()}
+                {crew.xp.toLocaleString(locale)}
               </T>
               <T size={11} rounded color={C.textMute}>
-                TOTAL XP
+                {t('ranks.totalXp')}
               </T>
             </View>
           </View>
           <Bar value={crew.progress} max={1} color={RANK_COLORS[crew.level - 1]} height={10} />
           <T size={12} color={C.textDim} weight="700">
-            {crew.next ? `${crew.toNext.toLocaleString()} XP to ${crew.next}` : 'You’ve reached the top rank.'}
+            {crew.next ? t('ranks.xpToNext', { xp: crew.toNext.toLocaleString(locale), rank: crew.next }) : t('ranks.topRank')}
           </T>
         </Card>
 
@@ -69,15 +70,15 @@ export default function RanksScreen() {
             !following ? (
               <Pressable onPress={() => actions.setWall(undefined)} hitSlop={6}>
                 <T size={11} rounded color={C.cyan}>
-                  FOLLOW MY RANK
+                  {t('ranks.followMyRank')}
                 </T>
               </Pressable>
             ) : undefined
           }>
-          The ladder
+          {t('ranks.ladder')}
         </SectionTitle>
         <T size={12} color={C.textDim} style={{ lineHeight: 17, marginTop: -4 }}>
-          Every rank unlocks a new wall for the whole app. Tap an unlocked wall to use it.
+          {t('ranks.ladderIntro')}
         </T>
         <View style={{ gap: 8 }}>
           {RANKS.map((r, i) => {
@@ -102,7 +103,7 @@ export default function RanksScreen() {
                       {r.name.toUpperCase()}
                     </Comic>
                     <T size={12} rounded color={current ? color : C.textMute}>
-                      {current ? 'YOU ARE HERE' : `${r.xp.toLocaleString()} XP`}
+                      {current ? t('ranks.youAreHere') : t('ranks.xpAmount', { xp: r.xp.toLocaleString(locale) })}
                     </T>
                   </View>
                   <T size={12} color={current || done ? C.textDim : C.textMute} style={{ lineHeight: 17 }}>
@@ -118,7 +119,7 @@ export default function RanksScreen() {
           })}
         </View>
 
-        <SectionTitle>How to earn XP</SectionTitle>
+        <SectionTitle>{t('ranks.howToEarn')}</SectionTitle>
         <Card style={{ gap: 8 }}>
           {XP_SOURCES.map((x) => (
             <View key={x.label} style={styles.between}>
@@ -148,7 +149,7 @@ function WallThumb({ level, unlocked, inUse, color }: { level: number; unlocked:
       }}
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessibilityRole="button"
-      accessibilityLabel={`${WALL_NAMES[RANKS[level - 1].scene]} wall${unlocked ? '' : ', locked'}`}
+      accessibilityLabel={t(unlocked ? 'ranks.wallLabel' : 'ranks.wallLabelLocked', { name: WALL_NAMES[RANKS[level - 1].scene] })}
       style={[styles.thumb, { borderColor: inUse ? color : C.ink }]}>
       {width > 0 && <RankScene level={level} width={width} height={130} />}
       {!unlocked && (
@@ -162,7 +163,7 @@ function WallThumb({ level, unlocked, inUse, color }: { level: number; unlocked:
         </T>
         {(inUse || unlocked) && (
           <T size={10} rounded color={inUse ? color : C.cyan}>
-            {inUse ? 'IN USE' : 'TAP TO USE'}
+            {inUse ? t('ranks.inUse') : t('ranks.tapToUse')}
           </T>
         )}
       </View>

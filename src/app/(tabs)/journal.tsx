@@ -9,6 +9,7 @@ import { openCoach } from '@/components/quick-fab';
 import { Card, T, tap } from '@/components/ui';
 import { Backdrop, Comic, Sticker } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
+import { locale, t } from '@/lib/i18n';
 import { dayKey, fmtKg, fmtWater, summarize } from '@/lib/nutrition';
 import { sceneFor } from '@/lib/scene';
 import { useStore } from '@/lib/store';
@@ -46,16 +47,16 @@ export default function JournalScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
-              Your days, drawn
+              {t('journal.subtitle')}
             </T>
-            <Comic size={40}>JOURNAL</Comic>
+            <Comic size={40}>{t('journal.title')}</Comic>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <T size={22} rounded color={C.pink}>
               {moments}
             </T>
             <T size={10} rounded color={C.textMute}>
-              MOMENTS
+              {t('journal.moments')}
             </T>
           </View>
         </View>
@@ -63,7 +64,7 @@ export default function JournalScreen() {
         <Pressable onPress={() => openCoach('voice')} style={({ pressed }) => [styles.prompt, pressed && { transform: [{ translateY: 2 }] }]} accessibilityRole="button">
           <Icon name="mic" size={18} color={C.pink} />
           <T size={13} rounded color={C.pink} style={{ flex: 1 }}>
-            TELL THE COACH ABOUT YOUR DAY
+            {t('journal.tellCoach')}
           </T>
           <Icon name="chevron" size={14} color={C.pink} />
         </Pressable>
@@ -71,10 +72,10 @@ export default function JournalScreen() {
         {days.length === 0 ? (
           <Card style={{ alignItems: 'center', gap: 8, paddingVertical: Space.xl }}>
             <Comic size={24} color={C.lime}>
-              BLANK PAGES
+              {t('journal.emptyTitle')}
             </Comic>
             <T size={13} color={C.textDim} style={{ textAlign: 'center', lineHeight: 19 }}>
-              Tell the Coach something like “Amazing day, went to the beach, swam for a while and grabbed lunch with friends”. It turns up here as a page.
+              {t('journal.emptyBody')}
             </T>
           </Card>
         ) : (
@@ -84,10 +85,10 @@ export default function JournalScreen() {
           <T size={20}>📰</T>
           <View style={{ flex: 1 }}>
             <T size={13} rounded color={C.ink}>
-              YOUR WEEKLY RECAP
+              {t('journal.weeklyRecap')}
             </T>
             <T size={11} color={C.ink}>
-              Your last 7 days as a comic page, ready to share
+              {t('journal.weeklyRecapSub')}
             </T>
           </View>
           <Icon name="chevron" size={14} color={C.ink} />
@@ -101,9 +102,9 @@ export default function JournalScreen() {
 function dayTitle(k: string, todayKey: string) {
   const y = new Date(todayKey + 'T12:00');
   y.setDate(y.getDate() - 1);
-  if (k === todayKey) return 'TODAY';
-  if (k === dayKey(y)) return 'YESTERDAY';
-  return new Date(k + 'T12:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase();
+  if (k === todayKey) return t('journal.today');
+  if (k === dayKey(y)) return t('journal.yesterday');
+  return new Date(k + 'T12:00').toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' }).toLocaleUpperCase(locale);
 }
 
 function DayPage({ dayKey: k, todayKey, list, units }: { dayKey: string; todayKey: string; list: Entry[]; units: 'metric' | 'imperial' }) {
@@ -114,9 +115,9 @@ function DayPage({ dayKey: k, todayKey, list, units }: { dayKey: string; todayKe
   const tags = [...new Set(moments.flatMap((m) => m.tags ?? []))].slice(0, 5);
 
   const facts: { icon: IconName; color: string; text: string }[] = [];
-  if (mind.sleepHours != null) facts.push({ icon: 'moon', color: C.violet, text: `${mind.sleepHours}h sleep` });
-  if (sum.meals) facts.push({ icon: 'fork', color: C.orange, text: `${sum.meals} meal${sum.meals === 1 ? '' : 's'} · ${Math.round(sum.eaten)} kcal` });
-  if (sum.workouts) facts.push({ icon: 'dumbbell', color: C.lime, text: `${sum.workouts} workout${sum.workouts === 1 ? '' : 's'} · ${sum.activeMin} min` });
+  if (mind.sleepHours != null) facts.push({ icon: 'moon', color: C.violet, text: t('journal.factSleep', { h: mind.sleepHours }) });
+  if (sum.meals) facts.push({ icon: 'fork', color: C.orange, text: t('journal.factMeals', { count: sum.meals, kcal: Math.round(sum.eaten) }) });
+  if (sum.workouts) facts.push({ icon: 'dumbbell', color: C.lime, text: t('journal.factWorkouts', { count: sum.workouts, min: sum.activeMin }) });
   if (sum.water) facts.push({ icon: 'drop', color: C.water, text: fmtWater(sum.water, units) });
   if (weight?.weightKg) facts.push({ icon: 'scale', color: C.violet, text: fmtKg(weight.weightKg, units) });
 
@@ -129,7 +130,7 @@ function DayPage({ dayKey: k, todayKey, list, units }: { dayKey: string; todayKe
         }}
         style={styles.dayHead}
         accessibilityRole="button"
-        accessibilityLabel={`Open ${dayTitle(k, todayKey)}`}>
+        accessibilityLabel={t('journal.openDay', { day: dayTitle(k, todayKey) })}>
         <Comic size={22} color={k === todayKey ? C.orange : C.text}>
           {dayTitle(k, todayKey)}
         </Comic>
@@ -138,7 +139,7 @@ function DayPage({ dayKey: k, todayKey, list, units }: { dayKey: string; todayKe
           {mind.level && (
             <View style={[styles.pill, { backgroundColor: LEVEL_COLOR[mind.level] }]}>
               <T size={9} rounded color={C.ink}>
-                STRESS {mind.stress}
+                {t('journal.stress', { n: mind.stress ?? '' })}
               </T>
             </View>
           )}
@@ -149,7 +150,7 @@ function DayPage({ dayKey: k, todayKey, list, units }: { dayKey: string; todayKe
       <Card style={{ gap: 14 }} accent={mind.level ? LEVEL_COLOR[mind.level] + '77' : undefined}>
         {moments.length === 0 ? (
           <T size={13} color={C.textDim} style={{ lineHeight: 19 }}>
-            No story for this day yet. Tell the Coach what happened and it becomes a panel here.
+            {t('journal.noStory')}
           </T>
         ) : (
           moments.map((m) => (
@@ -159,8 +160,8 @@ function DayPage({ dayKey: k, todayKey, list, units }: { dayKey: string; todayKe
                 {m.summary || m.title}
               </T>
               <T size={11} rounded color={C.textMute}>
-                {new Date(m.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                {m.energy != null ? ` · ENERGY ${Math.round(m.energy)}/5` : ''}
+                {new Date(m.createdAt).toLocaleTimeString(locale, { hour: 'numeric', minute: '2-digit' })}
+                {m.energy != null ? ` · ${t('journal.energy', { n: Math.round(m.energy) })}` : ''}
               </T>
               {!!m.note && (
                 <View style={styles.note}>

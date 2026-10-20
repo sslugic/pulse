@@ -2,6 +2,7 @@
 import { fetch as streamingFetch } from 'expo/fetch';
 
 import { cloudAI } from './cloud';
+import { language, LANGUAGE_NAMES, t } from './i18n';
 import type { ChatMessage, Entry, Goal, Nutrition, Pace, Profile, Targets } from './types';
 import { personaById } from './personas';
 import type { RecapCaptions } from './recap';
@@ -96,15 +97,15 @@ async function aiFetch(
     if (res.status === 402) {
       const j = await res.json().catch(() => ({}));
       if (typeof j.balance === 'number') balanceListener?.(j.balance);
-      throw new AiError(`You’re out of AI credits (this needs ${j.cost ?? 'a few'}). Get more in Crew → Credits.`, false, 'credits');
+      throw new AiError(t('errors.outOfCredits', { cost: j.cost ?? '?' }), false, 'credits');
     }
-    if (res.status === 401) throw new AiError('Your session expired. Sign in again in Crew.', false);
+    if (res.status === 401) throw new AiError(t('errors.sessionExpired'), false);
     const bal = res.headers.get('x-credits-balance');
     if (bal != null && balanceListener) balanceListener(Number(bal));
     return res;
   }
   // Release builds only ever talk to Pulse cloud, which holds the Gemini key as a server secret.
-  if (!__DEV__ || !opts.apiKey) throw new AiError('Sign in (Crew → Account) to use AI features.', false);
+  if (!__DEV__ || !opts.apiKey) throw new AiError(t('errors.signInForAi'), false);
   const q = opts.method === 'streamGenerateContent' ? '?alt=sse' : '';
   return fetchImpl(`${ENDPOINT}/${opts.model}:${opts.method}${q}`, {
     method: 'POST',
@@ -267,13 +268,26 @@ ${userContext(profile, entries)}`;
 // Gemini 3 accepts a thinking level; older models reject it, so we drop it for that model on that error.
 const noThinking = new Set<string>();
 
+// Every AI answer comes back in the app's language. The rule is appended after the system prompt so
+// the cached prefix stays the same for everyone.
+const LANGUAGE_RULE =
+  language === 'en'
+    ? null
+    : `LANGUAGE: Write every reply and every text field (titles, names, notes, summaries, tips, plans) in ${LANGUAGE_NAMES[language]}. Keep JSON keys and enum values exactly as specified.`;
+
+function withLanguage(body: Record<string, unknown>) {
+  const sys = body.systemInstruction as { parts?: { text?: string }[] } | undefined;
+  if (!LANGUAGE_RULE || !sys?.parts) return body;
+  return { ...body, systemInstruction: { ...sys, parts: [...sys.parts, { text: LANGUAGE_RULE }] } };
+}
+
 function requestBody(body: Record<string, unknown>, model: string, feature: Feature) {
   const level = LITE_FEATURES.has(feature) ? 'minimal' : 'low';
   const generationConfig = {
     ...(body.generationConfig as object),
     ...(noThinking.has(model) ? {} : { thinkingConfig: { thinkingLevel: level } }),
   };
-  return JSON.stringify({ ...body, generationConfig });
+  return JSON.stringify({ ...withLanguage(body), generationConfig });
 }
 
 function requestError(status: number, json: { error?: { message?: string } }, model: string) {
@@ -282,15 +296,15 @@ function requestError(status: number, json: { error?: { message?: string } }, mo
     noThinking.add(model);
     return new AiError('retry-without-thinking');
   }
-  if (/API key/i.test(msg)) return new AiError('That API key was rejected. Check it in Profile.', false);
-  if (status === 429) return new AiError('Gemini is rate-limiting requests. Try again in a moment.');
+  if (/API key/i.test(msg)) return new AiError(t('errors.keyRejected'), false);
+  if (status === 429) return new AiError(t('errors.rateLimited'));
   return new AiError(msg, status >= 500);
 }
 
 function networkError(err: unknown) {
-  if ((err as Error).name === 'AbortError') return new AiError('Gemini took too long to answer.');
+  if ((err as Error).name === 'AbortError') return new AiError(t('errors.tooSlow'));
   if (err instanceof AiError) return err;
-  return new AiError('Network problem — check your connection.');
+  return new AiError(t('errors.network'));
 }
 
 /** Runs a request with a hard timeout and one retry on transient failures. */
@@ -325,7 +339,7 @@ function generate(apiKey: string, mainModel: string, body: Record<string, unknow
     const json = await res.json().catch(() => ({}));
     if (!res.ok) throw requestError(res.status, json, model);
     const text = json?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? '').join('') ?? '';
-    if (!text) throw new AiError('Gemini returned an empty answer.');
+    if (!text) throw new AiError(t('errors.emptyAnswer'));
     return text;
   }, timeoutMs);
 }
@@ -346,7 +360,7 @@ function generateStream(
       const res = await aiFetch({ apiKey, model, method: 'streamGenerateContent', body: requestBody(body, model, feature), feature, id, signal }, streamingFetch as unknown as typeof fetch);
       if (!res.ok) throw requestError(res.status, await res.json().catch(() => ({})), model);
       const reader = res.body?.getReader();
-      if (!reader) throw new AiError('Streaming is not available.');
+      if (!reader) throw new AiError(t('errors.noStreaming'));
       const decoder = new TextDecoder();
       let buffer = '';
       let text = '';
@@ -374,7 +388,7 @@ function generateStream(
           onText(text);
         }
       }
-      if (!text) throw new AiError('Gemini returned an empty answer.');
+      if (!text) throw new AiError(t('errors.emptyAnswer'));
       return text;
     },
     timeoutMs,
@@ -662,17 +676,17 @@ export async function synthesizeSpeech(opts: { apiKey: string; text: string; voi
       }
       type Part = { inlineData?: { data?: string; mimeType?: string } };
       const audio = (json?.candidates?.[0]?.content?.parts as Part[] | undefined)?.find((p) => p.inlineData?.data)?.inlineData;
-      if (!audio?.data) throw new AiError('Gemini returned no audio.');
+      if (!audio?.data) throw new AiError(t('errors.noAudio'));
       return { base64: audio.data, mimeType: audio.mimeType ?? 'audio/L16;rate=24000' };
     } catch (err) {
-      if ((err as Error).name === 'AbortError') throw new AiError('Speech took too long.');
+      if ((err as Error).name === 'AbortError') throw new AiError(t('errors.speechTooSlow'));
       throw err;
     } finally {
       clearTimeout(timer);
     }
   }
   ttsModel = 0; // try again from the top next time, e.g. after the key changes
-  throw new AiError('No Gemini speech model is available for this key.', false);
+  throw new AiError(t('errors.noSpeechModel'), false);
 }
 
 /** Comic-book captions for the weekly recap, in the user's coach persona voice. */

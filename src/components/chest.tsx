@@ -7,6 +7,7 @@ import { C } from '@/constants/theme';
 import type { ChestTier } from '@/lib/arcade';
 import { CHEST_LOOK, type Loot } from '@/lib/brain';
 import { tap } from '@/lib/haptics';
+import { t } from '@/lib/i18n';
 import { actions } from '@/lib/store';
 
 import { Icon } from './icon';
@@ -111,15 +112,15 @@ function LootRow({ l, i }: { l: Loot; i: number }) {
   );
   switch (l.kind) {
     case 'tokens':
-      return row(<TokenCoin size={30} />, `+${l.amount} TOKENS`, 'Spend them on games and power-ups', C.yellow);
+      return row(<TokenCoin size={30} />, t('arcade.lootTokens', { n: l.amount }), t('arcade.lootTokensSub'), C.yellow);
     case 'xp':
-      return row(<Icon name="bolt" size={28} color={C.lime} />, `+${l.amount} XP`, 'Counts toward your crew rank', C.lime);
+      return row(<Icon name="bolt" size={28} color={C.lime} />, t('arcade.lootXp', { n: l.amount }), t('arcade.lootXpSub'), C.lime);
     case 'freeze':
-      return row(<T size={28}>🧊</T>, 'STREAK FREEZE', 'Saves your streak if you miss a day', C.cyan);
+      return row(<T size={28}>🧊</T>, t('arcade.streakFreeze'), t('arcade.lootFreezeSub'), C.cyan);
     case 'doubler':
-      return row(<T size={28}>⚡</T>, 'TOKEN DOUBLER', `Your next ${l.wins} Brain Gym wins pay double`, C.orange);
+      return row(<T size={28}>⚡</T>, t('arcade.tokenDoubler'), t('arcade.lootDoublerSub', { wins: l.wins }), C.orange);
     case 'game':
-      return row(<Icon name={l.game.icon} size={28} color={l.game.color} />, `${l.game.title} UNLOCKED`, 'A free arcade game, yours to keep', l.game.color);
+      return row(<Icon name={l.game.icon} size={28} color={l.game.color} />, t('arcade.lootGame', { game: l.game.title }), t('arcade.lootGameSub'), l.game.color);
   }
 }
 
@@ -152,9 +153,9 @@ function ChestModal({ chest, day, onClose }: { chest: { id: string; tier: ChestT
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.scrim}>
         <Comic size={34} color={look.glow}>
-          {loot ? 'YOU GOT' : look.name}
+          {loot ? t('arcade.youGot') : look.name}
         </Comic>
-        <Pressable onPress={open} accessibilityRole="button" accessibilityLabel="Open chest" style={{ marginTop: 56, marginBottom: 28 }}>
+        <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={t('arcade.openChest')} style={{ marginTop: 56, marginBottom: 28 }}>
           <Animated.View entering={ZoomIn.duration(300)} style={shakeStyle}>
             <ChestArt tier={chest.tier} size={170} open={!!loot} bounce={!loot} />
           </Animated.View>
@@ -165,12 +166,12 @@ function ChestModal({ chest, day, onClose }: { chest: { id: string; tier: ChestT
               <LootRow key={i} l={l} i={i} />
             ))}
             <Animated.View entering={FadeInDown.delay(300 + loot.length * 280)}>
-              <ArcadeButton label="COLLECT" size="md" onPress={onClose} style={{ marginTop: 8 }} />
+              <ArcadeButton label={t('arcade.collect')} size="md" onPress={onClose} style={{ marginTop: 8 }} />
             </Animated.View>
           </View>
         ) : (
           <T size={15} rounded color={C.textDim}>
-            TAP THE CHEST TO OPEN
+            {t('arcade.tapChestToOpen')}
           </T>
         )}
       </View>

@@ -6,26 +6,27 @@ import Svg, { Circle, Defs, Ellipse, G, Line, LinearGradient as SvgLinearGradien
 import { C, Display } from '@/constants/theme';
 import { questXp } from '@/lib/quests';
 import { crewRank, RANKS } from '@/lib/rank';
+import { t } from '@/lib/i18n';
 import { useStore } from '@/lib/store';
 
 // One backdrop scene per crew rank, so the app's walls change every time the player ranks up.
 
 export const WALL_NAMES = [
-  'BACK ALLEY',
-  'HANDBALL COURT',
-  'NIGHT STREET',
-  'BODEGA CORNER',
-  'BASKETBALL COURT',
-  'ROOFTOP',
-  'SUBWAY STATION',
-  'SUBWAY TUNNEL',
-  'TRAIN YARD',
-  'BRIDGE UNDERPASS',
-  'NEON CLUB',
-  'BLOCK PARTY',
-  'BILLBOARD SQUARE',
-  'HALL OF FAME',
-  'PULSE TOWER',
+  t('ranks.wallBackAlley'),
+  t('ranks.wallHandballCourt'),
+  t('ranks.wallNightStreet'),
+  t('ranks.wallBodegaCorner'),
+  t('ranks.wallBasketballCourt'),
+  t('ranks.wallRooftop'),
+  t('ranks.wallSubwayStation'),
+  t('ranks.wallSubwayTunnel'),
+  t('ranks.wallTrainYard'),
+  t('ranks.wallBridgeUnderpass'),
+  t('ranks.wallNeonClub'),
+  t('ranks.wallBlockParty'),
+  t('ranks.wallBillboardSquare'),
+  t('ranks.wallHallOfFame'),
+  t('ranks.wallPulseTower'),
 ] as const;
 
 type Piece = { text: string; x: number; y: number; size: number; fill: string; rot: number };

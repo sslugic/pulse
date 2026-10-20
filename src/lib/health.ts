@@ -11,10 +11,11 @@ import {
 import { useEffect, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import { t } from './i18n';
 import { dayKey } from './nutrition';
 import type { Entry } from './types';
 
-// Apple Health, read-only. Workouts, sleep and weigh-ins become Pulse entries (tagged with the
+// Apple Health, read-only. Titles are stored in the app's language at import time. Workouts, sleep and weigh-ins become Pulse entries (tagged with the
 // HealthKit uuid so a sync never duplicates them); steps are shown live on HQ.
 
 export const healthAvailable = () => Platform.OS === 'ios' && isHealthDataAvailable();
@@ -32,20 +33,21 @@ export async function connectHealth() {
   return requestAuthorization({ toRead: READ });
 }
 
+// [log.* title key, emoji]
 const WORKOUT_NAMES: Partial<Record<WorkoutActivityType, [string, string]>> = {
-  [WorkoutActivityType.running]: ['Run', '🏃'],
-  [WorkoutActivityType.walking]: ['Walk', '🚶'],
-  [WorkoutActivityType.cycling]: ['Ride', '🚴'],
-  [WorkoutActivityType.swimming]: ['Swim', '🏊'],
-  [WorkoutActivityType.traditionalStrengthTraining]: ['Strength training', '🏋️'],
-  [WorkoutActivityType.functionalStrengthTraining]: ['Functional training', '🏋️'],
-  [WorkoutActivityType.highIntensityIntervalTraining]: ['HIIT', '🔥'],
-  [WorkoutActivityType.yoga]: ['Yoga', '🧘'],
-  [WorkoutActivityType.hiking]: ['Hike', '🥾'],
-  [WorkoutActivityType.rowing]: ['Row', '🚣'],
-  [WorkoutActivityType.elliptical]: ['Elliptical', '🏃'],
-  [WorkoutActivityType.coreTraining]: ['Core training', '💪'],
-  [WorkoutActivityType.dance]: ['Dance', '💃'],
+  [WorkoutActivityType.running]: ['workoutRun', '🏃'],
+  [WorkoutActivityType.walking]: ['workoutWalk', '🚶'],
+  [WorkoutActivityType.cycling]: ['workoutRide', '🚴'],
+  [WorkoutActivityType.swimming]: ['workoutSwim', '🏊'],
+  [WorkoutActivityType.traditionalStrengthTraining]: ['workoutStrength', '🏋️'],
+  [WorkoutActivityType.functionalStrengthTraining]: ['workoutFunctional', '🏋️'],
+  [WorkoutActivityType.highIntensityIntervalTraining]: ['workoutHiit', '🔥'],
+  [WorkoutActivityType.yoga]: ['workoutYoga', '🧘'],
+  [WorkoutActivityType.hiking]: ['workoutHike', '🥾'],
+  [WorkoutActivityType.rowing]: ['workoutRow', '🚣'],
+  [WorkoutActivityType.elliptical]: ['workoutElliptical', '🏃'],
+  [WorkoutActivityType.coreTraining]: ['workoutCore', '💪'],
+  [WorkoutActivityType.dance]: ['workoutDance', '💃'],
 };
 
 export type HealthEntry = Omit<Entry, 'id'>;
@@ -60,7 +62,8 @@ export async function pullHealth(since: Date, known: Set<string>): Promise<Healt
     const j = w.toJSON();
     w.dispose();
     if (known.has(j.uuid)) continue;
-    const [title, emoji] = WORKOUT_NAMES[j.workoutActivityType] ?? ['Workout', '💪'];
+    const [titleKey, emoji] = WORKOUT_NAMES[j.workoutActivityType] ?? ['workout', '💪'];
+    const title = t(`log.${titleKey}`);
     const minutes = Math.round((j.endDate.getTime() - j.startDate.getTime()) / 60000);
     const kcal = j.totalEnergyBurned?.quantity;
     out.push({
@@ -72,7 +75,7 @@ export async function pullHealth(since: Date, known: Set<string>): Promise<Healt
       caloriesBurned: kcal != null ? Math.round(kcal) : Math.round(minutes * 6),
       intensity: minutes && kcal && kcal / minutes > 9 ? 'high' : 'moderate',
       source: 'quick',
-      note: 'From Apple Health',
+      note: t('log.fromHealth'),
       healthId: j.uuid,
     });
   }
@@ -80,7 +83,7 @@ export async function pullHealth(since: Date, known: Set<string>): Promise<Healt
   const weights = await queryQuantitySamples('HKQuantityTypeIdentifierBodyMass', { limit: 0, unit: 'kg', filter: { date } });
   for (const s of weights) {
     if (known.has(s.uuid)) continue;
-    out.push({ kind: 'weight', title: 'Weigh-in', emoji: '⚖️', createdAt: s.startDate.getTime(), weightKg: Math.round(s.quantity * 100) / 100, source: 'quick', note: 'From Apple Health', healthId: s.uuid });
+    out.push({ kind: 'weight', title: t('log.weighIn'), emoji: '⚖️', createdAt: s.startDate.getTime(), weightKg: Math.round(s.quantity * 100) / 100, source: 'quick', note: t('log.fromHealth'), healthId: s.uuid });
   }
 
   // Sleep: one journal entry per night, summing the asleep stages that ended that morning.
@@ -100,7 +103,7 @@ export async function pullHealth(since: Date, known: Set<string>): Promise<Healt
     const id = `sleep:${key}`;
     if (known.has(id) || n.ms < 2 * 3600_000) continue;
     const hours = Math.round((n.ms / 3600_000) * 2) / 2;
-    out.push({ kind: 'journal', title: `Slept ${hours}h`, emoji: '😴', createdAt: n.end, sleepHours: hours, source: 'quick', note: 'From Apple Health', healthId: id });
+    out.push({ kind: 'journal', title: t('log.sleptHours', { h: hours }), emoji: '😴', createdAt: n.end, sleepHours: hours, source: 'quick', note: t('log.fromHealth'), healthId: id });
   }
   return out;
 }

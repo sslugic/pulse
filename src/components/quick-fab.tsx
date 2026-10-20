@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { C, Display } from '@/constants/theme';
 import { tap } from '@/lib/haptics';
+import { t } from '@/lib/i18n';
 
 import { Icon, type IconName } from './icon';
 import { T } from './ui';
@@ -18,9 +19,9 @@ export function openCoach(mode: CoachMode) {
 }
 
 const OPTIONS: { mode: CoachMode; label: string; icon: IconName; color: string }[] = [
-  { mode: 'type', label: 'TYPE', icon: 'bubble', color: C.cyan },
-  { mode: 'camera', label: 'SNAP', icon: 'camera', color: C.orange },
-  { mode: 'voice', label: 'TALK TO COACH', icon: 'mic', color: C.yellow },
+  { mode: 'type', label: t('common.fabType'), icon: 'bubble', color: C.cyan },
+  { mode: 'camera', label: t('common.fabSnap'), icon: 'camera', color: C.orange },
+  { mode: 'voice', label: t('common.fabTalk'), icon: 'mic', color: C.yellow },
 ];
 
 // Height of the street tab bar above the home indicator.
@@ -43,7 +44,7 @@ export function QuickFab() {
     <>
       {open && (
         <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(150)} style={StyleSheet.absoluteFill}>
-          <Pressable style={[StyleSheet.absoluteFill, styles.scrim]} onPress={() => setOpen(false)} accessibilityLabel="Close quick log" />
+          <Pressable style={[StyleSheet.absoluteFill, styles.scrim]} onPress={() => setOpen(false)} accessibilityLabel={t('common.fabClose')} />
         </Animated.View>
       )}
       <View pointerEvents="box-none" style={[styles.wrap, { bottom }]}>
@@ -70,7 +71,7 @@ export function QuickFab() {
             setOpen((v) => !v);
           }}
           accessibilityRole="button"
-          accessibilityLabel={open ? 'Close quick log' : 'Log something'}
+          accessibilityLabel={open ? t('common.fabClose') : t('common.fabOpen')}
           style={({ pressed }) => [styles.fab, open && styles.fabOpen, pressed && { transform: [{ scale: 0.94 }] }]}>
           <View style={{ transform: [{ rotate: open ? '45deg' : '0deg' }] }}>
             <Icon name="plus" size={30} color={C.ink} weight="bold" />

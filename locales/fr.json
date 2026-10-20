@@ -1,0 +1,9 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Pulse",
+    "NSCameraUsageDescription": "Pulse utilise l’appareil photo pour photographier tes repas et séances afin que l’IA les enregistre, et pour scanner les codes-barres.",
+    "NSPhotoLibraryUsageDescription": "Pulse lit les photos que tu choisis pour enregistrer repas et séances.",
+    "NSMicrophoneUsageDescription": "Pulse utilise le micro pour que tu puisses tout noter à la voix.",
+    "NSHealthShareUsageDescription": "Pulse lit tes pas, séances, sommeil et poids pour qu’ils s’enregistrent tout seuls et te rapportent de l’XP."
+  }
+}

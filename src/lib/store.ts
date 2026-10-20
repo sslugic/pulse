@@ -17,6 +17,7 @@ import { BEST_BONUS, CHESTS_PER_DAY, PAID_WINS_PER_DAY, WIN_TOKENS, WIN_XP, ches
 import { season, SEASON_BADGE_REWARD, SEASON_REWARD } from './seasons';
 import { isPersonaUnlocked, personaById, personaUnlockId, type PersonaId } from './personas';
 import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, type GameState } from './quests';
+import { t } from './i18n';
 import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
 import { speak, speakStream, stopSpeaking } from './voice';
@@ -281,7 +282,7 @@ function markWorkoutDone(day: string, entryId: string) {
   if (!state.workoutPlan || state.workoutPlan.done[day]) return;
   set((s) => (s.workoutPlan ? { workoutPlan: { ...s.workoutPlan, done: { ...s.workoutPlan.done, [day]: entryId } } } : {}));
   set((s) => ({ game: { ...s.game, claims: [...s.game.claims, { day, questId: `plan-workout:${day}`, xp: PLAN_WORKOUT_XP, tokens: 0, at: Date.now() }] } }));
-  pushReward(PLAN_WORKOUT_XP, 0, 'WORKOUT PLAN DONE');
+  pushReward(PLAN_WORKOUT_XP, 0, t('rewards.workoutPlanDone'));
   celebrate();
 }
 
@@ -295,7 +296,7 @@ function matchToPlans(entry: Entry, announce: boolean) {
     const i = matchMeal(entry, d.meals, taken);
     if (i >= 0) {
       markMealEaten(day, i, entry.id);
-      if (announce) pushReward(PLAN_MEAL_XP, 0, `PLAN: ${d.meals[i].when.toUpperCase()} ✓`);
+      if (announce) pushReward(PLAN_MEAL_XP, 0, t('rewards.planMeal', { meal: d.meals[i].when.toUpperCase() }));
     }
   } else if (entry.kind === 'exercise' && state.workoutPlan) {
     const w = state.workoutPlan.days.find((x) => x.day === day);
@@ -326,14 +327,14 @@ async function syncEverydayActivity(since: Date) {
       const entry: Entry = {
         id: uid(),
         kind: 'exercise',
-        title: 'Everyday activity',
+        title: t('rewards.everydayActivity'),
         emoji: '🚶',
         createdAt: Math.min(end.getTime(), Date.now()),
         caloriesBurned: extra,
         durationMin: 0,
         intensity: 'low',
         source: 'quick',
-        note: 'Active energy from Apple Health (walks, stairs, moving around)',
+        note: t('rewards.everydayActivityNote'),
         healthId: id,
         passive: true,
       };
@@ -468,7 +469,7 @@ export const actions = {
     const entry: Entry = { ...e, id: uid(), createdAt: e.createdAt ?? Date.now() };
     const before = logXp(state.entries);
     set((s) => ({ entries: [entry, ...s.entries].sort((a, b) => b.createdAt - a.createdAt) }));
-    pushReward(logXp(state.entries) - before, 0, 'LOGGED');
+    pushReward(logXp(state.entries) - before, 0, t('rewards.logged'));
     // Today's logged now, so tonight's reminder moves to tomorrow.
     actions.refreshReminder();
     // The latest weigh-in keeps the profile weight current so calorie math follows; a back-dated one doesn't.
@@ -541,7 +542,7 @@ export const actions = {
     set((s) => ({ game: { ...s.game, claims: [...s.game.claims, ...claims] } }));
     const xp = claims.reduce((n, c) => n + c.xp, 0);
     const tokens = claims.reduce((n, c) => n + c.tokens, 0);
-    pushReward(xp, tokens, perfect ? 'PERFECT DAY' : q.title);
+    pushReward(xp, tokens, perfect ? t('rewards.perfectDay') : q.title);
     celebrate();
   },
   /** Buys an arcade game with tokens. Returns false when it can't be afforded. */
@@ -559,7 +560,7 @@ export const actions = {
     if (state.game.playedDay !== day) set((s) => ({ game: { ...s.game, playedDay: day } }));
     if (state.game.claims.some((c) => c.day === day && c.questId === ARCADE_CLAIM)) return;
     set((s) => ({ game: { ...s.game, claims: [...s.game.claims, { day, questId: ARCADE_CLAIM, xp: ARCADE_XP, tokens: 0, at: Date.now() }] } }));
-    pushReward(ARCADE_XP, 0, 'CHILLED OUT');
+    pushReward(ARCADE_XP, 0, t('rewards.chilledOut'));
     celebrate();
   },
   /**
@@ -699,7 +700,7 @@ export const actions = {
     if (!gap.length || !logged.has(dayKey(d)) || gap.length > freezes) return;
     freezes -= gap.length;
     set((s) => ({ game: { ...s.game, freezes, frozenDays: [...(s.game.frozenDays ?? []), ...gap] } }));
-    pushReward(0, 0, `🧊 STREAK SAVED · ${gap.length} FREEZE${gap.length > 1 ? 'S' : ''} USED`, true);
+    pushReward(0, 0, t('rewards.streakSaved', { count: gap.length }), true);
   },
   async addProgressPhoto(from: 'camera' | 'library') {
     const img = await pickImage(from);
@@ -784,7 +785,7 @@ export const actions = {
     const m = state.mealPlan?.days.find((d) => d.day === day)?.meals[index];
     if (!m) return;
     const entry = actions.addEntry(
-      { kind: 'meal', title: m.name, emoji: m.emoji, nutrition: { calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat }, source: 'quick', note: 'From your meal plan' },
+      { kind: 'meal', title: m.name, emoji: m.emoji, nutrition: { calories: m.calories, protein: m.protein, carbs: m.carbs, fat: m.fat }, source: 'quick', note: t('rewards.fromMealPlan') },
       { skipPlanMatch: true },
     );
     markMealEaten(day, index, entry.id);
@@ -794,7 +795,7 @@ export const actions = {
     const w = state.workoutPlan?.days.find((d) => d.day === day);
     if (!w || w.rest || state.workoutPlan?.done[day]) return;
     const entry = actions.addEntry(
-      { kind: 'exercise', title: w.title, emoji: w.emoji || '💪', durationMin: w.durationMin, caloriesBurned: w.estKcal, intensity: w.focus === 'HIIT' ? 'high' : 'moderate', source: 'quick', note: 'From your workout plan' },
+      { kind: 'exercise', title: w.title, emoji: w.emoji || '💪', durationMin: w.durationMin, caloriesBurned: w.estKcal, intensity: w.focus === 'HIIT' ? 'high' : 'moderate', source: 'quick', note: t('rewards.fromWorkoutPlan') },
       { skipPlanMatch: true },
     );
     markWorkoutDone(day, entry.id);

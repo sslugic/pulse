@@ -13,6 +13,7 @@ import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { calorieTarget } from '@/lib/nutrition';
 import { AccountCard } from '@/components/account-card';
 import { cloudConfigured } from '@/lib/cloud';
+import { t } from '@/lib/i18n';
 import { HEALTH_DISCLAIMER } from '@/lib/legal';
 import { actions, getState, useStore } from '@/lib/store';
 import type { Profile } from '@/lib/types';
@@ -44,22 +45,22 @@ export default function Onboarding() {
             <Comic size={56} color={C.yellow}>
               PULSE
             </Comic>
-            <Comic size={20}>THE UNDERGROUND FITNESS CREW</Comic>
+            <Comic size={20}>{t('onboarding.tagline')}</Comic>
             <T size={17} color={C.textDim} style={{ textAlign: 'center', lineHeight: 24, maxWidth: 320 }}>
-              Your AI fitness coach. Just talk, snap a photo, or type a few words — calories, macros and burn are worked out for you.
+              {t('onboarding.intro')}
             </T>
             <View style={{ gap: 12, marginTop: Space.lg, alignSelf: 'stretch' }}>
               {(
                 [
-                  ['mic', C.violet, 'Say “I had a burrito and a beer”'],
-                  ['camera', C.orange, 'Snap your plate or the treadmill screen'],
-                  ['chart', C.cyan, 'See calories in vs out, macros and trends'],
+                  ['mic', C.violet, t('onboarding.featureVoice')],
+                  ['camera', C.orange, t('onboarding.featureSnap')],
+                  ['chart', C.cyan, t('onboarding.featureChart')],
                 ] as const
-              ).map(([i, color, t]) => (
-                <View key={t} style={styles.feature}>
+              ).map(([i, color, text]) => (
+                <View key={text} style={styles.feature}>
                   <IconBadge name={i} color={color} size={40} />
                   <T size={15} weight="600" style={{ flex: 1 }}>
-                    {t}
+                    {text}
                   </T>
                 </View>
               ))}
@@ -69,20 +70,20 @@ export default function Onboarding() {
 
         {step === 1 && (
           <Animated.View entering={FadeInDown.duration(350)} style={{ gap: 18 }}>
-            <Comic size={38}>ABOUT YOU</Comic>
+            <Comic size={38}>{t('onboarding.aboutTitle')}</Comic>
             <T size={14} color={C.textDim}>
-              Used to estimate calorie burn and set your daily targets.
+              {t('onboarding.aboutBody')}
             </T>
-            <Field label="Name">
-              <TextInput value={p.name} onChangeText={(name) => set({ name })} placeholder="Your first name" placeholderTextColor={C.textMute} style={inputStyle} />
+            <Field label={t('onboarding.fieldName')}>
+              <TextInput value={p.name} onChangeText={(name) => set({ name })} placeholder={t('onboarding.namePlaceholder')} placeholderTextColor={C.textMute} style={inputStyle} />
             </Field>
             <ProfileFields p={p} set={set} />
             <View style={styles.targetBox}>
               <T size={13} color={C.textDim} weight="600">
-                Daily target
+                {t('onboarding.dailyTarget')}
               </T>
               <T size={28} weight="900" rounded color={C.lime}>
-                {calorieTarget(p).toLocaleString()} kcal
+                {t('onboarding.kcal', { kcal: calorieTarget(p).toLocaleString() })}
               </T>
             </View>
           </Animated.View>
@@ -90,9 +91,9 @@ export default function Onboarding() {
 
         {step === 2 && cloudConfigured && (
           <Animated.View entering={FadeInDown.duration(350)} style={{ gap: 18 }}>
-            <Comic size={38}>JOIN THE CREW</Comic>
+            <Comic size={38}>{t('onboarding.joinTitle')}</Comic>
             <T size={14} color={C.textDim} style={{ lineHeight: 20 }}>
-              The Coach, plans and recaps run on AI credits. Sign in to start with 50 free and keep your progress backed up.
+              {t('onboarding.joinBody')}
             </T>
             <AccountCard />
             <T size={11} color={C.textMute} style={{ lineHeight: 15 }}>
@@ -103,7 +104,7 @@ export default function Onboarding() {
 
         <View style={{ flex: 1 }} />
         <GradientButton
-          label={step === 0 ? 'Get started' : step === 1 ? 'Continue' : signedIn ? 'Start logging' : 'Skip for now'}
+          label={step === 0 ? t('onboarding.getStarted') : step === 1 ? t('onboarding.continue') : signedIn ? t('onboarding.startLogging') : t('onboarding.skip')}
           onPress={() => {
             if (step < 2) {
               setStep(step + 1);

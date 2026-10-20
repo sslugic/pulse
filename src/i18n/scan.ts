@@ -1,5 +1,131 @@
 // Strings for: scan. English is the source; every other language should have the same keys.
-const en = {} as const;
+const en = {
+  title: 'SCAN BARCODE',
+  cameraNeeded: 'CAMERA NEEDED',
+  cameraNeededBody: 'Pulse needs the camera to read barcodes on packaged food.',
+  allowCamera: 'ALLOW CAMERA',
+  pointAtBarcode: 'POINT AT A BARCODE',
+  notFound: 'NOT IN THE FOOD DATABASE',
+  lookupFailed: 'COULDN’T LOOK THAT UP',
+  notFoundHint: 'Try snapping the nutrition label with the Coach instead.',
+  errorHint: 'Check your connection and try again.',
+  scanAgain: 'SCAN AGAIN',
+  perServing: 'Per serving: {serving}',
+  kcal: 'KCAL',
+  protein: 'PROTEIN',
+  carbs: 'CARBS',
+  fat: 'FAT',
+  rescan: 'RESCAN',
+  logIt: 'LOG IT',
+  scannedNote: 'Scanned barcode',
+} as const;
 
-const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<keyof typeof en, string>>> = { en, es: {}, de: {}, fr: {}, it: {}, pt: {} };
+type Table = Partial<Record<keyof typeof en, string>>;
+
+const es: Table = {
+  title: 'ESCANEAR CÓDIGO',
+  cameraNeeded: 'NECESITO LA CÁMARA',
+  cameraNeededBody: 'Pulse necesita la cámara para leer códigos de barras de comida envasada.',
+  allowCamera: 'PERMITIR CÁMARA',
+  pointAtBarcode: 'APUNTA A UN CÓDIGO',
+  notFound: 'NO ESTÁ EN LA BASE DE DATOS',
+  lookupFailed: 'NO PUDE BUSCARLO',
+  notFoundHint: 'Prueba a hacerle una foto a la etiqueta nutricional con el Coach.',
+  errorHint: 'Revisa tu conexión y vuelve a intentarlo.',
+  scanAgain: 'ESCANEAR OTRA VEZ',
+  perServing: 'Por ración: {serving}',
+  kcal: 'KCAL',
+  protein: 'PROTEÍNA',
+  carbs: 'CARBOS',
+  fat: 'GRASA',
+  rescan: 'REPETIR',
+  logIt: 'REGISTRAR',
+  scannedNote: 'Código de barras escaneado',
+};
+
+const de: Table = {
+  title: 'BARCODE SCANNEN',
+  cameraNeeded: 'KAMERA NÖTIG',
+  cameraNeededBody: 'Pulse braucht die Kamera, um Barcodes auf verpackten Lebensmitteln zu lesen.',
+  allowCamera: 'KAMERA ERLAUBEN',
+  pointAtBarcode: 'AUF EINEN BARCODE HALTEN',
+  notFound: 'NICHT IN DER DATENBANK',
+  lookupFailed: 'SUCHE FEHLGESCHLAGEN',
+  notFoundHint: 'Fotografier stattdessen das Nährwertetikett mit dem Coach.',
+  errorHint: 'Prüf deine Verbindung und versuch’s nochmal.',
+  scanAgain: 'NOCHMAL SCANNEN',
+  perServing: 'Pro Portion: {serving}',
+  kcal: 'KCAL',
+  protein: 'PROTEIN',
+  carbs: 'KH',
+  fat: 'FETT',
+  rescan: 'NEU SCANNEN',
+  logIt: 'LOGGEN',
+  scannedNote: 'Barcode gescannt',
+};
+
+const fr: Table = {
+  title: 'SCANNER UN CODE-BARRES',
+  cameraNeeded: 'CAMÉRA REQUISE',
+  cameraNeededBody: 'Pulse a besoin de la caméra pour lire les codes-barres des produits emballés.',
+  allowCamera: 'AUTORISER LA CAMÉRA',
+  pointAtBarcode: 'VISE UN CODE-BARRES',
+  notFound: 'PAS DANS LA BASE ALIMENTAIRE',
+  lookupFailed: 'RECHERCHE IMPOSSIBLE',
+  notFoundHint: 'Prends plutôt l’étiquette nutritionnelle en photo avec le Coach.',
+  errorHint: 'Vérifie ta connexion et réessaie.',
+  scanAgain: 'RESCANNER',
+  perServing: 'Par portion : {serving}',
+  kcal: 'KCAL',
+  protein: 'PROTÉINES',
+  carbs: 'GLUCIDES',
+  fat: 'LIPIDES',
+  rescan: 'RESCANNER',
+  logIt: 'ENREGISTRER',
+  scannedNote: 'Code-barres scanné',
+};
+
+const it: Table = {
+  title: 'SCANSIONA CODICE',
+  cameraNeeded: 'SERVE LA FOTOCAMERA',
+  cameraNeededBody: 'Pulse ha bisogno della fotocamera per leggere i codici a barre dei cibi confezionati.',
+  allowCamera: 'CONSENTI FOTOCAMERA',
+  pointAtBarcode: 'INQUADRA UN CODICE',
+  notFound: 'NON È NEL DATABASE',
+  lookupFailed: 'RICERCA NON RIUSCITA',
+  notFoundHint: 'Prova invece a fotografare l’etichetta nutrizionale con il Coach.',
+  errorHint: 'Controlla la connessione e riprova.',
+  scanAgain: 'SCANSIONA ANCORA',
+  perServing: 'Per porzione: {serving}',
+  kcal: 'KCAL',
+  protein: 'PROTEINE',
+  carbs: 'CARBO',
+  fat: 'GRASSI',
+  rescan: 'RIPETI',
+  logIt: 'REGISTRA',
+  scannedNote: 'Codice a barre scansionato',
+};
+
+const pt: Table = {
+  title: 'ESCANEAR CÓDIGO',
+  cameraNeeded: 'PRECISO DA CÂMERA',
+  cameraNeededBody: 'O Pulse precisa da câmera pra ler códigos de barras de comida embalada.',
+  allowCamera: 'PERMITIR CÂMERA',
+  pointAtBarcode: 'APONTE PRA UM CÓDIGO',
+  notFound: 'NÃO ESTÁ NA BASE DE ALIMENTOS',
+  lookupFailed: 'NÃO DEU PRA BUSCAR',
+  notFoundHint: 'Tente fotografar a tabela nutricional com o Coach.',
+  errorHint: 'Confira sua conexão e tente de novo.',
+  scanAgain: 'ESCANEAR DE NOVO',
+  perServing: 'Por porção: {serving}',
+  kcal: 'KCAL',
+  protein: 'PROTEÍNA',
+  carbs: 'CARBOS',
+  fat: 'GORDURA',
+  rescan: 'REFAZER',
+  logIt: 'REGISTRAR',
+  scannedNote: 'Código de barras escaneado',
+};
+
+const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<keyof typeof en, string>>> = { en, es, de, fr, it, pt };
 export default strings;

@@ -25,6 +25,10 @@ export const locale = getLocales().find((l) => l.languageCode === language)?.lan
 
 type Vars = Record<string, string | number>;
 
+// Hermes has no Intl.PluralRules. These six languages only need "one" vs "other": French and
+// Portuguese treat 0 and 1 as singular, the rest only 1.
+const pluralForm = (lang: string, n: number) => (n === 1 || ((lang === 'fr' || lang === 'pt') && n === 0) ? 'one' : 'other');
+
 /**
  * Translated text for a key like "arcade.title". `{name}` placeholders are filled from `vars`.
  * Plurals: pass `count` and keep `key_one` / `key_other` variants; `t('x', { count })` picks one.
@@ -37,7 +41,7 @@ export function t(key: string, vars?: Vars): string {
     const table = ns?.[lang];
     if (!table) return undefined;
     if (vars && typeof vars.count === 'number') {
-      const form = new Intl.PluralRules(lang).select(vars.count);
+      const form = pluralForm(lang, vars.count);
       return table[`${k}_${form}`] ?? table[`${k}_other`] ?? table[k];
     }
     return table[k];

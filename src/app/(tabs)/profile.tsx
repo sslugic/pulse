@@ -10,7 +10,8 @@ import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic, MetalPanel } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { COACH_VOICES } from '@/lib/gemini';
-import { GOAL_INFO, macroTargets, PACE_INFO } from '@/lib/nutrition';
+import { locale, t } from '@/lib/i18n';
+import { goalLabel, macroTargets, paceLabel } from '@/lib/nutrition';
 import { actions, useStore } from '@/lib/store';
 
 export default function ProfileScreen() {
@@ -18,43 +19,43 @@ export default function ProfileScreen() {
   const profile = useStore((s) => s.profile);
   const settings = useStore((s) => s.settings);
   const entries = useStore((s) => s.entries);
-  const t = macroTargets(profile);
+  const targets = macroTargets(profile);
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Backdrop />
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.md, paddingBottom: Space.xl }]} keyboardShouldPersistTaps="handled">
-        <Comic size={42}>THE CREW</Comic>
+        <Comic size={42}>{t('crew.title')}</Comic>
 
         <MetalPanel onPress={() => router.push('/goals')} accent={C.lime + '99'} style={{ marginTop: Space.sm }} innerStyle={{ gap: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <IconBadge name="target" color={C.lime} size={40} />
               <View style={{ flex: 1 }}>
                 <T size={12} color={C.textDim} weight="700" style={{ letterSpacing: 0.8, textTransform: 'uppercase' }}>
-                  Nutrition plan
+                  {t('crew.nutritionPlan')}
                 </T>
                 <T size={17} weight="800">
-                  {GOAL_INFO[profile.goal].label}
-                  {profile.goal !== 'maintain' ? <T size={13} color={C.textDim}> · {PACE_INFO[profile.pace]}</T> : null}
+                  {goalLabel(profile.goal)}
+                  {profile.goal !== 'maintain' ? <T size={13} color={C.textDim}> · {paceLabel(profile.pace)}</T> : null}
                 </T>
               </View>
               <Icon name="chevron" size={16} color={C.textMute} />
             </View>
             <View style={styles.targets}>
-              <Target label="kcal" value={t.calories} color={C.lime} />
-              <Target label="protein" value={t.protein} unit="g" color={C.protein} />
-              <Target label="carbs" value={t.carbs} unit="g" color={C.carbs} />
-              <Target label="fat" value={t.fat} unit="g" color={C.fat} />
+              <Target label={t('crew.targetKcal')} value={targets.calories} color={C.lime} />
+              <Target label={t('crew.targetProtein')} value={targets.protein} unit="g" color={C.protein} />
+              <Target label={t('crew.targetCarbs')} value={targets.carbs} unit="g" color={C.carbs} />
+              <Target label={t('crew.targetFat')} value={targets.fat} unit="g" color={C.fat} />
             </View>
             <T size={12} rounded color={C.cyan}>
-              SET A GOAL WITH AI OR EDIT TARGETS →
+              {t('crew.setGoalCta')}
             </T>
         </MetalPanel>
 
-        <SectionTitle>Account & credits</SectionTitle>
+        <SectionTitle>{t('crew.sectionAccount')}</SectionTitle>
         <AccountCard />
 
-        <SectionTitle>Your coach</SectionTitle>
+        <SectionTitle>{t('crew.sectionCoach')}</SectionTitle>
         <PersonaPicker />
 
         <SectionTitle>Apple Health</SectionTitle>
@@ -63,10 +64,10 @@ export default function ProfileScreen() {
             <IconBadge name="heart" color={C.pink} size={36} />
             <View style={{ flex: 1 }}>
               <T size={14} rounded color={C.text}>
-                {settings.health?.on ? 'CONNECTED' : 'NOT CONNECTED'}
+                {settings.health?.on ? t('crew.healthConnected') : t('crew.healthNotConnected')}
               </T>
               <T size={12} color={C.textDim}>
-                {settings.health?.lastSync ? `Last synced ${new Date(settings.health.lastSync).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}` : 'Workouts, sleep, weight and steps log themselves.'}
+                {settings.health?.lastSync ? t('crew.healthLastSynced', { time: new Date(settings.health.lastSync).toLocaleString(locale, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) }) : t('crew.healthBlurb')}
               </T>
             </View>
           </View>
@@ -74,90 +75,90 @@ export default function ProfileScreen() {
             {settings.health?.on ? (
               <>
                 <Chip
-                  label="Sync now"
+                  label={t('crew.syncNow')}
                   onPress={async () => {
                     const n = await actions.syncHealth();
-                    Alert.alert('Apple Health', n ? `Imported ${n} new ${n === 1 ? 'entry' : 'entries'}.` : 'Everything is up to date.');
+                    Alert.alert('Apple Health', n ? t('crew.healthImported', { count: n }) : t('crew.healthUpToDate'));
                   }}
                 />
-                <Chip label="Disconnect" onPress={() => actions.disconnectHealth()} />
+                <Chip label={t('crew.disconnect')} onPress={() => actions.disconnectHealth()} />
               </>
             ) : (
               <Chip
-                label="Connect Apple Health"
+                label={t('crew.connectHealth')}
                 active
                 onPress={async () => {
-                  if (!(await actions.connectHealth())) Alert.alert('Apple Health', 'Health isn’t available on this device, or access was declined. You can allow it in the Health app under Sharing.');
+                  if (!(await actions.connectHealth())) Alert.alert('Apple Health', t('crew.healthUnavailable'));
                 }}
               />
             )}
           </View>
           <T size={12} color={C.textMute}>
-            Pulse only reads from Health and never writes to it. Imported workouts and weigh-ins earn XP like any other log.
+            {t('crew.healthNote')}
           </T>
         </Card>
 
-        <SectionTitle>Streak reminder</SectionTitle>
+        <SectionTitle>{t('crew.sectionReminder')}</SectionTitle>
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {[undefined, 18, 20, 21].map((h) => (
               <Chip
                 key={String(h)}
-                label={h == null ? 'Off' : `${h - 12} pm`}
+                label={h == null ? t('crew.reminderOff') : new Date(2000, 0, 1, h).toLocaleTimeString(locale, { hour: 'numeric' })}
                 active={settings.reminderHour === h}
                 onPress={async () => {
-                  if (!(await actions.setReminder(h))) Alert.alert('Notifications are off', 'Allow notifications for Pulse in iPhone Settings to get streak reminders.');
+                  if (!(await actions.setReminder(h))) Alert.alert(t('crew.notificationsOffTitle'), t('crew.notificationsOffBody'));
                 }}
               />
             ))}
           </View>
           <T size={12} color={C.textMute}>
-            One nudge in the evening, only on days you haven’t logged anything yet.
+            {t('crew.reminderNote')}
           </T>
         </Card>
 
-        <SectionTitle>Coach voice</SectionTitle>
+        <SectionTitle>{t('crew.sectionVoice')}</SectionTitle>
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {[...COACH_VOICES, { id: 'device', label: 'Offline' }].map((v) => (
+            {[...COACH_VOICES, { id: 'device', label: t('crew.voiceOffline') }].map((v) => (
               <Chip
                 key={v.id}
-                label={v.id === 'device' ? v.label : `${v.id} · ${v.label}`}
+                label={v.id === 'device' ? v.label : `${v.id} · ${t(`labels.voice_${v.id}`)}`}
                 active={settings.coachVoice === v.id}
                 onPress={() => {
                   actions.setCoachVoice(v.id);
-                  actions.speakMessage('voice-preview', "Hey, I'm your Pulse coach. Let's crush today's goals together!");
+                  actions.speakMessage('voice-preview', t('crew.voicePreview'));
                 }}
               />
             ))}
           </View>
           <T size={12} color={C.textMute}>
-            Natural voices come from Google Gemini and use AI credits. Offline uses the iPhone’s built-in voice.
+            {t('crew.voiceNote')}
           </T>
         </Card>
 
-        <SectionTitle>Your details</SectionTitle>
+        <SectionTitle>{t('crew.sectionDetails')}</SectionTitle>
         <Card style={{ gap: 18 }}>
-          <Field label="Name">
-            <TextInput value={profile.name} onChangeText={(name) => actions.updateProfile({ name })} placeholder="Your first name" placeholderTextColor={C.textMute} style={inputStyle} />
+          <Field label={t('crew.fieldName')}>
+            <TextInput value={profile.name} onChangeText={(name) => actions.updateProfile({ name })} placeholder={t('crew.namePlaceholder')} placeholderTextColor={C.textMute} style={inputStyle} />
           </Field>
           <ProfileFields p={profile} set={actions.updateProfile} showGoal={false} />
         </Card>
 
-        <SectionTitle>Data</SectionTitle>
+        <SectionTitle>{t('crew.sectionData')}</SectionTitle>
         <Card style={{ gap: 12 }}>
           <T size={13} color={C.textDim}>
-            {entries.length} entries stored on this device.
+            {t('crew.entriesStored', { count: entries.length })}
           </T>
           <Pressable
             onPress={() =>
-              Alert.alert('Erase everything?', 'This deletes all logs, chat and your profile from this device.', [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Erase', style: 'destructive', onPress: actions.resetAll },
+              Alert.alert(t('crew.eraseTitle'), t('crew.eraseBody'), [
+                { text: t('crew.cancel'), style: 'cancel' },
+                { text: t('crew.erase'), style: 'destructive', onPress: actions.resetAll },
               ])
             }>
             <T size={14} color={C.danger} weight="700">
-              Erase all data
+              {t('crew.eraseAll')}
             </T>
           </Pressable>
         </Card>

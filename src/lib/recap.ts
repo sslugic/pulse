@@ -1,3 +1,4 @@
+import { t } from '@/lib/i18n';
 import { dayKey, lastNDays, loggedDays, summarize, targets as currentTargets } from './nutrition';
 import type { Claim } from './quests';
 import { sceneFor, type SceneElement } from './scene';
@@ -85,11 +86,11 @@ export function weekStats(entries: Entry[], profile: Profile, claims: Claim[], e
 /** Captions written from the numbers alone, used when there's no API key or the AI call fails. */
 export function fallbackCaptions(s: WeekStats) {
   return {
-    title: s.daysLogged >= 5 ? 'THE WEEK YOU SHOWED UP' : s.daysLogged >= 3 ? 'BUILDING MOMENTUM' : 'THE COMEBACK STARTS',
-    training: s.workouts ? `${s.workouts} workout${s.workouts > 1 ? 's' : ''}, ${s.activeMin} minutes on the clock.` : 'No workouts logged. Next week, one session is a win.',
-    fuel: s.meals ? `${s.meals} meals tracked. Protein on point ${s.proteinDays} day${s.proteinDays === 1 ? '' : 's'}.` : 'Log a few meals next week to see your fuel story.',
-    mind: s.avgSleep != null ? `Averaging ${s.avgSleep.toFixed(1)} hours of sleep.` : 'Tell the Coach how you sleep to fill this panel.',
-    verdict: s.daysLogged >= 5 ? 'Consistency like this is how bodies change. Keep the streak alive.' : 'Every logged day counts. Aim for one more than this week.',
+    title: s.daysLogged >= 5 ? t('recap.titleShowedUp') : s.daysLogged >= 3 ? t('recap.titleMomentum') : t('recap.titleComeback'),
+    training: s.workouts ? t('recap.trainingCaption', { count: s.workouts, min: s.activeMin }) : t('recap.trainingNone'),
+    fuel: s.meals ? t('recap.fuelCaption', { meals: s.meals, count: s.proteinDays }) : t('recap.fuelNone'),
+    mind: s.avgSleep != null ? t('recap.mindCaption', { h: s.avgSleep.toFixed(1) }) : t('recap.mindNone'),
+    verdict: s.daysLogged >= 5 ? t('recap.verdictStrong') : t('recap.verdictKeepGoing'),
   };
 }
 

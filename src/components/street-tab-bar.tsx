@@ -6,16 +6,17 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 import { C, Display } from '@/constants/theme';
 import { tap } from '@/lib/haptics';
+import { t } from '@/lib/i18n';
 
 import { Icon, type IconName } from './icon';
 
 export const TABS: Record<string, { label: string; icon: IconName; color: string }> = {
-  index: { label: 'HQ', icon: 'flame', color: C.orange },
-  coach: { label: 'Coach', icon: 'sparkles', color: C.violet },
-  journal: { label: 'Journal', icon: 'journal', color: C.pink },
-  arcade: { label: 'Arcade', icon: 'game', color: C.yellow },
-  trends: { label: 'Stats', icon: 'chart', color: C.lime },
-  profile: { label: 'Crew', icon: 'person', color: C.cyan },
+  index: { label: t('common.tabHq'), icon: 'flame', color: C.orange },
+  coach: { label: t('common.tabCoach'), icon: 'sparkles', color: C.violet },
+  journal: { label: t('common.tabJournal'), icon: 'journal', color: C.pink },
+  arcade: { label: t('common.tabArcade'), icon: 'game', color: C.yellow },
+  trends: { label: t('common.tabStats'), icon: 'chart', color: C.lime },
+  profile: { label: t('common.tabCrew'), icon: 'person', color: C.cyan },
 };
 
 /** Spray-paint splat behind the active tab. */

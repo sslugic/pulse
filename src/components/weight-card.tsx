@@ -4,6 +4,7 @@ import Svg, { Circle, Defs, Line, LinearGradient, Path, Stop } from 'react-nativ
 
 import { C } from '@/constants/theme';
 import { tap } from '@/lib/haptics';
+import { t } from '@/lib/i18n';
 import { dayKey } from '@/lib/nutrition';
 import { actions } from '@/lib/store';
 import type { Entry, Profile } from '@/lib/types';
@@ -40,7 +41,7 @@ export function WeightCard({ weighIns, profile }: { weighIns: Entry[]; profile: 
       <View style={styles.top}>
         <View style={{ gap: 2 }}>
           <T size={11} rounded color={C.textDim}>
-            CURRENT
+            {t('hq.current')}
           </T>
           <View style={styles.big}>
             <Comic size={44} color={C.text}>
@@ -51,13 +52,13 @@ export function WeightCard({ weighIns, profile }: { weighIns: Entry[]; profile: 
             </T>
           </View>
           <T size={11} color={C.textMute} weight="700">
-            {last ? `WEIGHED ${shortDate(last.at).toUpperCase()}` : 'FROM YOUR PROFILE'}
+            {last ? t('hq.weighed', { date: shortDate(last.at).toUpperCase() }) : t('hq.fromProfile')}
           </T>
         </View>
         <View style={styles.side}>
-          <Stat label="CHANGE" value={points.length >= 2 ? `${delta > 0 ? '+' : ''}${delta.toFixed(1)} ${unit}` : '—'} color={deltaColor} />
-          <Stat label="START" value={first ? `${fmt(first.kg)} ${unit}` : '—'} color={C.text} />
-          <Stat label="WEIGH-INS" value={String(points.length)} color={C.violet} />
+          <Stat label={t('hq.change')} value={points.length >= 2 ? `${delta > 0 ? '+' : ''}${delta.toFixed(1)} ${unit}` : '—'} color={deltaColor} />
+          <Stat label={t('hq.start')} value={first ? `${fmt(first.kg)} ${unit}` : '—'} color={C.text} />
+          <Stat label={t('hq.weighIns')} value={String(points.length)} color={C.violet} />
         </View>
       </View>
 
@@ -70,25 +71,25 @@ export function WeightCard({ weighIns, profile }: { weighIns: Entry[]; profile: 
       <Pressable onPress={() => router.push('/progress-photos')} style={styles.photos} accessibilityRole="button">
         <Icon name="camera" size={14} color={C.violet} />
         <T size={12} rounded color={C.violet} style={{ flex: 1 }}>
-          PROGRESS PHOTOS · BEFORE & NOW
+          {t('hq.progressPhotos')}
         </T>
         <Icon name="chevron" size={12} color={C.violet} />
       </Pressable>
 
       <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
         {points.length < 2
-          ? `Log another weigh-in to see your trend. Say “I weigh ${imperial ? '172 lb' : '78 kg'}” to the Coach.`
-          : `Say “I weigh ${imperial ? '172 lb' : '78 kg'}” to the Coach to add a weigh-in.`}
+          ? t('hq.weighHintTrend', { w: imperial ? '172 lb' : '78 kg' })
+          : t('hq.weighHintAdd', { w: imperial ? '172 lb' : '78 kg' })}
       </T>
     </Card>
   );
 }
 
-function dayLabel(t: number, todayKey: string) {
-  const k = dayKey(t);
+function dayLabel(at: number, todayKey: string) {
+  const k = dayKey(at);
   const y = new Date(todayKey + 'T12:00');
   y.setDate(y.getDate() - 1);
-  return k === todayKey ? 'TODAY' : k === dayKey(y) ? 'YESTERDAY' : new Date(t).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
+  return k === todayKey ? t('hq.today') : k === dayKey(y) ? t('hq.yesterday') : new Date(at).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
 }
 
 /** Recent weigh-ins, newest first, with arrows to move one to another day and a delete button. */
@@ -100,32 +101,32 @@ function WeighInList({ weighIns, fmt, unit }: { weighIns: Entry[]; fmt: (kg: num
     actions.moveEntryDays(e.id, days);
   };
   const remove = (e: Entry) =>
-    Alert.alert('Delete weigh-in?', `${fmt(e.weightKg ?? 0)} ${unit} on ${dayLabel(e.createdAt, todayKey).toLowerCase()}`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => actions.removeEntry(e.id) },
+    Alert.alert(t('hq.deleteWeighInTitle'), t('hq.deleteWeighInBody', { weight: `${fmt(e.weightKg ?? 0)} ${unit}`, day: dayLabel(e.createdAt, todayKey).toLowerCase() }), [
+      { text: t('hq.cancel'), style: 'cancel' },
+      { text: t('hq.delete'), style: 'destructive', onPress: () => actions.removeEntry(e.id) },
     ]);
   return (
     <View style={styles.list}>
       <T size={10} rounded color={C.textMute}>
-        WEIGH-INS · USE THE ARROWS TO FIX A DAY
+        {t('hq.weighInsHint')}
       </T>
       {rows.map((e) => {
         const isToday = dayKey(e.createdAt) === todayKey;
         return (
           <View key={e.id} style={styles.row}>
-            <Pressable onPress={() => move(e, -1)} style={styles.arrow} hitSlop={6} accessibilityLabel="Move to the day before">
+            <Pressable onPress={() => move(e, -1)} style={styles.arrow} hitSlop={6} accessibilityLabel={t('hq.moveDayBefore')}>
               <Icon name="back" size={14} color={C.text} weight="bold" />
             </Pressable>
             <T size={12} rounded color={C.textDim} style={{ flex: 1, textAlign: 'center' }}>
               {dayLabel(e.createdAt, todayKey)}
             </T>
-            <Pressable onPress={() => move(e, 1)} disabled={isToday} style={[styles.arrow, isToday && { opacity: 0.25 }]} hitSlop={6} accessibilityLabel="Move to the day after">
+            <Pressable onPress={() => move(e, 1)} disabled={isToday} style={[styles.arrow, isToday && { opacity: 0.25 }]} hitSlop={6} accessibilityLabel={t('hq.moveDayAfter')}>
               <Icon name="chevron" size={14} color={C.text} weight="bold" />
             </Pressable>
             <T size={15} rounded color={C.text} style={{ width: 84, textAlign: 'right' }}>
               {fmt(e.weightKg ?? 0)} {unit}
             </T>
-            <Pressable onPress={() => remove(e)} style={styles.trash} hitSlop={6} accessibilityLabel="Delete weigh-in">
+            <Pressable onPress={() => remove(e)} style={styles.trash} hitSlop={6} accessibilityLabel={t('hq.deleteWeighIn')}>
               <Icon name="trash" size={14} color={C.textMute} />
             </Pressable>
           </View>
