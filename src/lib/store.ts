@@ -20,6 +20,7 @@ import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, typ
 import { t } from './i18n';
 import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
+import { avatarById, avatarUnlockId, avatarGiftId, isAvatarUnlocked, type AvatarId } from './avatars';
 import { trackById, trackUnlockId, type TrackId } from './music';
 import { configureSound, playSfx } from './sound';
 import { speak, speakStream, stopSpeaking } from './voice';
@@ -443,6 +444,21 @@ export const actions = {
     playSfx('fanfare');
     return true;
   },
+  /** Unlocks an avatar early with XP. Returns false if it isn't for sale or isn't affordable. */
+  unlockAvatar(id: AvatarId, spendableXp: number) {
+    const a = avatarById(id);
+    if (!a.xp || spendableXp < a.xp || state.game.unlocked.includes(avatarUnlockId(id))) return false;
+    set((s) => ({ game: { ...s.game, unlocked: [...s.game.unlocked, avatarUnlockId(id)], xpSpent: (s.game.xpSpent ?? 0) + a.xp } }));
+    celebrate();
+    playSfx('fanfare');
+    return true;
+  },
+  /** Sets the profile picture, if it's unlocked at this level. */
+  chooseAvatar(id: AvatarId, level: number) {
+    if (!isAvatarUnlocked(avatarById(id), level, state.game.unlocked)) return false;
+    actions.updateProfile({ avatar: id });
+    return true;
+  },
   setVoiceReplies(voiceReplies: boolean) {
     set((s) => ({ settings: { ...s.settings, voiceReplies } }));
     if (!voiceReplies) stopSpeaking();
@@ -675,7 +691,7 @@ export const actions = {
     const xp = loot.reduce((n, l) => n + (l.kind === 'xp' ? l.amount : 0), 0);
     const freeze = loot.some((l) => l.kind === 'freeze');
     const doubler = loot.reduce((n, l) => n + (l.kind === 'doubler' ? l.wins : 0), 0);
-    const gifts = loot.flatMap((l) => (l.kind === 'game' ? [`gift:${l.game.id}`] : []));
+    const gifts = loot.flatMap((l) => (l.kind === 'game' ? [`gift:${l.game.id}`] : l.kind === 'avatar' ? [avatarGiftId(l.avatar.id)] : []));
     set((s) => ({
       game: {
         ...s.game,

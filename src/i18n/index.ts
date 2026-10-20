@@ -26,5 +26,6 @@ import share from './share';
 import music from './music';
 import tour from './tour';
 import rewards from './rewards';
+import avatars from './avatars';
 
-export const STRINGS = { common, log, hq, quests, wellbeing, coach, journal, stats, recap, goals, photos, scan, arcade, ranks, season, crew, onboarding, account, credits, plans, errors, rewards, labels, squad, share, music, tour };
+export const STRINGS = { common, log, hq, quests, wellbeing, coach, journal, stats, recap, goals, photos, scan, arcade, ranks, season, crew, onboarding, account, credits, plans, errors, rewards, labels, squad, share, music, tour, avatars };

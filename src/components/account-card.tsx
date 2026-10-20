@@ -9,7 +9,7 @@ import { locale, t } from '@/lib/i18n';
 import { actions, useStore } from '@/lib/store';
 
 import { Icon } from './icon';
-import { TokenCoin } from './quests-card';
+import { CreditGem } from './quests-card';
 import { Card, T, tap } from './ui';
 
 /** Pulse account: Sign in with Apple, credit balance, backup, sign out and account deletion. */
@@ -50,10 +50,10 @@ export function AccountCard() {
     return (
       <Card style={{ gap: 12 }} accent={C.yellow + '99'}>
         <View style={styles.row}>
-          <TokenCoin size={28} />
+          <CreditGem size={28} />
           <T size={13} color={C.text} style={{ flex: 1, lineHeight: 18 }}>
             {pitchBefore}
-            <T size={13} rounded color={C.yellow}>
+            <T size={13} rounded color={C.cyan}>
               {t('account.freeCredits')}
             </T>
             {pitchAfter}
@@ -99,11 +99,11 @@ export function AccountCard() {
           </T>
         </View>
         <Pressable onPress={() => router.push('/credits')} style={styles.credits} accessibilityRole="button">
-          <TokenCoin size={20} />
-          <T size={16} rounded color={C.yellow}>
+          <CreditGem size={20} />
+          <T size={16} rounded color={C.cyan}>
             {account.credits?.toLocaleString() ?? '—'}
           </T>
-          <Icon name="chevron" size={12} color={C.yellow} />
+          <Icon name="chevron" size={12} color={C.cyan} />
         </Pressable>
       </View>
       {account.subscription?.active && (
@@ -154,7 +154,7 @@ export function AccountCard() {
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  credits: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#2A2410' },
+  credits: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, backgroundColor: '#0F2630' },
   action: { alignItems: 'center', paddingVertical: 11, borderRadius: 10, backgroundColor: C.yellow, borderWidth: 2, borderColor: C.ink, borderBottomWidth: 4 },
   small: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 8, backgroundColor: '#1D2023', borderWidth: 2, borderColor: C.ink },
 });

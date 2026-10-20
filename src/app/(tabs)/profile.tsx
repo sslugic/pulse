@@ -5,10 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconBadge } from '@/components/icon';
 import { AccountCard } from '@/components/account-card';
 import { PersonaPicker } from '@/components/persona-picker';
+import { TagAvatar } from '@/components/tag-avatar';
 import { Field, inputStyle, ProfileFields } from '@/components/profile-form';
 import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic, MetalPanel } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
+import type { AvatarId } from '@/lib/avatars';
 import { COACH_VOICES } from '@/lib/gemini';
 import { locale, t } from '@/lib/i18n';
 import { goalLabel, macroTargets, paceLabel } from '@/lib/nutrition';
@@ -25,7 +27,15 @@ export default function ProfileScreen() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Backdrop />
       <ScrollView contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.md, paddingBottom: Space.xl }]} keyboardShouldPersistTaps="handled">
-        <Comic size={42}>{t('crew.title')}</Comic>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Comic size={42}>{t('crew.title')}</Comic>
+          <Pressable onPress={() => router.push('/avatars')} accessibilityRole="button" accessibilityLabel={t('crew.avatar')} style={({ pressed }) => [{ alignItems: 'center', gap: 2 }, pressed && { opacity: 0.7 }]}>
+            <TagAvatar size={56} online={false} letter={(profile.name || 'P')[0]} avatar={profile.avatar as AvatarId | undefined} />
+            <T size={11} rounded color={C.cyan}>
+              {t('crew.avatar')} ›
+            </T>
+          </Pressable>
+        </View>
 
         <MetalPanel onPress={() => router.push('/goals')} accent={C.lime + '99'} style={{ marginTop: Space.sm }} innerStyle={{ gap: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>

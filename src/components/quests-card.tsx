@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { C, Display, Space } from '@/constants/theme';
 import { t } from '@/lib/i18n';
@@ -19,6 +20,28 @@ export function TokenCoin({ size = 18 }: { size?: number }) {
   return (
     <View style={[styles.coin, { width: size, height: size, borderRadius: size / 2, borderWidth: Math.max(1.5, size / 10) }]}>
       <Text style={{ fontFamily: Display.block, fontSize: size * 0.55, color: '#7A4A00', lineHeight: size * 0.7 }}>P</Text>
+    </View>
+  );
+}
+
+/** AI credits: a cyan gem, so they never look like arcade tokens (the gold P coin). */
+export function CreditGem({ size = 18 }: { size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M6 3h12l5 6-11 13L1 9z" fill={C.cyan} stroke={C.ink} strokeWidth={2} strokeLinejoin="round" />
+      <Path d="M1 9h22M8 3l-2 6 6 13 6-13-2-6" fill="none" stroke={C.ink} strokeWidth={1.2} strokeLinejoin="round" opacity={0.55} />
+      <Path d="M7 5l-1.5 3.5" stroke="#FFFFFF" strokeWidth={1.6} strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function CreditCount({ value, size = 16 }: { value: number; size?: number }) {
+  return (
+    <View style={styles.tokens}>
+      <CreditGem size={size + 2} />
+      <T size={size} rounded color={C.cyan}>
+        {value.toLocaleString()}
+      </T>
     </View>
   );
 }

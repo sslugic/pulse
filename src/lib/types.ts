@@ -74,6 +74,8 @@ export interface Profile {
   planNote?: string;
   /** Coach personality; see lib/personas. */
   persona?: string;
+  /** Profile picture; see lib/avatars. Missing means the initial tag. */
+  avatar?: string;
 }
 
 export interface ChatMessage {

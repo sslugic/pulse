@@ -101,6 +101,7 @@ export default function RootLayout() {
               <Stack.Screen name="join/[code]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="r/[code]" options={{ presentation: 'modal' }} />
               <Stack.Screen name="music" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="avatars" options={{ presentation: 'modal' }} />
             </Stack.Protected>
             <Stack.Protected guard={!onboarded}>
               <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
