@@ -84,3 +84,25 @@ export function weekDots(entries: Entry[], now = new Date()) {
     return { letter, key: dayKey(d), on: logged.has(dayKey(d)), today: dayKey(d) === dayKey(now) };
   });
 }
+
+/** The Monday (dayKey) of the week `now` falls in. Weeks run Monday to Sunday, like the HQ week strip. */
+export function weekStart(now = new Date()) {
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  return dayKey(monday);
+}
+
+/**
+ * XP earned in the week starting `monday` (a dayKey), for the friends board: logging XP and the
+ * daily logging bonus for that week's days, plus quests, chests and games claimed that week.
+ * The streak bonus is left out so a long streak doesn't decide every week.
+ */
+export function weeklyXp(entries: Entry[], claims: { day: string; xp: number }[], monday: string) {
+  const end = new Date(monday + 'T12:00');
+  end.setDate(end.getDate() + 7);
+  const until = dayKey(end);
+  const inWeek = (k: string) => k >= monday && k < until;
+  const week = entries.filter((e) => inWeek(dayKey(e.createdAt)));
+  const logging = logXp(week) - streak(week) * 25;
+  return Math.max(0, logging) + claims.reduce((n, c) => n + (inWeek(c.day) ? c.xp : 0), 0);
+}

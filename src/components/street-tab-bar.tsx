@@ -10,12 +10,13 @@ import { t } from '@/lib/i18n';
 
 import { Icon, type IconName } from './icon';
 
+// Stats has no button of its own; HQ links to it. The bar has room for six.
 export const TABS: Record<string, { label: string; icon: IconName; color: string }> = {
   index: { label: t('common.tabHq'), icon: 'flame', color: C.orange },
   coach: { label: t('common.tabCoach'), icon: 'sparkles', color: C.violet },
   journal: { label: t('common.tabJournal'), icon: 'journal', color: C.pink },
   arcade: { label: t('common.tabArcade'), icon: 'game', color: C.yellow },
-  trends: { label: t('common.tabStats'), icon: 'chart', color: C.lime },
+  squad: { label: t('common.tabSquad'), icon: 'people', color: C.lime },
   profile: { label: t('common.tabCrew'), icon: 'person', color: C.cyan },
 };
 

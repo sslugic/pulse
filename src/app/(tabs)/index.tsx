@@ -205,6 +205,12 @@ export default function Today() {
                 {t('hq.scanBarcode')}
               </T>
             </Pressable>
+            <Pressable onPress={() => router.navigate('/trends')} style={styles.fuelBtn} accessibilityRole="button">
+              <Icon name="chart" size={14} color={C.lime} />
+              <T size={12} rounded color={C.lime}>
+                {t('hq.stats')}
+              </T>
+            </Pressable>
           </View>
         </Card>
 

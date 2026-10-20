@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RankScene, useWallLevel, WALL_NAMES } from '@/components/backdrops';
 import { GlassButton, Icon } from '@/components/icon';
+import { shareCard } from '@/components/share-card';
 import { Bar, Card, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
@@ -25,6 +26,7 @@ export default function RanksScreen() {
   const crew = useMemo(() => crewRank(entries, questXp(claims), frozen), [entries, claims, frozen]);
   const { wall } = useWallLevel();
   const following = useStore((s) => s.game.wall == null);
+  const name = useStore((s) => s.profile.name.split(' ')[0] ?? '');
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -37,7 +39,10 @@ export default function RanksScreen() {
             </T>
             <Comic size={38}>{t('ranks.title')}</Comic>
           </View>
-          <GlassButton icon="close" onPress={() => router.back()} />
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <GlassButton icon="share" onPress={() => shareCard({ kind: 'rank', level: crew.level, rank: crew.rank, name, xp: crew.xp })} />
+            <GlassButton icon="close" onPress={() => router.back()} />
+          </View>
         </View>
 
         <Card style={{ gap: 10 }} accent={RANK_COLORS[crew.level - 1] + 'AA'}>

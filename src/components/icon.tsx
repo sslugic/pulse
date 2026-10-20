@@ -90,6 +90,11 @@ const ICONS = {
   film: ['film.fill', 'movie'],
   gift: ['gift.fill', 'redeem'],
   sick: ['bandage.fill', 'healing'],
+  share: ['square.and.arrow.up', 'ios_share'],
+  trophy: ['trophy.fill', 'emoji_events'],
+  wave: ['hand.wave.fill', 'waving_hand'],
+  link: ['link', 'link'],
+  more: ['ellipsis', 'more_horiz'],
 } as const;
 
 export type IconName = keyof typeof ICONS;
