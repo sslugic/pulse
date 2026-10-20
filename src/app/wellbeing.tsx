@@ -10,11 +10,12 @@ import { Bar, Card, Chip, Ring, SectionTitle, T, tap } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { wellbeingInsight, type WellbeingInsight } from '@/lib/gemini';
+import { t } from '@/lib/i18n';
 import { journalPhotoUri, pickImage } from '@/lib/media';
 import { dayKey, lastNDays } from '@/lib/nutrition';
 import { actions, canUseAI, getState, useAiReady, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
-import { dayWellbeing, impactFor, LEVEL_COLOR, MOODS, moodEmoji, patterns } from '@/lib/wellbeing';
+import { dayWellbeing, impactFor, LEVEL_COLOR, LEVEL_LABEL, MOODS, moodEmoji, patterns } from '@/lib/wellbeing';
 
 export default function WellbeingScreen() {
   const insets = useSafeAreaInsets();
@@ -48,7 +49,7 @@ export default function WellbeingScreen() {
     if (!canUseAI()) return;
     let cancelled = false;
     wellbeingInsight({ apiKey: s.settings.apiKey, model: s.settings.model, profile: s.profile, entries: s.entries })
-      .catch(() => ({ headline: 'Couldn’t reach Gemini', body: 'Check your connection and tap refresh.', tips: [] }))
+      .catch(() => ({ headline: t('wellbeing.geminiErrorTitle'), body: t('wellbeing.geminiErrorBody'), tips: [] }))
       .then((r) => {
         if (cancelled) return;
         setInsight(r);
@@ -65,11 +66,11 @@ export default function WellbeingScreen() {
 
   const logMood = (mood: number) => {
     tap();
-    actions.addEntry({ kind: 'journal', title: 'Mood check-in', emoji: moodEmoji(mood), mood, source: 'quick' });
+    actions.addEntry({ kind: 'journal', title: t('wellbeing.moodCheckIn'), emoji: moodEmoji(mood), mood, source: 'quick' });
   };
   const logSleep = (h: number) => {
     tap();
-    actions.addEntry({ kind: 'journal', title: `Slept ${h}h`, emoji: '😴', sleepHours: h, source: 'quick' });
+    actions.addEntry({ kind: 'journal', title: t('wellbeing.sleptHours', { h }), emoji: '😴', sleepHours: h, source: 'quick' });
   };
   const addMoment = async (from: 'camera' | 'library') => {
     const img = await pickImage(from);
@@ -88,9 +89,9 @@ export default function WellbeingScreen() {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <T size={13} color={C.textDim} weight="600">
-            Stress, sleep & journal
+            {t('wellbeing.subtitle')}
           </T>
-          <Comic size={38}>MIND & RECOVERY</Comic>
+          <Comic size={38}>{t('wellbeing.mindRecovery')}</Comic>
         </View>
         <GlassButton icon="close" onPress={() => router.back()} />
       </View>
@@ -110,7 +111,7 @@ export default function WellbeingScreen() {
               </Ring>
               <View style={{ flex: 1, gap: 6 }}>
                 <T size={12} weight="800" color={color} style={{ letterSpacing: 1 }}>
-                  {today.level?.toUpperCase()} STRESS
+                  {today.level ? t('wellbeing.levelStress', { level: LEVEL_LABEL[today.level].toUpperCase() }) : ''}
                 </T>
                 <T size={18} weight="800">
                   {impact?.title}
@@ -140,17 +141,17 @@ export default function WellbeingScreen() {
           <View style={{ alignItems: 'center', gap: 8, paddingVertical: Space.sm }}>
             <IconBadge name="brain" color={C.pink} size={52} />
             <T size={16} weight="800">
-              No check-in yet today
+              {t('wellbeing.noCheckIn')}
             </T>
             <T size={13} color={C.textDim} style={{ textAlign: 'center', lineHeight: 19 }}>
-              Log how you feel and how you slept. Pulse turns it into a stress score and shows how it’s affecting your progress.
+              {t('wellbeing.noCheckInBody')}
             </T>
           </View>
         )}
       </LinearGradient>
 
       {/* Check-ins */}
-      <SectionTitle>How do you feel?</SectionTitle>
+      <SectionTitle>{t('wellbeing.howDoYouFeel')}</SectionTitle>
       <Card style={styles.moods}>
         {MOODS.map((m) => {
           const on = today.mood != null && Math.round(today.mood) === m.v;
@@ -165,7 +166,7 @@ export default function WellbeingScreen() {
         })}
       </Card>
 
-      <SectionTitle right={today.sleepHours != null ? <T size={12} color={C.violet} weight="700">{today.sleepHours}h logged</T> : undefined}>Last night’s sleep</SectionTitle>
+      <SectionTitle right={today.sleepHours != null ? <T size={12} color={C.violet} weight="700">{t('wellbeing.sleepLogged', { h: today.sleepHours })}</T> : undefined}>{t('wellbeing.lastNightSleep')}</SectionTitle>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 2 }}>
         {[4, 5, 5.5, 6, 6.5, 7, 7.5, 8, 9].map((h) => (
           <Chip key={h} label={`${h}h`} active={today.sleepHours === h} color={C.violet} onPress={() => logSleep(h)} />
@@ -173,9 +174,9 @@ export default function WellbeingScreen() {
       </ScrollView>
 
       <View style={styles.actions}>
-        <ActionTile icon="mic" label="Talk about your day" color={C.pink} onPress={talk} />
-        <ActionTile icon="photoAdd" label="Add a photo moment" color={C.cyan} onPress={() => addMoment('library')} busy={thinking} />
-        <ActionTile icon="camera" label="Snap a moment" color={C.orange} onPress={() => addMoment('camera')} busy={thinking} />
+        <ActionTile icon="mic" label={t('wellbeing.talkAboutDay')} color={C.pink} onPress={talk} />
+        <ActionTile icon="photoAdd" label={t('wellbeing.addPhotoMoment')} color={C.cyan} onPress={() => addMoment('library')} busy={thinking} />
+        <ActionTile icon="camera" label={t('wellbeing.snapMoment')} color={C.orange} onPress={() => addMoment('camera')} busy={thinking} />
       </View>
 
       {/* AI coaching */}
@@ -187,14 +188,14 @@ export default function WellbeingScreen() {
                 <Icon name="retry" size={14} color={C.textDim} />
               </Pressable>
             }>
-            Coach on your progress
+            {t('wellbeing.coachOnProgress')}
           </SectionTitle>
           <Card style={{ gap: 10 }}>
             {loading && !insight ? (
               <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
                 <ActivityIndicator color={C.pink} />
                 <T size={13} color={C.textDim}>
-                  Connecting your stress, sleep and food…
+                  {t('wellbeing.connecting')}
                 </T>
               </View>
             ) : insight ? (
@@ -225,13 +226,13 @@ export default function WellbeingScreen() {
       )}
 
       {/* Trends */}
-      <SectionTitle>Last 14 days</SectionTitle>
+      <SectionTitle>{t('wellbeing.last14Days')}</SectionTitle>
       <Card style={{ gap: 14 }}>
-        <TrendRow label="Stress" days={week} value={(d) => d.stress} max={100} color={(d) => (d.level ? LEVEL_COLOR[d.level] : C.textMute)} />
-        <TrendRow label="Sleep" days={week} value={(d) => d.sleepHours} max={10} color={() => C.violet} />
+        <TrendRow label={t('wellbeing.stress')} days={week} value={(d) => d.stress} max={100} color={(d) => (d.level ? LEVEL_COLOR[d.level] : C.textMute)} />
+        <TrendRow label={t('wellbeing.sleep')} days={week} value={(d) => d.sleepHours} max={10} color={() => C.violet} />
         <View style={{ gap: 6 }}>
           <T size={11} weight="700" color={C.textMute}>
-            MOOD
+            {t('wellbeing.mood').toUpperCase()}
           </T>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             {week.map((d) => (
@@ -244,7 +245,7 @@ export default function WellbeingScreen() {
       </Card>
 
       {/* Patterns */}
-      <SectionTitle>Your patterns</SectionTitle>
+      <SectionTitle>{t('wellbeing.yourPatterns')}</SectionTitle>
       <Card style={{ gap: 12 }}>
         {found.length ? (
           found.map((p, i) => (
@@ -257,24 +258,24 @@ export default function WellbeingScreen() {
           ))
         ) : (
           <T size={13} color={C.textDim} style={{ lineHeight: 19 }}>
-            Check in for a few days and I’ll show how your sleep and stress line up with what you eat and how you train.
+            {t('wellbeing.patternsEmpty')}
           </T>
         )}
       </Card>
 
       {/* Journal */}
-      <SectionTitle>Journal</SectionTitle>
+      <SectionTitle>{t('wellbeing.journal')}</SectionTitle>
       {journal.length === 0 ? (
         <Card>
           <T size={13} color={C.textDim} style={{ lineHeight: 19 }}>
-            Tell the Coach what happened today, or add a photo of something worth remembering. It all lands here.
+            {t('wellbeing.journalEmpty')}
           </T>
         </Card>
       ) : (
         journal.map(([k, list]) => (
           <View key={k} style={{ gap: 8, marginBottom: Space.sm }}>
             <T size={13} weight="800" color={C.textDim} style={{ paddingHorizontal: 4 }}>
-              {k === todayKey ? 'Today' : new Date(k + 'T12:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+              {k === todayKey ? t('wellbeing.today') : new Date(k + 'T12:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
             </T>
             {list.map((e) => (
               <Card key={e.id} style={{ gap: 10 }}>
@@ -286,8 +287,8 @@ export default function WellbeingScreen() {
                     </T>
                     <T size={11} color={C.textMute}>
                       {new Date(e.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
-                      {e.sleepHours != null ? ` · slept ${e.sleepHours}h` : ''}
-                      {e.stress != null ? ` · stress ${Math.round(e.stress)}/10` : ''}
+                      {e.sleepHours != null ? ` · ${t('wellbeing.sleptShort', { h: e.sleepHours })}` : ''}
+                      {e.stress != null ? ` · ${t('wellbeing.stressShort', { n: Math.round(e.stress) })}` : ''}
                     </T>
                   </View>
                 </View>
@@ -299,10 +300,10 @@ export default function WellbeingScreen() {
                 )}
                 {!!e.tags?.length && (
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {e.tags.map((t) => (
-                      <View key={t} style={styles.tag}>
+                    {e.tags.map((tag) => (
+                      <View key={tag} style={styles.tag}>
                         <T size={11} weight="700" color={C.pink}>
-                          {t}
+                          {tag}
                         </T>
                       </View>
                     ))}

@@ -9,7 +9,8 @@ import { Card, Chip, GradientButton, SectionTitle, T, tap } from '@/components/u
 import { Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Radius, Space } from '@/constants/theme';
 import { planGoal } from '@/lib/gemini';
-import { fmtWater, GOAL_INFO, PACE_INFO, recommendedTargets, targets as getTargets, tdee } from '@/lib/nutrition';
+import { locale, t } from '@/lib/i18n';
+import { fmtWater, GOAL_INFO, goalBlurb, goalLabel, PACE_INFO, paceLabel, recommendedTargets, targets as getTargets, tdee } from '@/lib/nutrition';
 import { actions, getState, useStore } from '@/lib/store';
 import type { Goal, Pace, Targets } from '@/lib/types';
 
@@ -20,24 +21,24 @@ const GOAL_ICON: Record<Goal, { icon: IconName; color: string }> = {
   gain: { icon: 'dumbbell', color: C.cyan },
 };
 
-const IDEAS = ['Build muscle and lose fat', 'Lose 5 kg by summer', 'Bulk for strength training', 'Run a half marathon', 'Stay lean, eat more protein'];
+const IDEAS = [t('goals.ideaMuscleFat'), t('goals.ideaLose5'), t('goals.ideaBulk'), t('goals.ideaHalfMarathon'), t('goals.ideaLean')];
 
 const ROWS: { key: keyof Targets; label: string; unit: string; step: number; icon: IconName; color: string }[] = [
-  { key: 'calories', label: 'Calories', unit: 'kcal', step: 50, icon: 'flame', color: C.lime },
-  { key: 'protein', label: 'Protein', unit: 'g', step: 5, icon: 'dumbbell', color: C.protein },
-  { key: 'carbs', label: 'Carbs', unit: 'g', step: 5, icon: 'bolt', color: C.carbs },
-  { key: 'fat', label: 'Fat', unit: 'g', step: 5, icon: 'drop', color: C.fat },
-  { key: 'fiber', label: 'Fiber', unit: 'g', step: 1, icon: 'leaf', color: C.cyan },
-  { key: 'waterMl', label: 'Water', unit: 'ml', step: 250, icon: 'drop', color: C.water },
+  { key: 'calories', label: t('goals.calories'), unit: 'kcal', step: 50, icon: 'flame', color: C.lime },
+  { key: 'protein', label: t('goals.protein'), unit: 'g', step: 5, icon: 'dumbbell', color: C.protein },
+  { key: 'carbs', label: t('goals.carbs'), unit: 'g', step: 5, icon: 'bolt', color: C.carbs },
+  { key: 'fat', label: t('goals.fat'), unit: 'g', step: 5, icon: 'drop', color: C.fat },
+  { key: 'fiber', label: t('goals.fiber'), unit: 'g', step: 1, icon: 'leaf', color: C.cyan },
+  { key: 'waterMl', label: t('goals.water'), unit: 'ml', step: 250, icon: 'drop', color: C.water },
 ];
 
 export default function GoalsScreen() {
   const insets = useSafeAreaInsets();
   const profile = useStore((s) => s.profile);
-  const t = getTargets(profile);
+  const tgt = getTargets(profile);
   const rec = recommendedTargets(profile);
   const maintenance = Math.round(tdee(profile) / 10) * 10;
-  const kgPerWeek = ((t.calories - maintenance) * 7) / 7700;
+  const kgPerWeek = ((tgt.calories - maintenance) * 7) / 7700;
 
   const [request, setRequest] = useState('');
   const [busy, setBusy] = useState(false);
@@ -60,7 +61,7 @@ export default function GoalsScreen() {
     }
   }
 
-  const macroKcal = t.protein * 4 + t.carbs * 4 + t.fat * 9;
+  const macroKcal = tgt.protein * 4 + tgt.carbs * 4 + tgt.fat * 9;
   const edited = !!profile.custom && Object.keys(profile.custom).length > 0;
 
   return (
@@ -70,9 +71,9 @@ export default function GoalsScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
-              Your daily targets
+              {t('goals.subtitle')}
             </T>
-            <Comic size={38}>NUTRITION PLAN</Comic>
+            <Comic size={38}>{t('goals.title')}</Comic>
           </View>
           <GlassButton icon="close" onPress={() => router.back()} />
         </View>
@@ -85,17 +86,17 @@ export default function GoalsScreen() {
             </LinearGradient>
             <View style={{ flex: 1 }}>
               <T size={16} weight="800">
-                Tell me your goal
+                {t('goals.aiTitle')}
               </T>
               <T size={12} color={C.textDim}>
-                I’ll set calories and macros for your body.
+                {t('goals.aiSubtitle')}
               </T>
             </View>
           </View>
           <TextInput
             value={request}
             onChangeText={setRequest}
-            placeholder="e.g. I want to build muscle and lose some belly fat"
+            placeholder={t('goals.aiPlaceholder')}
             placeholderTextColor={C.textMute}
             style={styles.aiInput}
             multiline
@@ -112,11 +113,11 @@ export default function GoalsScreen() {
             <View style={styles.busy}>
               <ActivityIndicator color={C.lime} />
               <T size={14} color={C.textDim} weight="600">
-                Building your plan…
+                {t('goals.building')}
               </T>
             </View>
           ) : (
-            <GradientButton label="Build my plan" onPress={() => buildPlan()} disabled={!request.trim()} icon={<Icon name="sparkles" size={18} color="#07080C" />} />
+            <GradientButton label={t('goals.buildPlan')} onPress={() => buildPlan()} disabled={!request.trim()} icon={<Icon name="sparkles" size={18} color="#07080C" />} />
           )}
           {error && (
             <T size={13} color={C.danger}>
@@ -135,7 +136,7 @@ export default function GoalsScreen() {
         )}
 
         {/* Goal */}
-        <SectionTitle>Goal</SectionTitle>
+        <SectionTitle>{t('goals.goal')}</SectionTitle>
         <View style={styles.grid}>
           {(Object.keys(GOAL_INFO) as Goal[]).map((g) => {
             const on = profile.goal === g;
@@ -150,10 +151,10 @@ export default function GoalsScreen() {
                 style={({ pressed }) => [styles.goal, on && { borderColor: color, backgroundColor: color + '14' }, pressed && { opacity: 0.8 }]}>
                 <IconBadge name={icon} color={color} size={38} />
                 <T size={15} weight="800">
-                  {GOAL_INFO[g].label}
+                  {goalLabel(g)}
                 </T>
                 <T size={12} color={C.textDim} style={{ lineHeight: 16 }}>
-                  {GOAL_INFO[g].blurb}
+                  {goalBlurb(g)}
                 </T>
               </Pressable>
             );
@@ -166,10 +167,10 @@ export default function GoalsScreen() {
               right={
                 <T size={12} color={C.textDim}>
                   ≈ {kgPerWeek > 0 ? '+' : ''}
-                  {profile.units === 'imperial' ? `${(kgPerWeek * 2.20462).toFixed(1)} lb` : `${kgPerWeek.toFixed(2)} kg`} / week
+                  {profile.units === 'imperial' ? `${(kgPerWeek * 2.20462).toFixed(1)} lb` : `${kgPerWeek.toFixed(2)} kg`} {t('goals.perWeek')}
                 </T>
               }>
-              Pace
+              {t('goals.pace')}
             </SectionTitle>
             <View style={styles.segment}>
               {(Object.keys(PACE_INFO) as Pace[]).map((p) => {
@@ -183,7 +184,7 @@ export default function GoalsScreen() {
                     }}
                     style={[styles.segBtn, on && styles.segOn]}>
                     <T size={14} weight="700" color={on ? '#07080C' : C.textDim}>
-                      {PACE_INFO[p]}
+                      {paceLabel(p)}
                     </T>
                   </Pressable>
                 );
@@ -198,34 +199,34 @@ export default function GoalsScreen() {
             edited ? (
               <Pressable onPress={() => actions.resetTargets()} hitSlop={8}>
                 <T size={12} color={C.cyan} weight="700">
-                  Reset to recommended
+                  {t('goals.resetToRecommended')}
                 </T>
               </Pressable>
             ) : (
               <T size={12} color={C.textMute}>
-                Tap ± to fine-tune
+                {t('goals.tapToFineTune')}
               </T>
             )
           }>
-          Daily targets
+          {t('goals.dailyTargets')}
         </SectionTitle>
         <Card style={{ gap: 4, paddingVertical: 8 }}>
           {ROWS.map((r) => (
             <TargetRow
               key={r.key}
               row={r}
-              value={t[r.key]}
+              value={tgt[r.key]}
               recommended={rec[r.key]}
               custom={profile.custom?.[r.key] != null}
               units={profile.units}
             />
           ))}
         </Card>
-        <MacroSplit p={t.protein} c={t.carbs} f={t.fat} />
+        <MacroSplit p={tgt.protein} c={tgt.carbs} f={tgt.fat} />
         <T size={12} color={C.textMute} style={{ paddingHorizontal: 4, lineHeight: 17 }}>
-          Maintenance ≈ {maintenance.toLocaleString()} kcal (Mifflin-St Jeor × activity).{' '}
-          {Math.abs(macroKcal - t.calories) > 60 && `Your macros add up to ${Math.round(macroKcal)} kcal. `}
-          Protein is set per kg of body weight for your goal.
+          {t('goals.maintenance', { kcal: maintenance.toLocaleString(locale) })}{' '}
+          {Math.abs(macroKcal - tgt.calories) > 60 && `${t('goals.macrosAddUp', { kcal: Math.round(macroKcal) })} `}
+          {t('goals.proteinNote')}
         </T>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -257,7 +258,7 @@ function TargetRow({
     const n = Math.max(row.step, value + dir * row.step);
     actions.setTarget(row.key, n === recommended ? undefined : n);
   };
-  const display = row.key === 'waterMl' ? fmtWater(value, units) : `${value.toLocaleString()} ${row.unit}`;
+  const display = row.key === 'waterMl' ? fmtWater(value, units) : `${value.toLocaleString(locale)} ${row.unit}`;
 
   return (
     <View style={styles.row}>
@@ -267,7 +268,7 @@ function TargetRow({
           {row.label}
         </T>
         <T size={11} color={custom ? C.orange : C.textMute} weight="600">
-          {custom ? `Edited · rec. ${recommended.toLocaleString()}` : 'Recommended'}
+          {custom ? t('goals.editedRec', { n: recommended.toLocaleString(locale) }) : t('goals.recommended')}
         </T>
       </View>
       <Pressable onPress={() => bump(-1)} style={styles.step} hitSlop={4}>
@@ -302,9 +303,9 @@ function MacroSplit({ p, c, f }: { p: number; c: number; f: number }) {
   const kp = p * 4, kc = c * 4, kf = f * 9;
   const total = kp + kc + kf || 1;
   const parts = [
-    { label: 'Protein', pct: kp / total, color: C.protein },
-    { label: 'Carbs', pct: kc / total, color: C.carbs },
-    { label: 'Fat', pct: kf / total, color: C.fat },
+    { label: t('goals.protein'), pct: kp / total, color: C.protein },
+    { label: t('goals.carbs'), pct: kc / total, color: C.carbs },
+    { label: t('goals.fat'), pct: kf / total, color: C.fat },
   ];
   return (
     <View style={{ gap: 8, marginTop: Space.sm, paddingHorizontal: 4 }}>

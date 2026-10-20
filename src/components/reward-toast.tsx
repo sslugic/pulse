@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FullWindowOverlay } from 'react-native-screens';
 
 import { C } from '@/constants/theme';
+import { t } from '@/lib/i18n';
 import { actions, useStore } from '@/lib/store';
 
 import { TokenCoin } from './quests-card';
@@ -19,8 +20,8 @@ export function RewardToast() {
   useEffect(() => {
     if (!reward) return;
     const id = reward.id;
-    const t = setTimeout(() => actions.clearReward(id), 1800);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => actions.clearReward(id), 1800);
+    return () => clearTimeout(timer);
   }, [reward]);
 
   if (!reward) return null;
@@ -34,7 +35,7 @@ export function RewardToast() {
           </T>
           {reward.xp > 0 && (
             <Comic size={24} color={C.lime}>
-              {`+${reward.xp} XP`}
+              {t('common.rewardXp', { xp: reward.xp })}
             </Comic>
           )}
           {reward.tokens > 0 && (

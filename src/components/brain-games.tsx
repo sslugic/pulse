@@ -7,6 +7,7 @@ import { C } from '@/constants/theme';
 import type { BrainId, GameDef } from '@/lib/arcade';
 import { CHEST_LOOK, PAID_WINS_PER_DAY, stars, winsToday, type RunResult } from '@/lib/brain';
 import { tap } from '@/lib/haptics';
+import { t } from '@/lib/i18n';
 import { actions, useStore } from '@/lib/store';
 
 import { ChestArt, ChestOpener } from './chest';
@@ -115,10 +116,10 @@ export function EchoGame({ onEnd }: GameProps) {
   return (
     <View style={styles.center}>
       <Hud
-        left={`STEP ${seq.length}`}
+        left={t('arcade.step', { n: seq.length })}
         right={
           <T size={13} rounded color={showing ? C.textDim : C.lime}>
-            {showing ? 'WATCH…' : 'YOUR TURN'}
+            {showing ? t('arcade.watch') : t('arcade.yourTurn')}
           </T>
         }
       />
@@ -127,7 +128,7 @@ export function EchoGame({ onEnd }: GameProps) {
           <Pressable
             key={i}
             onPressIn={() => press(i)}
-            accessibilityLabel={`Pad ${i + 1}`}
+            accessibilityLabel={t('arcade.padN', { n: i + 1 })}
             style={[
               styles.pad,
               {
@@ -198,7 +199,7 @@ export function GridGame({ color, onEnd }: GameProps) {
 
   return (
     <View style={styles.center}>
-      <Hud left={`LEVEL ${level} · ${target.size} TILES`} right={<Lives n={lives} />} />
+      <Hud left={t('arcade.levelTiles', { level, tiles: target.size })} right={<Lives n={lives} />} />
       <View style={styles.grid}>
         {Array.from({ length: GRID }, (_, i) => {
           const on = (showing && miss == null && target.has(i)) || found.has(i);
@@ -208,7 +209,7 @@ export function GridGame({ color, onEnd }: GameProps) {
             <Pressable
               key={i}
               onPressIn={() => press(i)}
-              accessibilityLabel={`Tile ${i + 1}`}
+              accessibilityLabel={t('arcade.tileN', { n: i + 1 })}
               style={[
                 styles.tile,
                 on && {
@@ -224,7 +225,7 @@ export function GridGame({ color, onEnd }: GameProps) {
         })}
       </View>
       <T size={13} rounded color={showing ? C.textDim : C.lime}>
-        {miss != null ? 'MISSED ONE' : showing ? 'REMEMBER THESE…' : `TAP THE ${target.size - found.size} LEFT`}
+        {miss != null ? t('arcade.missedOne') : showing ? t('arcade.rememberThese') : t('arcade.tapLeft', { n: target.size - found.size })}
       </T>
     </View>
   );
@@ -233,10 +234,10 @@ export function GridGame({ color, onEnd }: GameProps) {
 // ---------- Color Clash: tap the ink colour, not the word ----------
 
 const INKS = [
-  { name: 'RED', color: '#FF4D4D' },
-  { name: 'BLUE', color: '#3E8BFF' },
-  { name: 'GREEN', color: '#5BE01E' },
-  { name: 'YELLOW', color: '#FFD23A' },
+  { name: t('arcade.inkRed'), color: '#FF4D4D' },
+  { name: t('arcade.inkBlue'), color: '#3E8BFF' },
+  { name: t('arcade.inkGreen'), color: '#5BE01E' },
+  { name: t('arcade.inkYellow'), color: '#FFD23A' },
 ];
 
 const clashCard = () => {
@@ -275,7 +276,7 @@ export function ClashGame({ onEnd }: GameProps) {
         </Animated.View>
       </View>
       <T size={12} rounded color={C.textDim}>
-        TAP THE INK COLOUR
+        {t('arcade.tapInk')}
       </T>
       <View style={styles.answers}>
         {INKS.map((ink, i) => (
@@ -351,14 +352,14 @@ export function MathGame({ onEnd }: GameProps) {
         </Animated.View>
       </View>
       <View style={{ flexDirection: 'row', gap: 12, alignSelf: 'stretch' }}>
-        <Pressable onPressIn={() => answer(false)} style={[styles.yesNo, { backgroundColor: C.danger }]} accessibilityLabel="Wrong">
+        <Pressable onPressIn={() => answer(false)} style={[styles.yesNo, { backgroundColor: C.danger }]} accessibilityLabel={t('arcade.wrongLabel')}>
           <Comic size={26} color="#fff">
-            WRONG
+            {t('arcade.wrong')}
           </Comic>
         </Pressable>
-        <Pressable onPressIn={() => answer(true)} style={[styles.yesNo, { backgroundColor: '#3FB618' }]} accessibilityLabel="Right">
+        <Pressable onPressIn={() => answer(true)} style={[styles.yesNo, { backgroundColor: '#3FB618' }]} accessibilityLabel={t('arcade.rightLabel')}>
           <Comic size={26} color="#fff">
-            RIGHT
+            {t('arcade.right')}
           </Comic>
         </Pressable>
       </View>
@@ -419,19 +420,19 @@ export function CodeGame({ color, onEnd }: GameProps) {
 
   return (
     <View style={styles.center}>
-      <Hud left={`${len} DIGITS`} right={<Lives n={lives} />} />
+      <Hud left={t('arcade.digits', { n: len })} right={<Lives n={lives} />} />
       <View style={[styles.wordBox, verdict === 'ok' && { borderColor: C.lime }, verdict === 'bad' && { borderColor: C.danger }]}>
         <Comic size={46} color={showing ? color : verdict === 'bad' ? C.danger : C.text} style={{ letterSpacing: 6 }}>
           {showing ? secret : verdict === 'bad' ? secret : typed.padEnd(secret.length, '•')}
         </Comic>
       </View>
       <T size={13} rounded color={showing ? C.textDim : C.lime}>
-        {showing ? 'MEMORISE…' : verdict === 'bad' ? 'THAT WAS THE CODE' : 'TYPE IT IN'}
+        {showing ? t('arcade.memorise') : verdict === 'bad' ? t('arcade.thatWasTheCode') : t('arcade.typeItIn')}
       </T>
       <View style={styles.keypad}>
         {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((d, i) =>
           d ? (
-            <Pressable key={i} onPressIn={() => key(d)} style={[styles.key, (showing || !!verdict) && { opacity: 0.4 }]} accessibilityLabel={d === '⌫' ? 'Delete' : d}>
+            <Pressable key={i} onPressIn={() => key(d)} style={[styles.key, (showing || !!verdict) && { opacity: 0.4 }]} accessibilityLabel={d === '⌫' ? t('arcade.delete') : d}>
               <Comic size={26} color={C.text}>
                 {d}
               </Comic>
@@ -508,28 +509,28 @@ export function ChallengeShell({ game, day, onExit }: { game: GameDef; day: stri
         <Animated.View entering={FadeIn} style={{ flex: 1, justifyContent: 'center', gap: 14 }}>
           <Card style={{ gap: 12 }} accent={game.color + '99'}>
             <T size={11} rounded color={C.textDim}>
-              HOW TO PLAY
+              {t('arcade.howToPlay')}
             </T>
             <T size={16} color={C.text} style={{ lineHeight: 23 }}>
               {game.howTo}
             </T>
             <View style={styles.goals}>
-              <Goal label="WIN" value={`${game.win} ${game.unit}`} sub="tokens + chest" color={C.lime} />
-              <Goal label="GOLD" value={`${game.great} ${game.unit}`} sub="gold chest" color={C.yellow} />
-              <Goal label="YOUR BEST" value={best ? `${best}` : '—'} sub={best ? `${'★'.repeat(stars(game, best))}` : 'no runs yet'} color={game.color} />
+              <Goal label={t('arcade.goalWin')} value={`${game.win} ${game.unit}`} sub={t('arcade.goalWinSub')} color={C.lime} />
+              <Goal label={t('arcade.goalGold')} value={`${game.great} ${game.unit}`} sub={t('arcade.goalGoldSub')} color={C.yellow} />
+              <Goal label={t('arcade.yourBest')} value={best ? `${best}` : '—'} sub={best ? `${'★'.repeat(stars(game, best))}` : t('arcade.noRunsYetSub')} color={game.color} />
             </View>
           </Card>
           <View style={styles.meta}>
             <T size={12} rounded color={wins >= PAID_WINS_PER_DAY ? C.textMute : C.text}>
-              {`PAID WINS TODAY ${Math.min(wins, PAID_WINS_PER_DAY)}/${PAID_WINS_PER_DAY}`}
+              {t('arcade.paidWinsToday', { wins: Math.min(wins, PAID_WINS_PER_DAY), max: PAID_WINS_PER_DAY })}
             </T>
             {!!g.doubler && (
               <T size={12} rounded color={C.orange}>
-                {`⚡ DOUBLER ×${g.doubler}`}
+                {t('arcade.doublerTimes', { n: g.doubler })}
               </T>
             )}
           </View>
-          <ArcadeButton label="START" onPress={start} colors={['#B8FF4A', '#5BE01E']} textColor="#fff" />
+          <ArcadeButton label={t('arcade.start')} onPress={start} colors={['#B8FF4A', '#5BE01E']} textColor="#fff" />
         </Animated.View>
       )}
 
@@ -544,7 +545,7 @@ export function ChallengeShell({ game, day, onExit }: { game: GameDef; day: stri
           <Card style={{ alignItems: 'center', gap: 12 }} accent={(result.won ? C.lime : C.textMute) + '99'}>
             <Animated.View entering={ZoomIn.springify()}>
               <Comic size={48} color={result.won ? C.lime : C.text}>
-                {result.won ? 'YOU WON!' : 'GOOD TRY'}
+                {result.won ? t('arcade.youWon') : t('arcade.goodTry')}
               </Comic>
             </Animated.View>
             <Stars n={stars(game, result.score)} size={34} />
@@ -554,13 +555,13 @@ export function ChallengeShell({ game, day, onExit }: { game: GameDef; day: stri
             {result.newBest && (
               <View style={[styles.badge, { backgroundColor: C.yellow }]}>
                 <T size={11} rounded color={C.ink}>
-                  NEW BEST
+                  {t('arcade.newBest')}
                 </T>
               </View>
             )}
             {!result.won && (
               <T size={13} color={C.textDim} style={{ textAlign: 'center' }}>
-                {`Reach ${game.win} ${(game.unit ?? '').toLowerCase()} to win tokens and a chest. ${game.win! - result.score} to go.`}
+                {t('arcade.reachToWin', { win: game.win ?? 0, unit: (game.unit ?? '').toLowerCase(), left: game.win! - result.score })}
               </T>
             )}
             {(result.tokens > 0 || result.xp > 0) && (
@@ -579,14 +580,14 @@ export function ChallengeShell({ game, day, onExit }: { game: GameDef; day: stri
                 {result.xp > 0 && <Comic size={26} color={C.lime}>{`+${result.xp} XP`}</Comic>}
                 {result.doubled && (
                   <T size={12} rounded color={C.orange}>
-                    ⚡ DOUBLED
+                    {t('arcade.doubled')}
                   </T>
                 )}
               </View>
             )}
             {result.capped && (
               <T size={12} color={C.textMute} style={{ textAlign: 'center' }}>
-                {`You’ve used today’s ${PAID_WINS_PER_DAY} paid wins. Best scores still count, and rewards reset tomorrow.`}
+                {t('arcade.capped', { n: PAID_WINS_PER_DAY })}
               </T>
             )}
             {result.chest && result.chestId && g.chests?.some((c) => c.id === result.chestId) && (
@@ -600,15 +601,15 @@ export function ChallengeShell({ game, day, onExit }: { game: GameDef; day: stri
                     {CHEST_LOOK[result.chest].name}
                   </Comic>
                   <T size={12} color={C.textDim}>
-                    Tap to open it now
+                    {t('arcade.tapToOpenNow')}
                   </T>
                 </View>
               </Pressable>
             )}
           </Card>
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <ArcadeButton label="AGAIN" size="md" colors={['#5FE2FF', '#1E8FE0']} textColor="#fff" onPress={start} style={{ flex: 1 }} />
-            <ArcadeButton label="DONE" size="md" onPress={onExit} style={{ flex: 1 }} />
+            <ArcadeButton label={t('arcade.again')} size="md" colors={['#5FE2FF', '#1E8FE0']} textColor="#fff" onPress={start} style={{ flex: 1 }} />
+            <ArcadeButton label={t('arcade.done')} size="md" onPress={onExit} style={{ flex: 1 }} />
           </View>
         </Animated.View>
       )}

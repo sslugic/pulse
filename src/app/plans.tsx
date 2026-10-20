@@ -7,21 +7,32 @@ import { GlassButton, Icon } from '@/components/icon';
 import { Card, Chip, SectionTitle, T, tap } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
-import { GOAL_INFO } from '@/lib/nutrition';
+import { locale, t } from '@/lib/i18n';
+import { goalLabel } from '@/lib/nutrition';
 import { personaById } from '@/lib/personas';
 import { mealKey, type MealSpan, type WorkoutSpan } from '@/lib/plans';
 import { actions, PLAN_MEAL_XP, PLAN_WORKOUT_XP, useAiReady, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 
 const AISLES = ['Produce', 'Meat & Fish', 'Dairy & Eggs', 'Bakery', 'Pantry', 'Frozen', 'Other'];
+// Aisle ids come from the AI in English; these are what's shown.
+const AISLE_LABELS: Record<string, string> = {
+  Produce: t('plans.aisleProduce'),
+  'Meat & Fish': t('plans.aisleMeatFish'),
+  'Dairy & Eggs': t('plans.aisleDairyEggs'),
+  Bakery: t('plans.aisleBakery'),
+  Pantry: t('plans.aislePantry'),
+  Frozen: t('plans.aisleFrozen'),
+  Other: t('plans.aisleOther'),
+};
 
 function dayLabel(k: string, todayKey: string) {
-  const t = new Date(todayKey + 'T12:00');
-  t.setDate(t.getDate() + 1);
-  const tomorrow = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
-  if (k === todayKey) return 'TODAY';
-  if (k === tomorrow) return 'TOMORROW';
-  return new Date(k + 'T12:00').toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase();
+  const d = new Date(todayKey + 'T12:00');
+  d.setDate(d.getDate() + 1);
+  const tomorrow = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (k === todayKey) return t('plans.today');
+  if (k === tomorrow) return t('plans.tomorrow');
+  return new Date(k + 'T12:00').toLocaleDateString(locale, { weekday: 'long', month: 'short', day: 'numeric' }).toUpperCase();
 }
 
 /** Meal and workout plans, made fresh each day automatically or ahead of time on request. */
@@ -41,33 +52,33 @@ export default function PlansScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
-              {GOAL_INFO[profile.goal].label} · by {persona.name}
+              {t('plans.byPersona', { goal: goalLabel(profile.goal), name: persona.name })}
             </T>
-            <Comic size={36}>YOUR PLANS</Comic>
+            <Comic size={36}>{t('plans.title')}</Comic>
           </View>
           <GlassButton icon="close" onPress={() => router.back()} />
         </View>
 
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Chip label="🍽 Meals" active={tab === 'meals'} onPress={() => setTab('meals')} />
-          <Chip label="🏋️ Workouts" active={tab === 'workouts'} onPress={() => setTab('workouts')} />
+          <Chip label={t('plans.tabMeals')} active={tab === 'meals'} onPress={() => setTab('meals')} />
+          <Chip label={t('plans.tabWorkouts')} active={tab === 'workouts'} onPress={() => setTab('workouts')} />
         </View>
 
         <Card style={{ gap: 6 }}>
           <View style={styles.between}>
             <T size={13} rounded color={C.text} style={{ flex: 1 }}>
-              NEW PLAN EVERY DAY
+              {t('plans.autoToggle')}
             </T>
             <Switch value={auto} onValueChange={(v) => actions.setAutoPlans(v)} trackColor={{ true: C.lime }} />
           </View>
           <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
             {auto
-              ? 'Each morning Pulse makes today’s meals and workout for your goal, unless you planned ahead. Finished days are scored against what you logged, then cleared.'
-              : 'Plans are only made when you ask.'}
+              ? t('plans.autoOn')
+              : t('plans.autoOff')}
           </T>
           {!hasKey && (
             <T size={12} color={C.orange}>
-              Sign in (Crew → Account) to make plans.
+              {t('plans.signInToPlan')}
             </T>
           )}
         </Card>
@@ -107,7 +118,7 @@ function Maker<S extends string>({
       </View>
       <TextInput value={prefs} onChangeText={setPrefs} placeholder={placeholder} placeholderTextColor={C.textMute} style={styles.input} />
       <ArcadeButton
-        label={busy ? 'PLANNING…' : label}
+        label={busy ? t('plans.planning') : label}
         size="md"
         disabled={busy || !hasKey}
         colors={['#FF9A3D', '#E8530E']}
@@ -120,7 +131,7 @@ function Maker<S extends string>({
           try {
             await onMake(prefs);
           } catch (e) {
-            setError((e as Error).message || 'Couldn’t make a plan. Try again.');
+            setError((e as Error).message || t('plans.makeError'));
           } finally {
             setBusy(false);
           }
@@ -140,18 +151,18 @@ function PlanHeader({ summary, auto, onClear }: { summary: string; auto: boolean
     <Card style={{ gap: 6 }} accent={C.violet + '88'}>
       <View style={styles.between}>
         <T size={11} rounded color={C.violet}>
-          {auto ? 'MADE FOR TODAY AUTOMATICALLY' : 'YOUR PLAN'}
+          {auto ? t('plans.madeAuto') : t('plans.yourPlan')}
         </T>
         <Pressable
           onPress={() =>
-            Alert.alert('Clear this plan?', 'Your logged meals and workouts stay. A new plan is made tomorrow if daily plans are on.', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Clear', style: 'destructive', onPress: onClear },
+            Alert.alert(t('plans.clearTitle'), t('plans.clearBody'), [
+              { text: t('plans.cancel'), style: 'cancel' },
+              { text: t('plans.clear'), style: 'destructive', onPress: onClear },
             ])
           }
           hitSlop={8}>
           <T size={11} rounded color={C.danger}>
-            CLEAR
+            {t('plans.clearCaps')}
           </T>
         </Pressable>
       </View>
@@ -183,13 +194,13 @@ function MealsTab({ hasKey }: { hasKey: boolean }) {
     <>
       <Maker
         spans={[
-          { id: 'today', label: 'Rest of today' },
-          { id: '3days', label: 'Next 3 days' },
+          { id: 'today', label: t('plans.spanRestOfToday') },
+          { id: '3days', label: t('plans.spanNext3Days') },
         ]}
         span={span}
         setSpan={setSpan}
-        placeholder="Preferences: vegetarian, no fish, quick dinners…"
-        label={plan ? 'REPLACE MEAL PLAN' : 'MAKE MEAL PLAN'}
+        placeholder={t('plans.mealPrefs')}
+        label={plan ? t('plans.replaceMealPlan') : t('plans.makeMealPlan')}
         hasKey={hasKey}
         onMake={(p) => actions.generateMealPlan(span, p)}
       />
@@ -198,8 +209,8 @@ function MealsTab({ hasKey }: { hasKey: boolean }) {
         <>
           <PlanHeader summary={plan.summary} auto={plan.auto} onClear={() => actions.clearMealPlan()} />
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Chip label="Meals" active={view === 'meals'} onPress={() => setView('meals')} />
-            <Chip label={`Groceries ${plan.checked.length}/${plan.grocery.length}`} active={view === 'grocery'} onPress={() => setView('grocery')} />
+            <Chip label={t('plans.viewMeals')} active={view === 'meals'} onPress={() => setView('meals')} />
+            <Chip label={t('plans.groceries', { done: plan.checked.length, total: plan.grocery.length })} active={view === 'grocery'} onPress={() => setView('grocery')} />
           </View>
 
           {view === 'meals'
@@ -207,7 +218,7 @@ function MealsTab({ hasKey }: { hasKey: boolean }) {
                 const eatenCount = d.meals.filter((_, i) => plan.eaten[mealKey(d.day, i)]).length;
                 return (
                   <View key={d.day}>
-                    <SectionTitle right={<T size={12} rounded color={C.lime}>{eatenCount}/{d.meals.length} EATEN</T>}>{dayLabel(d.day, todayKey)}</SectionTitle>
+                    <SectionTitle right={<T size={12} rounded color={C.lime}>{t('plans.eaten', { done: eatenCount, total: d.meals.length })}</T>}>{dayLabel(d.day, todayKey)}</SectionTitle>
                     <View style={{ gap: 8 }}>
                       {d.meals.map((m, i) => {
                         const matched = byId.get(plan.eaten[mealKey(d.day, i)] ?? '');
@@ -230,11 +241,11 @@ function MealsTab({ hasKey }: { hasKey: boolean }) {
                               </T>
                             </View>
                             <T size={12} rounded color={C.textDim}>
-                              <T size={12} rounded color={C.protein}>P {Math.round(m.protein)}g</T>
+                              <T size={12} rounded color={C.protein}>{t('plans.macroP', { n: Math.round(m.protein) })}</T>
                               {'  '}
-                              <T size={12} rounded color={C.carbs}>C {Math.round(m.carbs)}g</T>
+                              <T size={12} rounded color={C.carbs}>{t('plans.macroC', { n: Math.round(m.carbs) })}</T>
                               {'  '}
-                              <T size={12} rounded color={C.fat}>F {Math.round(m.fat)}g</T>
+                              <T size={12} rounded color={C.fat}>{t('plans.macroF', { n: Math.round(m.fat) })}</T>
                             </T>
                             {!matched && (
                               <>
@@ -250,7 +261,7 @@ function MealsTab({ hasKey }: { hasKey: boolean }) {
                               <View style={styles.matched}>
                                 <Icon name="check" size={14} color={C.lime} weight="bold" />
                                 <T size={12} color={C.lime} style={{ flex: 1 }} numberOfLines={1}>
-                                  Logged: {matched.title} · {Math.round(matched.nutrition?.calories ?? 0)} kcal
+                                  {t('plans.logged', { title: matched.title, kcal: Math.round(matched.nutrition?.calories ?? 0) })}
                                 </T>
                               </View>
                             ) : (
@@ -263,7 +274,7 @@ function MealsTab({ hasKey }: { hasKey: boolean }) {
                                   style={styles.action}>
                                   <Icon name="plus" size={14} color={C.lime} weight="bold" />
                                   <T size={12} rounded color={C.lime}>
-                                    I ATE THIS · +{PLAN_MEAL_XP} XP
+                                    {t('plans.iAteThis', { xp: PLAN_MEAL_XP })}
                                   </T>
                                 </Pressable>
                               )
@@ -277,7 +288,7 @@ function MealsTab({ hasKey }: { hasKey: boolean }) {
               })
             : grocery.map(([aisle, items]) => (
                 <View key={aisle}>
-                  <SectionTitle>{aisle}</SectionTitle>
+                  <SectionTitle>{AISLE_LABELS[aisle] ?? aisle}</SectionTitle>
                   <Card style={{ gap: 4 }}>
                     {items.map((g) => {
                       const done = plan.checked.includes(g.item);
@@ -305,7 +316,7 @@ function MealsTab({ hasKey }: { hasKey: boolean }) {
                 </View>
               ))}
           <T size={11} color={C.textMute} style={{ textAlign: 'center' }}>
-            Meals you log through the Coach are matched to this plan automatically.
+            {t('plans.mealsNote')}
           </T>
         </>
       )}
@@ -323,14 +334,14 @@ function WorkoutsTab({ hasKey }: { hasKey: boolean }) {
     <>
       <Maker
         spans={[
-          { id: 'today', label: 'Today' },
-          { id: '3days', label: '3 days' },
-          { id: '7days', label: '7 days' },
+          { id: 'today', label: t('plans.spanToday') },
+          { id: '3days', label: t('plans.span3Days') },
+          { id: '7days', label: t('plans.span7Days') },
         ]}
         span={span}
         setSpan={setSpan}
-        placeholder="Preferences: home only, dumbbells, bad knee, 30 min max…"
-        label={plan ? 'REPLACE WORKOUT PLAN' : 'MAKE WORKOUT PLAN'}
+        placeholder={t('plans.workoutPrefs')}
+        label={plan ? t('plans.replaceWorkoutPlan') : t('plans.makeWorkoutPlan')}
         hasKey={hasKey}
         onMake={(p) => actions.generateWorkoutPlan(span, p)}
       />
@@ -353,7 +364,7 @@ function WorkoutsTab({ hasKey }: { hasKey: boolean }) {
                       {d.title}
                     </T>
                     <T size={11} color={C.textMute} weight="700">
-                      {d.rest ? 'RECOVERY' : `${d.durationMin} MIN · ~${Math.round(d.estKcal)} KCAL · ${d.exercises.length} EXERCISES`}
+                      {d.rest ? t('plans.recovery') : t('plans.workoutMeta', { min: d.durationMin, kcal: Math.round(d.estKcal), count: d.exercises.length })}
                     </T>
                   </View>
                   {done ? <Icon name="check" size={20} color={C.lime} weight="bold" /> : <Icon name={expanded ? 'minus' : 'plus'} size={16} color={C.textMute} />}
@@ -370,7 +381,7 @@ function WorkoutsTab({ hasKey }: { hasKey: boolean }) {
                         </T>
                       </View>
                       <T size={11} color={C.textMute}>
-                        Rest {x.rest} · {x.notes}
+                        {t('plans.exerciseRest', { rest: x.rest, notes: x.notes })}
                       </T>
                     </View>
                   ))}
@@ -383,7 +394,7 @@ function WorkoutsTab({ hasKey }: { hasKey: boolean }) {
                     style={styles.action}>
                     <Icon name="check" size={14} color={C.lime} weight="bold" />
                     <T size={12} rounded color={C.lime}>
-                      MARK DONE · +{PLAN_WORKOUT_XP} XP
+                      {t('plans.markDone', { xp: PLAN_WORKOUT_XP })}
                     </T>
                   </Pressable>
                 )}
@@ -391,7 +402,7 @@ function WorkoutsTab({ hasKey }: { hasKey: boolean }) {
             );
           })}
           <T size={11} color={C.textMute} style={{ textAlign: 'center' }}>
-            A workout you log through the Coach or Apple Health counts as today’s session.
+            {t('plans.workoutsNote')}
           </T>
         </>
       )}

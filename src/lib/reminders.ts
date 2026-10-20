@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { t } from './i18n';
 import { dayKey, streak } from './nutrition';
 import type { Entry } from './types';
 
@@ -39,8 +40,8 @@ export async function scheduleReminder(entries: Entry[], hour: number, frozen: s
 
   // The streak they'd be protecting on that evening.
   const run = streak(entries, frozen);
-  const title = run > 0 ? `🔥 Don’t break your ${run}-day streak` : '👋 Your crew misses you';
-  const body = run > 0 ? 'Log one thing before midnight: a meal, some water or how you feel.' : 'Log anything today to start a new streak and earn XP.';
+  const title = run > 0 ? t('crew.reminderStreakTitle', { count: run }) : t('crew.reminderMissTitle');
+  const body = run > 0 ? t('crew.reminderStreakBody') : t('crew.reminderMissBody');
 
   await Notifications.scheduleNotificationAsync({
     identifier: ID,

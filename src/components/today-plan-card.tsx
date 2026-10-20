@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { C, Space } from '@/constants/theme';
+import { t } from '@/lib/i18n';
 import { mealKey } from '@/lib/plans';
 import { useAiReady, useStore } from '@/lib/store';
 
@@ -28,7 +29,7 @@ export function TodayPlanCard({ todayKey }: { todayKey: string }) {
         <View style={styles.row}>
           <Icon name="calendar" size={18} color={C.orange} />
           <T size={13} rounded color={C.text} style={{ flex: 1 }}>
-            TODAY’S PLAN IS ON ITS WAY…
+            {t('hq.planOnItsWay')}
           </T>
           <Icon name="chevron" size={14} color={C.textMute} />
         </View>
@@ -43,17 +44,17 @@ export function TodayPlanCard({ todayKey }: { todayKey: string }) {
   return (
     <Card style={{ gap: 10, marginTop: Space.sm }} accent={C.violet + '88'}>
       <T size={13} rounded color={C.text}>
-        TODAY’S PLAN
+        {t('hq.todaysPlan')}
       </T>
       {md && (
         <Pressable onPress={() => open('meals')} style={styles.row} accessibilityRole="button">
           <T size={22}>{next?.emoji ?? '✅'}</T>
           <View style={{ flex: 1 }}>
             <T size={10} rounded color={C.orange}>
-              {next ? `NEXT: ${next.when.toUpperCase()}` : 'ALL MEALS EATEN'} · {eaten}/{md.meals.length}
+              {next ? t('hq.nextMeal', { when: next.when.toUpperCase() }) : t('hq.allMealsEaten')} · {eaten}/{md.meals.length}
             </T>
             <T size={14} rounded color={C.text} numberOfLines={1}>
-              {next ? `${next.name} · ${Math.round(next.calories)} kcal` : 'Plan complete. Nice work.'}
+              {next ? `${next.name} · ${Math.round(next.calories)} kcal` : t('hq.planComplete')}
             </T>
           </View>
           <Icon name="chevron" size={14} color={C.textMute} />
@@ -64,7 +65,7 @@ export function TodayPlanCard({ todayKey }: { todayKey: string }) {
           <T size={22}>{done ? '✅' : wd.emoji || '🏋️'}</T>
           <View style={{ flex: 1 }}>
             <T size={10} rounded color={wd.rest ? C.cyan : done ? C.lime : C.orange}>
-              {wd.rest ? 'REST DAY' : done ? 'WORKOUT DONE' : `WORKOUT · ${wd.durationMin} MIN`}
+              {wd.rest ? t('hq.restDay') : done ? t('hq.workoutDone') : t('hq.workoutMin', { n: wd.durationMin })}
             </T>
             <T size={14} rounded color={C.text} numberOfLines={1}>
               {wd.title}

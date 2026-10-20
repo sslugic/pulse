@@ -1,3 +1,4 @@
+import { locale, t } from './i18n';
 import { dayKey, loggedDays, streak } from './nutrition';
 import type { Entry } from './types';
 
@@ -5,39 +6,39 @@ import type { Entry } from './types';
 // 15 ranks on a gentle curve: a few days to the first, roughly a year of steady logging
 // (about 100 XP a day) to the last. `scene` is the backdrop wall each rank unlocks.
 export const RANKS = [
-  { name: 'Rookie', xp: 0, scene: 0, blurb: 'Fresh off the train. Log anything to start earning XP.' },
-  { name: 'Tagger', xp: 150, scene: 1, blurb: 'First marks on the wall. You’ve started showing up.' },
-  { name: 'Street Crew', xp: 400, scene: 2, blurb: 'You’ve got a routine going. A few solid days of logging.' },
-  { name: 'Corner Captain', xp: 800, scene: 3, blurb: 'A full week in. People on the block know your name.' },
-  { name: 'Block Boss', xp: 1400, scene: 4, blurb: 'Quests are part of your day now.' },
-  { name: 'Skyline Runner', xp: 2200, scene: 5, blurb: 'Weeks of streaks. You see the whole city from up here.' },
-  { name: 'Subway Rider', xp: 3300, scene: 6, blurb: 'A month of habits that stick.' },
-  { name: 'Subway King', xp: 4700, scene: 7, blurb: 'You run these tunnels. Consistency is your thing.' },
-  { name: 'Yard Bomber', xp: 6500, scene: 8, blurb: 'Two months in. Your name is painted on trains.' },
-  { name: 'Legend', xp: 8800, scene: 9, blurb: 'People ask how you do it.' },
-  { name: 'Neon Ace', xp: 11700, scene: 10, blurb: 'Half a year of showing up. You light up the room.' },
-  { name: 'Underground Icon', xp: 15300, scene: 11, blurb: 'Tracking is second nature.' },
-  { name: 'City Myth', xp: 19800, scene: 12, blurb: 'Stories get told about your streaks.' },
-  { name: 'Hall of Famer', xp: 25500, scene: 13, blurb: 'Your name is on the wall for good.' },
-  { name: 'Pulse Immortal', xp: 32000, scene: 14, blurb: 'A year of work. The top of the board.' },
+  { name: t('ranks.rankRookie'), xp: 0, scene: 0, blurb: t('ranks.rankRookieBlurb') },
+  { name: t('ranks.rankTagger'), xp: 150, scene: 1, blurb: t('ranks.rankTaggerBlurb') },
+  { name: t('ranks.rankStreetCrew'), xp: 400, scene: 2, blurb: t('ranks.rankStreetCrewBlurb') },
+  { name: t('ranks.rankCornerCaptain'), xp: 800, scene: 3, blurb: t('ranks.rankCornerCaptainBlurb') },
+  { name: t('ranks.rankBlockBoss'), xp: 1400, scene: 4, blurb: t('ranks.rankBlockBossBlurb') },
+  { name: t('ranks.rankSkylineRunner'), xp: 2200, scene: 5, blurb: t('ranks.rankSkylineRunnerBlurb') },
+  { name: t('ranks.rankSubwayRider'), xp: 3300, scene: 6, blurb: t('ranks.rankSubwayRiderBlurb') },
+  { name: t('ranks.rankSubwayKing'), xp: 4700, scene: 7, blurb: t('ranks.rankSubwayKingBlurb') },
+  { name: t('ranks.rankYardBomber'), xp: 6500, scene: 8, blurb: t('ranks.rankYardBomberBlurb') },
+  { name: t('ranks.rankLegend'), xp: 8800, scene: 9, blurb: t('ranks.rankLegendBlurb') },
+  { name: t('ranks.rankNeonAce'), xp: 11700, scene: 10, blurb: t('ranks.rankNeonAceBlurb') },
+  { name: t('ranks.rankUndergroundIcon'), xp: 15300, scene: 11, blurb: t('ranks.rankUndergroundIconBlurb') },
+  { name: t('ranks.rankCityMyth'), xp: 19800, scene: 12, blurb: t('ranks.rankCityMythBlurb') },
+  { name: t('ranks.rankHallOfFamer'), xp: 25500, scene: 13, blurb: t('ranks.rankHallOfFamerBlurb') },
+  { name: t('ranks.rankPulseImmortal'), xp: 32000, scene: 14, blurb: t('ranks.rankPulseImmortalBlurb') },
 ] as const;
 
 /** How XP is earned, for the rank ladder screen. */
 export const XP_SOURCES = [
-  { label: 'Log a meal', xp: '+10' },
-  { label: 'Log a workout', xp: '+15' },
-  { label: 'Journal check-in', xp: '+15' },
-  { label: 'Weigh-in', xp: '+10' },
-  { label: 'Water (up to 15 a day)', xp: '+3' },
-  { label: 'Each day you log anything', xp: '+20' },
-  { label: 'Each day of your current streak', xp: '+25' },
-  { label: 'Daily quests', xp: '+20 to +60' },
-  { label: 'Perfect day (all 3 quests)', xp: '+30' },
-  { label: 'Arcade minute (once a day)', xp: '+15' },
-  { label: 'Finish a planned workout', xp: '+25' },
-  { label: 'Eat a planned meal', xp: '+5' },
-  { label: 'Season challenge', xp: '+50' },
-  { label: 'Streak freezes keep your streak bonus alive', xp: '🧊' },
+  { label: t('ranks.xpMeal'), xp: '+10' },
+  { label: t('ranks.xpWorkout'), xp: '+15' },
+  { label: t('ranks.xpJournal'), xp: '+15' },
+  { label: t('ranks.xpWeighIn'), xp: '+10' },
+  { label: t('ranks.xpWater'), xp: '+3' },
+  { label: t('ranks.xpAnyLog'), xp: '+20' },
+  { label: t('ranks.xpStreakDay'), xp: '+25' },
+  { label: t('ranks.xpQuests'), xp: t('ranks.xpQuestsRange') },
+  { label: t('ranks.xpPerfectDay'), xp: '+30' },
+  { label: t('ranks.xpArcade'), xp: '+15' },
+  { label: t('ranks.xpPlannedWorkout'), xp: '+25' },
+  { label: t('ranks.xpPlannedMeal'), xp: '+5' },
+  { label: t('ranks.xpSeason'), xp: '+50' },
+  { label: t('ranks.xpFreeze'), xp: '🧊' },
 ] as const;
 
 const ENTRY_XP: Record<Entry['kind'], number> = { meal: 10, exercise: 15, journal: 15, weight: 10, water: 3 };
@@ -76,9 +77,10 @@ export function weekDots(entries: Entry[], now = new Date()) {
   const logged = loggedDays(entries);
   const monday = new Date(now);
   monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-  return ['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((letter, i) => {
+  return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
+    const letter = d.toLocaleDateString(locale, { weekday: 'narrow' });
     return { letter, key: dayKey(d), on: logged.has(dayKey(d)), today: dayKey(d) === dayKey(now) };
   });
 }

@@ -8,24 +8,25 @@ import { TokenCoin } from '@/components/quests-card';
 import { Card, SectionTitle, T, tap } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
+import { locale, t } from '@/lib/i18n';
 import { LEGAL } from '@/lib/legal';
 import { buy, loadOffers, purchasesConfigured, restore, type CreditOffer } from '@/lib/purchases';
 import { actions, useStore } from '@/lib/store';
 
 const FEATURE_LABELS: Record<string, string> = {
-  coach: 'Coach reply (text)',
-  coach_media: 'Coach reply (voice note or photo)',
-  voice: 'Reply read aloud',
-  meal_plan: 'Meal plan (1 day)',
-  meal_plan_3d: 'Meal plan (3 days)',
-  workout_plan: 'Workout plan (1 day)',
-  workout_plan_3d: 'Workout plan (3 days)',
-  workout_plan_7d: 'Workout plan (7 days)',
-  recap: 'Weekly recap',
-  wellbeing: 'Stress and sleep analysis',
-  goal_plan: 'Nutrition targets from a goal',
-  insight: 'Daily insight on HQ',
-  estimate: 'Fixing a meal with missing calories',
+  coach: t('credits.featureCoach'),
+  coach_media: t('credits.featureCoachMedia'),
+  voice: t('credits.featureVoice'),
+  meal_plan: t('credits.featureMealPlan'),
+  meal_plan_3d: t('credits.featureMealPlan3d'),
+  workout_plan: t('credits.featureWorkoutPlan'),
+  workout_plan_3d: t('credits.featureWorkoutPlan3d'),
+  workout_plan_7d: t('credits.featureWorkoutPlan7d'),
+  recap: t('credits.featureRecap'),
+  wellbeing: t('credits.featureWellbeing'),
+  goal_plan: t('credits.featureGoalPlan'),
+  insight: t('credits.featureInsight'),
+  estimate: t('credits.featureEstimate'),
 };
 
 /** AI credits: balance, what things cost, credit packs, Pulse Pro, and restore. */
@@ -56,10 +57,10 @@ export default function CreditsScreen() {
           await new Promise((r) => setTimeout(r, wait));
           await actions.refreshAccount();
         }
-        Alert.alert('Thanks!', 'Your credits have been added.');
+        Alert.alert(t('credits.thanksTitle'), t('credits.thanksBody'));
       }
     } catch (e) {
-      Alert.alert('Purchase failed', (e as Error).message);
+      Alert.alert(t('credits.purchaseFailed'), (e as Error).message);
     } finally {
       setBusy(null);
     }
@@ -75,16 +76,16 @@ export default function CreditsScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
-              Powers the Coach, plans and recaps
+              {t('credits.subtitle')}
             </T>
-            <Comic size={36}>AI CREDITS</Comic>
+            <Comic size={36}>{t('credits.title')}</Comic>
           </View>
           <GlassButton icon="close" onPress={() => router.back()} />
         </View>
 
         <Card style={{ gap: 6, alignItems: 'center' }} accent={C.yellow + 'AA'}>
           <T size={11} rounded color={C.textDim}>
-            YOUR BALANCE
+            {t('credits.balance')}
           </T>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <TokenCoin size={34} />
@@ -94,7 +95,8 @@ export default function CreditsScreen() {
           </View>
           {account.subscription?.active && (
             <T size={12} rounded color={C.lime}>
-              PULSE PRO ACTIVE{account.subscription.expiresAt ? ` · RENEWS ${new Date(account.subscription.expiresAt).toLocaleDateString()}` : ''}
+              {t('credits.proActive')}
+              {account.subscription.expiresAt ? t('credits.proRenews', { date: new Date(account.subscription.expiresAt).toLocaleDateString(locale) }) : ''}
             </T>
           )}
         </Card>
@@ -102,14 +104,14 @@ export default function CreditsScreen() {
         {!account.userId ? (
           <Card style={{ gap: 10 }}>
             <T size={14} color={C.text}>
-              Sign in to get 50 free credits and buy more.
+              {t('credits.signInPitch')}
             </T>
-            <ArcadeButton label="GO TO ACCOUNT" size="md" onPress={() => router.replace('/profile')} />
+            <ArcadeButton label={t('credits.goToAccount')} size="md" onPress={() => router.replace('/profile')} />
           </Card>
         ) : !purchasesConfigured ? (
           <Card>
             <T size={13} color={C.textDim}>
-              In-app purchases aren’t set up in this build yet.
+              {t('credits.notSetUp')}
             </T>
           </Card>
         ) : offers == null ? (
@@ -127,15 +129,15 @@ export default function CreditsScreen() {
                         {pro.title || 'Pulse Pro'}
                       </T>
                       <T size={12} color={C.textDim}>
-                        {pro.description || '600 AI credits every month'}
+                        {pro.description || t('credits.proDescription')}
                       </T>
                     </View>
                     <T size={16} rounded color={C.lime}>
-                      {pro.price}/mo
+                      {t('credits.perMonth', { price: pro.price })}
                     </T>
                   </View>
                   <ArcadeButton
-                    label={account.subscription?.active ? 'SUBSCRIBED' : busy === pro.id ? 'WORKING…' : 'SUBSCRIBE'}
+                    label={account.subscription?.active ? t('credits.subscribed') : busy === pro.id ? t('credits.working') : t('credits.subscribe')}
                     size="md"
                     colors={['#B8FF4A', '#5BE01E']}
                     textColor={C.ink}
@@ -143,14 +145,13 @@ export default function CreditsScreen() {
                     onPress={() => purchase(pro)}
                   />
                   <T size={10} color={C.textMute} style={{ lineHeight: 14 }}>
-                    {pro.price} per month, billed to your Apple ID. Renews automatically unless cancelled at least 24 hours before the end of the period. Manage or
-                    cancel in your App Store account settings. Unused monthly credits roll over while you stay subscribed.
+                    {t('credits.disclosure', { price: pro.price })}
                   </T>
                 </Card>
               </>
             )}
 
-            <SectionTitle>Credit packs</SectionTitle>
+            <SectionTitle>{t('credits.packsTitle')}</SectionTitle>
             <View style={{ gap: 8 }}>
               {packs.map((o) => (
                 <Card key={o.id} style={{ gap: 8 }}>
@@ -161,7 +162,7 @@ export default function CreditsScreen() {
                         {o.title}
                       </T>
                       <T size={12} color={C.textDim}>
-                        One-time purchase · never expires
+                        {t('credits.packNote')}
                       </T>
                     </View>
                     <Pressable onPress={() => purchase(o)} disabled={!!busy} style={[styles.buy, !!busy && { opacity: 0.5 }]}>
@@ -178,7 +179,7 @@ export default function CreditsScreen() {
               ))}
               {packs.length === 0 && !pro && (
                 <T size={13} color={C.textDim}>
-                  No products available right now. Try again later.
+                  {t('credits.noProducts')}
                   {loadError ? `\n\n${loadError}` : ''}
                 </T>
               )}
@@ -191,9 +192,9 @@ export default function CreditsScreen() {
                 try {
                   await restore();
                   await actions.refreshAccount();
-                  Alert.alert('Restored', 'Your purchases are up to date.');
+                  Alert.alert(t('credits.restoredTitle'), t('credits.restoredBody'));
                 } catch (e) {
-                  Alert.alert('Restore failed', (e as Error).message);
+                  Alert.alert(t('credits.restoreFailed'), (e as Error).message);
                 } finally {
                   setBusy(null);
                 }
@@ -201,13 +202,13 @@ export default function CreditsScreen() {
               style={styles.link}>
               <Icon name="retry" size={14} color={C.cyan} />
               <T size={13} rounded color={C.cyan}>
-                RESTORE PURCHASES
+                {t('credits.restore')}
               </T>
             </Pressable>
           </>
         )}
 
-        <SectionTitle>What things cost</SectionTitle>
+        <SectionTitle>{t('credits.costsTitle')}</SectionTitle>
         <Card style={{ gap: 8 }}>
           {Object.entries(account.costs)
             .sort((a, b) => b[1] - a[1])
@@ -217,13 +218,13 @@ export default function CreditsScreen() {
                   {FEATURE_LABELS[f] ?? f}
                 </T>
                 <T size={13} rounded color={n ? C.yellow : C.lime}>
-                  {n ? `${n} credit${n === 1 ? '' : 's'}` : 'FREE'}
+                  {n ? t('credits.cost', { count: n }) : t('credits.free')}
                 </T>
               </View>
             ))}
           {Object.keys(account.costs).length === 0 && (
             <T size={13} color={C.textDim}>
-              Prices load when you’re online.
+              {t('credits.pricesOffline')}
             </T>
           )}
         </Card>
@@ -231,12 +232,12 @@ export default function CreditsScreen() {
         <View style={styles.legal}>
           <Pressable onPress={() => Linking.openURL(LEGAL.terms)}>
             <T size={12} color={C.textMute} style={{ textDecorationLine: 'underline' }}>
-              Terms of Use (EULA)
+              {t('credits.terms')}
             </T>
           </Pressable>
           <Pressable onPress={() => Linking.openURL(LEGAL.privacy)}>
             <T size={12} color={C.textMute} style={{ textDecorationLine: 'underline' }}>
-              Privacy Policy
+              {t('credits.privacy')}
             </T>
           </Pressable>
         </View>

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { C, Space } from '@/constants/theme';
+import { t } from '@/lib/i18n';
 import { dayKey, fmtWater, macroTargets, summarize } from '@/lib/nutrition';
 import { actions, useStore } from '@/lib/store';
 import { dayWellbeing, MOODS, moodEmoji } from '@/lib/wellbeing';
@@ -16,7 +17,7 @@ const SLEEP = [5, 6, 7, 8, 9];
 export function QuickLog({ todayKey }: { todayKey: string }) {
   const entries = useStore((s) => s.entries);
   const profile = useStore((s) => s.profile);
-  const t = macroTargets(profile);
+  const targets = macroTargets(profile);
   const water = useMemo(() => summarize(entries, todayKey).water, [entries, todayKey]);
   const mind = useMemo(() => dayWellbeing(entries, todayKey), [entries, todayKey]);
   // The latest quick mood/sleep today, so the chosen chip stays lit.
@@ -27,26 +28,26 @@ export function QuickLog({ todayKey }: { todayKey: string }) {
 
   const addWater = (ml: number) => {
     tap();
-    actions.addEntry({ kind: 'water', title: ml === 250 ? 'Glass of water' : 'Bottle of water', emoji: '💧', waterMl: ml, source: 'quick' });
+    actions.addEntry({ kind: 'water', title: ml === 250 ? t('hq.glassOfWater') : t('hq.bottleOfWater'), emoji: '💧', waterMl: ml, source: 'quick' });
   };
   const logMood = (mood: number) => {
     tap();
-    actions.addEntry({ kind: 'journal', title: 'Mood check-in', emoji: moodEmoji(mood), mood, source: 'quick' });
+    actions.addEntry({ kind: 'journal', title: t('wellbeing.moodCheckIn'), emoji: moodEmoji(mood), mood, source: 'quick' });
   };
   const logSleep = (h: number) => {
     tap();
-    actions.addEntry({ kind: 'journal', title: `Slept ${h}h`, emoji: '😴', sleepHours: h, source: 'quick' });
+    actions.addEntry({ kind: 'journal', title: t('wellbeing.sleptHours', { h }), emoji: '😴', sleepHours: h, source: 'quick' });
   };
 
   return (
     <Card style={{ gap: 14, marginTop: Space.sm }} accent={C.cyan + '88'}>
       <View style={styles.head}>
         <T size={13} rounded color={C.text} style={{ flex: 1 }}>
-          QUICK LOG
+          {t('hq.quickLog')}
         </T>
         <Pressable onPress={() => router.push('/wellbeing')} style={styles.link} accessibilityRole="button">
           <T size={11} rounded color={C.pink}>
-            {mind.stress != null ? `STRESS ${mind.stress}` : 'MIND & RECOVERY'}
+            {mind.stress != null ? t('hq.stressScore', { n: mind.stress }) : t('wellbeing.mindRecovery')}
           </T>
           <Icon name="chevron" size={11} color={C.pink} />
         </Pressable>
@@ -60,12 +61,12 @@ export function QuickLog({ todayKey }: { todayKey: string }) {
             <T size={13} rounded color={C.water}>
               {fmtWater(water, profile.units)}
             </T>{' '}
-            / {fmtWater(t.waterMl, profile.units)}
+            / {fmtWater(targets.waterMl, profile.units)}
           </T>
-          <Bar value={water} max={t.waterMl} color={C.water} height={5} />
+          <Bar value={water} max={targets.waterMl} color={C.water} height={5} />
         </View>
         {[250, 500].map((ml) => (
-          <Pressable key={ml} onPress={() => addWater(ml)} style={({ pressed }) => [styles.chip, styles.waterChip, pressed && styles.pressed]} accessibilityLabel={`Add ${ml} ml water`}>
+          <Pressable key={ml} onPress={() => addWater(ml)} style={({ pressed }) => [styles.chip, styles.waterChip, pressed && styles.pressed]} accessibilityLabel={t('hq.addWater', { amount: fmtWater(ml, profile.units) })}>
             <T size={12} rounded color={C.water}>
               +{fmtWater(ml, profile.units)}
             </T>
@@ -76,13 +77,13 @@ export function QuickLog({ todayKey }: { todayKey: string }) {
       {/* Mood */}
       <View style={styles.row}>
         <T size={11} rounded color={C.textMute} style={styles.label}>
-          MOOD
+          {t('hq.mood')}
         </T>
         <View style={styles.spread}>
           {MOODS.map((m) => {
             const on = latest.mood === m.v;
             return (
-              <Pressable key={m.v} onPress={() => logMood(m.v)} style={({ pressed }) => [styles.mood, on && styles.on, pressed && styles.pressed]} accessibilityLabel={`Mood ${m.label}`}>
+              <Pressable key={m.v} onPress={() => logMood(m.v)} style={({ pressed }) => [styles.mood, on && styles.on, pressed && styles.pressed]} accessibilityLabel={t('hq.moodLabel', { mood: m.label })}>
                 <T size={22}>{m.emoji}</T>
               </Pressable>
             );
@@ -93,13 +94,13 @@ export function QuickLog({ todayKey }: { todayKey: string }) {
       {/* Sleep */}
       <View style={styles.row}>
         <T size={11} rounded color={C.textMute} style={styles.label}>
-          SLEEP
+          {t('hq.sleep')}
         </T>
         <View style={styles.spread}>
           {SLEEP.map((h) => {
             const on = latest.sleep === h;
             return (
-              <Pressable key={h} onPress={() => logSleep(h)} style={({ pressed }) => [styles.chip, styles.sleepChip, on && styles.on, pressed && styles.pressed]} accessibilityLabel={`Slept ${h} hours`}>
+              <Pressable key={h} onPress={() => logSleep(h)} style={({ pressed }) => [styles.chip, styles.sleepChip, on && styles.on, pressed && styles.pressed]} accessibilityLabel={t('hq.sleptHoursLabel', { count: h })}>
                 <T size={12} rounded color={on ? C.text : C.violet}>
                   {h}h
                 </T>

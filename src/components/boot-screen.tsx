@@ -14,6 +14,7 @@ import Animated, {
 import Svg, { Defs, Line, Path, Pattern, Rect } from 'react-native-svg';
 
 import { C, Display } from '@/constants/theme';
+import { t } from '@/lib/i18n';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -92,7 +93,7 @@ export function BootScreen({ ready, onDone }: { ready: boolean; onDone: () => vo
             animatedProps={beatProps}
           />
         </Svg>
-        <Text style={styles.sub}>UNDERGROUND FITNESS ARCADE</Text>
+        <Text style={styles.sub}>{t('common.bootTagline')}</Text>
       </Animated.View>
 
       <View style={styles.bottom}>
@@ -103,8 +104,8 @@ export function BootScreen({ ready, onDone }: { ready: boolean; onDone: () => vo
             return <View key={i} style={[styles.cell, { backgroundColor: on ? hue : '#15181A', shadowColor: hue, shadowOpacity: on ? 0.9 : 0 }]} />;
           })}
         </View>
-        <Text style={styles.loading}>{lit < CELLS ? `LOADING ${Math.round((lit / CELLS) * 100)}%` : 'READY PLAYER 1'}</Text>
-        <Animated.Text style={[styles.coin, coin]}>INSERT COIN</Animated.Text>
+        <Text style={styles.loading}>{lit < CELLS ? t('common.bootLoading', { pct: Math.round((lit / CELLS) * 100) }) : t('common.bootReady')}</Text>
+        <Animated.Text style={[styles.coin, coin]}>{t('common.bootInsertCoin')}</Animated.Text>
       </View>
     </Animated.View>
   );

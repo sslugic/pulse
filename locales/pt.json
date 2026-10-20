@@ -1,0 +1,9 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "Pulse",
+    "NSCameraUsageDescription": "O Pulse usa a câmera para fotografar refeições e treinos para a IA registrar, e para ler códigos de barras.",
+    "NSPhotoLibraryUsageDescription": "O Pulse lê as fotos que você escolhe para registrar refeições e treinos.",
+    "NSMicrophoneUsageDescription": "O Pulse usa o microfone para você registrar por voz.",
+    "NSHealthShareUsageDescription": "O Pulse lê seus passos, treinos, sono e peso para que se registrem sozinhos e rendam XP."
+  }
+}

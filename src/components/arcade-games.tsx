@@ -7,6 +7,7 @@ import Svg, { Path } from 'react-native-svg';
 import { C } from '@/constants/theme';
 import { GAME_SECONDS, type GameDef } from '@/lib/arcade';
 import { tap } from '@/lib/haptics';
+import { t } from '@/lib/i18n';
 
 import { GlassButton, Icon, type IconName } from './icon';
 import { Bar, Card, T } from './ui';
@@ -58,14 +59,14 @@ export function GameShell({ game, onExit, onFinish, children }: { game: GameDef;
         <View style={styles.done}>
           <Card style={{ alignItems: 'center', gap: 18, alignSelf: 'stretch' }} accent={C.lime + '99'}>
             <Comic size={44} color={C.lime}>
-              NICE.
+              {t('arcade.nice')}
             </Comic>
             <T size={15} color={C.textDim} style={{ textAlign: 'center', lineHeight: 21 }}>
-              One minute off the clock. Drop your shoulders, unclench your jaw, and take one more slow breath.
+              {t('arcade.coolDown')}
             </T>
             <View style={{ flexDirection: 'row', gap: 10, alignSelf: 'stretch' }}>
               <ArcadeButton
-                label="AGAIN"
+                label={t('arcade.again')}
                 size="md"
                 colors={['#5FE2FF', '#1E8FE0']}
                 textColor="#fff"
@@ -75,7 +76,7 @@ export function GameShell({ game, onExit, onFinish, children }: { game: GameDef;
                 }}
                 style={{ flex: 1 }}
               />
-              <ArcadeButton label="DONE" size="md" onPress={onExit} style={{ flex: 1 }} />
+              <ArcadeButton label={t('arcade.done')} size="md" onPress={onExit} style={{ flex: 1 }} />
             </View>
           </Card>
         </View>
@@ -91,19 +92,19 @@ export function GameShell({ game, onExit, onFinish, children }: { game: GameDef;
 // ---------- Box breathing ----------
 
 const PHASES = [
-  { label: 'BREATHE IN', scale: 1 },
-  { label: 'HOLD', scale: 1 },
-  { label: 'BREATHE OUT', scale: 0.45 },
-  { label: 'HOLD', scale: 0.45 },
+  { label: t('arcade.breatheIn'), scale: 1 },
+  { label: t('arcade.hold'), scale: 1 },
+  { label: t('arcade.breatheOut'), scale: 0.45 },
+  { label: t('arcade.hold'), scale: 0.45 },
 ];
 
 export function BreatheGame() {
-  const [t, setT] = useState(0);
-  const phase = Math.floor(t / 4) % 4;
+  const [tick, setTick] = useState(0);
+  const phase = Math.floor(tick / 4) % 4;
   const scale = useSharedValue(0.45);
 
   useEffect(() => {
-    const i = setInterval(() => setT((n) => n + 1), 1000);
+    const i = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(i);
   }, []);
   useEffect(() => {
@@ -122,12 +123,12 @@ export function BreatheGame() {
             {PHASES[phase].label}
           </Comic>
           <T size={40} rounded color={C.cyan}>
-            {4 - (t % 4)}
+            {4 - (tick % 4)}
           </T>
         </View>
       </View>
       <T size={13} color={C.textDim} style={{ textAlign: 'center' }}>
-        Follow the circle. Breathe through your nose if you can.
+        {t('arcade.breatheHint')}
       </T>
     </View>
   );
@@ -172,7 +173,7 @@ export function BubbleGame() {
   return (
     <View style={{ flex: 1, gap: 8 }}>
       <T size={13} rounded color={C.textDim} style={{ textAlign: 'center' }}>
-        {pops} POPPED
+        {t('arcade.popped', { count: pops })}
       </T>
       <View style={styles.tank} onLayout={(e: LayoutChangeEvent) => setBox({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}>
         {bubbles.map((b) => (
@@ -261,7 +262,7 @@ export function SprayGame() {
         {strokes.length === 0 && !live && (
           <View style={styles.wallHint} pointerEvents="none">
             <Comic size={26} color="#4A4E52">
-              TAG IT
+              {t('arcade.tagIt')}
             </Comic>
           </View>
         )}
@@ -274,7 +275,7 @@ export function SprayGame() {
               tap();
               setColor(c);
             }}
-            accessibilityLabel={`Spray color ${c}`}
+            accessibilityLabel={t('arcade.sprayColor', { color: c })}
             style={[styles.can, { backgroundColor: c }, c === color && styles.canOn]}
           />
         ))}
@@ -285,7 +286,7 @@ export function SprayGame() {
           }}
           style={styles.wipe}>
           <T size={12} rounded color={C.text}>
-            WIPE
+            {t('arcade.wipe')}
           </T>
         </Pressable>
       </View>
@@ -316,7 +317,7 @@ export function FidgetGame() {
   return (
     <View style={[styles.center, { gap: 18 }]}>
       <T size={13} rounded color={C.textDim}>
-        {on === 16 ? 'ALL 16 LIT! NOW SWITCH THEM OFF' : `${on} / 16 LIT`}
+        {on === 16 ? t('arcade.allLit') : t('arcade.litCount', { n: on })}
       </T>
       <View style={styles.board}>
         {lit.map((v, i) => {
@@ -325,7 +326,7 @@ export function FidgetGame() {
             <Pressable
               key={i}
               onPressIn={() => flip(i)}
-              accessibilityLabel={`Button ${i + 1}`}
+              accessibilityLabel={t('arcade.buttonN', { n: i + 1 })}
               style={({ pressed }) => [
                 styles.fidget,
                 { backgroundColor: v ? c : '#2A2D30', shadowColor: c, shadowOpacity: v ? 0.9 : 0 },
@@ -342,7 +343,7 @@ export function FidgetGame() {
         }}
         style={styles.wipe}>
         <T size={12} rounded color={C.text}>
-          ALL OFF
+          {t('arcade.allOff')}
         </T>
       </Pressable>
     </View>
@@ -383,13 +384,13 @@ export function ShredderGame() {
       <TextInput
         value={text}
         onChangeText={setText}
-        placeholder="What’s bugging you?"
+        placeholder={t('arcade.worryPlaceholder')}
         placeholderTextColor={C.textMute}
         multiline
         maxLength={140}
         style={styles.worry}
       />
-      <ArcadeButton label="SHRED IT" size="md" colors={['#FF9A3D', '#E8530E']} textColor="#fff" disabled={!text.trim() || !!paper} onPress={shred} />
+      <ArcadeButton label={t('arcade.shredIt')} size="md" colors={['#FF9A3D', '#E8530E']} textColor="#fff" disabled={!text.trim() || !!paper} onPress={shred} />
       <View style={{ alignItems: 'center', flex: 1 }}>
         <View style={styles.paperWell}>
           {paper && (
@@ -403,7 +404,7 @@ export function ShredderGame() {
         <View style={styles.shredder}>
           <View style={styles.slot} />
           <Comic size={18} color={C.text}>
-            SHREDDER
+            {t('arcade.shredder')}
           </Comic>
         </View>
         <View style={styles.stripWell}>
@@ -416,7 +417,7 @@ export function ShredderGame() {
           )}
         </View>
         <T size={13} rounded color={C.textDim}>
-          {count} {count === 1 ? 'WORRY' : 'WORRIES'} SHREDDED
+          {t('arcade.worriesShredded', { count })}
         </T>
       </View>
     </View>
@@ -471,7 +472,8 @@ export function MemoryGame() {
   return (
     <View style={[styles.center, { gap: 18 }]}>
       <T size={13} rounded color={C.textDim}>
-        {found.size}/{FACES.length} PAIRS{rounds ? ` · ${rounds} CLEARED` : ''}
+        {t('arcade.pairs', { found: found.size, total: FACES.length })}
+        {rounds ? t('arcade.roundsCleared', { count: rounds }) : ''}
       </T>
       <View style={styles.cards}>
         {deck.map((c, i) => {
@@ -480,7 +482,7 @@ export function MemoryGame() {
             <Pressable
               key={c.key}
               onPress={() => flip(i)}
-              accessibilityLabel={shown ? c.icon : 'Hidden card'}
+              accessibilityLabel={shown ? c.icon : t('arcade.hiddenCard')}
               style={[styles.card, shown && { backgroundColor: '#15181A', borderColor: c.color, shadowColor: c.color, shadowOpacity: 0.8 }, found.has(c.icon) && { opacity: 0.5 }]}>
               {shown ? <Icon name={c.icon} size={34} color={c.color} /> : <Comic size={22} color="#4A4E52">?</Comic>}
             </Pressable>

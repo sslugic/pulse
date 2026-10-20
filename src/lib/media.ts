@@ -3,6 +3,8 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Platform } from 'react-native';
 
+import { t } from './i18n';
+
 // 16 kHz mono WAV on iOS: tiny for short voice notes and a format Gemini reads natively.
 export const VOICE_PRESET: RecordingOptions = {
   extension: Platform.OS === 'ios' ? '.wav' : '.m4a',
@@ -53,7 +55,7 @@ export async function pickImage(from: 'camera' | 'library'): Promise<PickedImage
   if (from === 'camera') {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Camera access needed', 'Enable camera access in Settings to snap meals and workouts.');
+      Alert.alert(t('errors.cameraTitle'), t('errors.cameraBody'));
       return null;
     }
     try {

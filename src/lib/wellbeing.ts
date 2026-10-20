@@ -1,17 +1,26 @@
+import { t } from './i18n';
 import { dayKey, lastNDays, summarize, targets } from './nutrition';
 import type { Entry, Profile } from './types';
 
 export const MOODS = [
-  { v: 1, emoji: '😫', label: 'Awful' },
-  { v: 2, emoji: '😕', label: 'Low' },
-  { v: 3, emoji: '😐', label: 'Okay' },
-  { v: 4, emoji: '🙂', label: 'Good' },
-  { v: 5, emoji: '😄', label: 'Great' },
+  { v: 1, emoji: '😫', label: t('wellbeing.moodAwful') },
+  { v: 2, emoji: '😕', label: t('wellbeing.moodLow') },
+  { v: 3, emoji: '😐', label: t('wellbeing.moodOkay') },
+  { v: 4, emoji: '🙂', label: t('wellbeing.moodGood') },
+  { v: 5, emoji: '😄', label: t('wellbeing.moodGreat') },
 ] as const;
 
 export const moodEmoji = (m?: number) => (m ? MOODS[Math.min(4, Math.max(0, Math.round(m) - 1))].emoji : '—');
 
 export type StressLevel = 'low' | 'moderate' | 'high' | 'very high';
+
+/** Display name for a stress level (the level itself stays an English id). */
+export const LEVEL_LABEL: Record<StressLevel, string> = {
+  low: t('wellbeing.levelLow'),
+  moderate: t('wellbeing.levelModerate'),
+  high: t('wellbeing.levelHigh'),
+  'very high': t('wellbeing.levelVeryHigh'),
+};
 
 export interface StressPart {
   key: 'mind' | 'sleep' | 'mood' | 'energy' | 'load';
@@ -58,16 +67,16 @@ export function dayWellbeing(entries: Entry[], key: string): DayWellbeing {
   const load = summarize(entries, key);
 
   const parts: StressPart[] = [];
-  if (mentalStress != null) parts.push({ key: 'mind', label: 'Life stress', value: clamp(((mentalStress - 1) / 9) * 100), weight: 0.35 });
+  if (mentalStress != null) parts.push({ key: 'mind', label: t('wellbeing.partMind'), value: clamp(((mentalStress - 1) / 9) * 100), weight: 0.35 });
   if (sleepEntry?.sleepHours != null) {
     const hrs = clamp(((7.5 - sleepEntry.sleepHours) / 3.5) * 100);
     const q = sleepEntry.sleepQuality != null ? ((5 - sleepEntry.sleepQuality) / 4) * 100 : hrs;
-    parts.push({ key: 'sleep', label: 'Sleep debt', value: clamp(hrs * 0.7 + q * 0.3), weight: 0.3 });
+    parts.push({ key: 'sleep', label: t('wellbeing.partSleep'), value: clamp(hrs * 0.7 + q * 0.3), weight: 0.3 });
   }
-  if (mood != null) parts.push({ key: 'mood', label: 'Low mood', value: ((5 - mood) / 4) * 100, weight: 0.15 });
-  if (energy != null) parts.push({ key: 'energy', label: 'Fatigue', value: ((5 - energy) / 4) * 100, weight: 0.1 });
+  if (mood != null) parts.push({ key: 'mood', label: t('wellbeing.partMood'), value: ((5 - mood) / 4) * 100, weight: 0.15 });
+  if (energy != null) parts.push({ key: 'energy', label: t('wellbeing.partEnergy'), value: ((5 - energy) / 4) * 100, weight: 0.1 });
   if (parts.length && (load.activeMin > 0 || load.burned > 0)) {
-    parts.push({ key: 'load', label: 'Training load', value: clamp(Math.max(load.activeMin / 120, load.burned / 900) * 100), weight: 0.1 });
+    parts.push({ key: 'load', label: t('wellbeing.partLoad'), value: clamp(Math.max(load.activeMin / 120, load.burned / 900) * 100), weight: 0.1 });
   }
 
   const w = parts.reduce((a, p) => a + p.weight, 0);
@@ -100,27 +109,23 @@ export function impactFor(level: StressLevel, goal: Profile['goal']): { title: s
   switch (level) {
     case 'low':
       return {
-        title: 'Primed for progress',
-        body: losing ? 'Low strain and good recovery: a great day to hit your deficit and train hard.' : 'Recovery looks good. Push your training today.',
+        title: t('wellbeing.impactLowTitle'),
+        body: losing ? t('wellbeing.impactLowLosing') : t('wellbeing.impactLowBody'),
       };
     case 'moderate':
       return {
-        title: 'Manageable',
-        body: 'Some strain, nothing alarming. Keep protein high and get to bed on time to stay on track.',
+        title: t('wellbeing.impactModerateTitle'),
+        body: t('wellbeing.impactModerateBody'),
       };
     case 'high':
       return {
-        title: 'Stress is working against you',
-        body: losing
-          ? 'High stress raises cortisol, which drives cravings and water retention. The scale may stall even if fat loss continues. Keep the deficit moderate and favour a lighter session.'
-          : 'High strain blunts recovery. Favour a lighter session and prioritise sleep tonight.',
+        title: t('wellbeing.impactHighTitle'),
+        body: losing ? t('wellbeing.impactHighLosing') : t('wellbeing.impactHighBody'),
       };
     default:
       return {
-        title: 'Recovery day',
-        body: losing
-          ? 'Very high strain. Eat at maintenance today, walk instead of lifting heavy, and protect your sleep. One calm day protects the whole week’s progress.'
-          : 'Very high strain. Take a rest day and focus on sleep and food quality.',
+        title: t('wellbeing.impactVeryHighTitle'),
+        body: losing ? t('wellbeing.impactVeryHighLosing') : t('wellbeing.impactVeryHighBody'),
       };
   }
 }
@@ -128,6 +133,8 @@ export function impactFor(level: StressLevel, goal: Profile['goal']): { title: s
 export interface Pattern {
   text: string;
   tone: 'good' | 'warn' | 'info';
+  /** Which correlation this is, so callers can pick one without matching on (translated) text. */
+  kind: 'sleep' | 'stress' | 'mood' | 'onTarget' | 'tag';
 }
 
 /** Simple, honest correlations from the user's own history (needs a few days of data each side). */
@@ -142,8 +149,9 @@ export function patterns(entries: Entry[], profile: Profile, days = 30): Pattern
   const a = kcal(shortSleep), b = kcal(goodSleep);
   if (a != null && b != null && shortSleep.length >= 2 && goodSleep.length >= 2 && Math.abs(a - b) >= 100) {
     out.push({
-      text: `After short nights (<6.5h) you eat ${Math.round(Math.abs(a - b))} kcal ${a > b ? 'more' : 'less'} than after good sleep.`,
+      text: t(a > b ? 'wellbeing.patternSleepMore' : 'wellbeing.patternSleepLess', { n: Math.round(Math.abs(a - b)) }),
       tone: a > b ? 'warn' : 'info',
+      kind: 'sleep',
     });
   }
 
@@ -152,8 +160,9 @@ export function patterns(entries: Entry[], profile: Profile, days = 30): Pattern
   const c = kcal(tense), d = kcal(calm);
   if (c != null && d != null && tense.length >= 2 && calm.length >= 2 && Math.abs(c - d) >= 100) {
     out.push({
-      text: `On high-stress days you eat ${Math.round(Math.abs(c - d))} kcal ${c > d ? 'more' : 'less'} than on calm days.`,
+      text: t(c > d ? 'wellbeing.patternStressMore' : 'wellbeing.patternStressLess', { n: Math.round(Math.abs(c - d)) }),
       tone: c > d ? 'warn' : 'info',
+      kind: 'stress',
     });
   }
 
@@ -162,8 +171,9 @@ export function patterns(entries: Entry[], profile: Profile, days = 30): Pattern
   const m1 = avg(trained.map((r) => r.w.mood!)), m2 = avg(rested.map((r) => r.w.mood!));
   if (m1 != null && m2 != null && trained.length >= 2 && rested.length >= 2 && Math.abs(m1 - m2) >= 0.4) {
     out.push({
-      text: `Your mood is ${m1 > m2 ? 'better' : 'lower'} on days you work out (${moodEmoji(m1)} vs ${moodEmoji(m2)}).`,
+      text: t(m1 > m2 ? 'wellbeing.patternMoodBetter' : 'wellbeing.patternMoodLower', { a: moodEmoji(m1), b: moodEmoji(m2) }),
       tone: m1 > m2 ? 'good' : 'info',
+      kind: 'mood',
     });
   }
 
@@ -172,13 +182,13 @@ export function patterns(entries: Entry[], profile: Profile, days = 30): Pattern
   const sleptWell = onTrack.filter((r) => r.w.sleepHours != null && r.w.sleepHours >= 7).length;
   const withSleep = onTrack.filter((r) => r.w.sleepHours != null).length;
   if (withSleep >= 3) {
-    out.push({ text: `${Math.round((sleptWell / withSleep) * 100)}% of your on-target days followed 7h+ of sleep.`, tone: 'info' });
+    out.push({ text: t('wellbeing.patternOnTarget', { pct: Math.round((sleptWell / withSleep) * 100) }), tone: 'info', kind: 'onTarget' });
   }
 
   const tagCount = new Map<string, number>();
-  rows.forEach((r) => r.w.tags.forEach((t) => tagCount.set(t.toLowerCase(), (tagCount.get(t.toLowerCase()) ?? 0) + 1)));
+  rows.forEach((r) => r.w.tags.forEach((tag) => tagCount.set(tag.toLowerCase(), (tagCount.get(tag.toLowerCase()) ?? 0) + 1)));
   const top = [...tagCount.entries()].sort((x, y) => y[1] - x[1])[0];
-  if (top && top[1] >= 3) out.push({ text: `“${top[0]}” came up on ${top[1]} days this month.`, tone: 'info' });
+  if (top && top[1] >= 3) out.push({ text: t('wellbeing.patternTag', { tag: top[0], n: top[1] }), tone: 'info', kind: 'tag' });
 
   return out;
 }

@@ -2,6 +2,7 @@ import type { IconName } from '@/components/icon';
 import { C } from '@/constants/theme';
 
 import { spentTokens, type BrainId } from './arcade';
+import { t } from './i18n';
 import type { Chest } from './brain';
 import { dayKey, summarize, type DaySummary } from './nutrition';
 import type { Entry, Targets } from './types';
@@ -29,7 +30,7 @@ interface QuestDef {
   id: string;
   tier: Tier;
   title: string;
-  blurb: (t: Targets) => string;
+  blurb: (targets: Targets) => string;
   icon: IconName;
   color: string;
   progress: (c: Ctx) => [value: number, goal: number];
@@ -49,25 +50,25 @@ const count = (c: Ctx, f: (e: Entry) => boolean) => c.entries.filter(f).length;
 
 const QUESTS: QuestDef[] = [
   // Easy
-  { id: 'half-tank', tier: 1, title: 'HALF TANK', blurb: () => 'Drink half your water target', icon: 'drop', color: C.water, water: true, progress: (c) => [c.sum.water, Math.round(c.targets.waterMl / 2)] },
-  { id: 'mind-check', tier: 1, title: 'MIND CHECK', blurb: () => 'Tell the Coach how you slept and feel', icon: 'brain', color: C.violet, progress: (c) => [count(c, (e) => e.kind === 'journal'), 1] },
-  { id: 'two-plates', tier: 1, title: 'TWO PLATES', blurb: () => 'Log two meals', icon: 'fork', color: C.orange, progress: (c) => [c.sum.meals, 2] },
-  { id: 'snapshot', tier: 1, title: 'SNAPSHOT', blurb: () => 'Log something with a photo', icon: 'camera', color: C.yellow, progress: (c) => [count(c, (e) => e.source === 'photo'), 1] },
-  { id: 'mic-check', tier: 1, title: 'MIC CHECK', blurb: () => 'Log something with a voice note', icon: 'mic', color: C.pink, progress: (c) => [count(c, (e) => e.source === 'voice'), 1] },
+  { id: 'half-tank', tier: 1, title: t('quests.halfTank'), blurb: () => t('quests.halfTankBlurb'), icon: 'drop', color: C.water, water: true, progress: (c) => [c.sum.water, Math.round(c.targets.waterMl / 2)] },
+  { id: 'mind-check', tier: 1, title: t('quests.mindCheck'), blurb: () => t('quests.mindCheckBlurb'), icon: 'brain', color: C.violet, progress: (c) => [count(c, (e) => e.kind === 'journal'), 1] },
+  { id: 'two-plates', tier: 1, title: t('quests.twoPlates'), blurb: () => t('quests.twoPlatesBlurb'), icon: 'fork', color: C.orange, progress: (c) => [c.sum.meals, 2] },
+  { id: 'snapshot', tier: 1, title: t('quests.snapshot'), blurb: () => t('quests.snapshotBlurb'), icon: 'camera', color: C.yellow, progress: (c) => [count(c, (e) => e.source === 'photo'), 1] },
+  { id: 'mic-check', tier: 1, title: t('quests.micCheck'), blurb: () => t('quests.micCheckBlurb'), icon: 'mic', color: C.pink, progress: (c) => [count(c, (e) => e.source === 'voice'), 1] },
   // Medium
-  { id: 'full-tank', tier: 2, title: 'FULL TANK', blurb: () => 'Hit your water target', icon: 'drop', color: C.water, water: true, progress: (c) => [c.sum.water, c.targets.waterMl] },
-  { id: 'protein-run', tier: 2, title: 'PROTEIN RUN', blurb: (t) => `Eat ${Math.round(t.protein * 0.8)} g of protein`, icon: 'bolt', color: C.protein, progress: (c) => [c.sum.protein, Math.round(c.targets.protein * 0.8)] },
-  { id: 'get-moving', tier: 2, title: 'GET MOVING', blurb: () => 'Log 20 active minutes', icon: 'figure', color: C.lime, progress: (c) => [c.sum.activeMin, 20] },
-  { id: 'three-square', tier: 2, title: 'THREE SQUARE', blurb: () => 'Log three meals', icon: 'fork', color: C.orange, progress: (c) => [c.sum.meals, 3] },
+  { id: 'full-tank', tier: 2, title: t('quests.fullTank'), blurb: () => t('quests.fullTankBlurb'), icon: 'drop', color: C.water, water: true, progress: (c) => [c.sum.water, c.targets.waterMl] },
+  { id: 'protein-run', tier: 2, title: t('quests.proteinRun'), blurb: (tg) => t('quests.proteinRunBlurb', { g: Math.round(tg.protein * 0.8) }), icon: 'bolt', color: C.protein, progress: (c) => [c.sum.protein, Math.round(c.targets.protein * 0.8)] },
+  { id: 'get-moving', tier: 2, title: t('quests.getMoving'), blurb: () => t('quests.getMovingBlurb'), icon: 'figure', color: C.lime, progress: (c) => [c.sum.activeMin, 20] },
+  { id: 'three-square', tier: 2, title: t('quests.threeSquare'), blurb: () => t('quests.threeSquareBlurb'), icon: 'fork', color: C.orange, progress: (c) => [c.sum.meals, 3] },
   // Hard
-  { id: 'max-protein', tier: 3, title: 'MAX PROTEIN', blurb: (t) => `Hit your full ${t.protein} g protein target`, icon: 'bolt', color: C.protein, progress: (c) => [c.sum.protein, c.targets.protein] },
-  { id: 'furnace', tier: 3, title: 'FURNACE', blurb: () => 'Burn 300 kcal in workouts', icon: 'flame', color: C.orange, progress: (c) => [c.sum.burned, 300] },
-  { id: 'iron-hour', tier: 3, title: 'IRON HOUR', blurb: () => 'Log 45 active minutes', icon: 'dumbbell', color: C.cyan, progress: (c) => [c.sum.activeMin, 45] },
+  { id: 'max-protein', tier: 3, title: t('quests.maxProtein'), blurb: (tg) => t('quests.maxProteinBlurb', { g: tg.protein }), icon: 'bolt', color: C.protein, progress: (c) => [c.sum.protein, c.targets.protein] },
+  { id: 'furnace', tier: 3, title: t('quests.furnace'), blurb: () => t('quests.furnaceBlurb'), icon: 'flame', color: C.orange, progress: (c) => [c.sum.burned, 300] },
+  { id: 'iron-hour', tier: 3, title: t('quests.ironHour'), blurb: () => t('quests.ironHourBlurb'), icon: 'dumbbell', color: C.cyan, progress: (c) => [c.sum.activeMin, 45] },
   {
     id: 'full-run',
     tier: 3,
-    title: 'FULL RUN',
-    blurb: () => 'Three meals, a workout and a check-in',
+    title: t('quests.fullRun'),
+    blurb: () => t('quests.fullRunBlurb'),
     icon: 'sparkles',
     color: C.yellow,
     progress: (c) => [Number(c.sum.meals >= 3) + Number(c.sum.workouts >= 1) + Number(count(c, (e) => e.kind === 'journal') >= 1), 3],

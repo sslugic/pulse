@@ -8,11 +8,12 @@ import { GlassButton, Icon } from '@/components/icon';
 import { Card, SectionTitle, T, tap } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Space } from '@/constants/theme';
+import { locale, t } from '@/lib/i18n';
 import { journalPhotoUri } from '@/lib/media';
 import { fmtKg } from '@/lib/nutrition';
 import { actions, useStore } from '@/lib/store';
 
-const date = (t: number) => new Date(t).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+const date = (ms: number) => new Date(ms).toLocaleDateString(locale, { month: 'short', day: 'numeric', year: 'numeric' });
 
 /** Private body-progress photos: a before/now slider and a timeline. Stored on this phone only. */
 export default function ProgressPhotosScreen() {
@@ -24,9 +25,9 @@ export default function ProgressPhotosScreen() {
   const last = photos[photos.length - 1];
 
   const remove = (id: string) =>
-    Alert.alert('Delete photo?', 'It’s removed from this phone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => actions.removeProgressPhoto(id) },
+    Alert.alert(t('photos.deleteTitle'), t('photos.deleteMessage'), [
+      { text: t('photos.cancel'), style: 'cancel' },
+      { text: t('photos.delete'), style: 'destructive', onPress: () => actions.removeProgressPhoto(id) },
     ]);
 
   return (
@@ -36,30 +37,30 @@ export default function ProgressPhotosScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
-              Private · stored only on this phone
+              {t('photos.subtitle')}
             </T>
-            <Comic size={36}>PROGRESS PICS</Comic>
+            <Comic size={36}>{t('photos.title')}</Comic>
           </View>
           <GlassButton icon="close" onPress={() => router.back()} />
         </View>
 
         <View style={{ flexDirection: 'row', gap: 10 }}>
-          <ArcadeButton label="TAKE" size="md" onPress={() => actions.addProgressPhoto('camera')} icon={<Icon name="camera" size={20} color="#FF7A1A" weight="bold" />} style={{ flex: 1 }} />
-          <ArcadeButton label="LIBRARY" size="md" colors={Gradients.cool} textColor="#fff" onPress={() => actions.addProgressPhoto('library')} icon={<Icon name="photo" size={20} color="#fff" weight="bold" />} style={{ flex: 1 }} />
+          <ArcadeButton label={t('photos.take')} size="md" onPress={() => actions.addProgressPhoto('camera')} icon={<Icon name="camera" size={20} color="#FF7A1A" weight="bold" />} style={{ flex: 1 }} />
+          <ArcadeButton label={t('photos.library')} size="md" colors={Gradients.cool} textColor="#fff" onPress={() => actions.addProgressPhoto('library')} icon={<Icon name="photo" size={20} color="#fff" weight="bold" />} style={{ flex: 1 }} />
         </View>
 
         {photos.length === 0 ? (
           <Card style={{ alignItems: 'center', gap: 8, paddingVertical: Space.xl, marginTop: Space.sm }}>
             <T size={40}>📸</T>
             <T size={13} color={C.textDim} style={{ textAlign: 'center', lineHeight: 19 }}>
-              Take a photo every week or two in the same spot and light. Your before and now appear side by side here.
+              {t('photos.emptyBody')}
             </T>
           </Card>
         ) : (
           <>
             {photos.length >= 2 && first && last && first.id !== last.id && (
               <>
-                <SectionTitle>Before · Now</SectionTitle>
+                <SectionTitle>{t('photos.beforeNow')}</SectionTitle>
                 <Compare beforeUri={journalPhotoUri(first.path)} afterUri={journalPhotoUri(last.path)} />
                 <View style={styles.between}>
                   <T size={12} rounded color={C.textDim}>
@@ -72,11 +73,11 @@ export default function ProgressPhotosScreen() {
                   </T>
                 </View>
                 <T size={11} color={C.textMute}>
-                  Drag across the photo to compare. Tap any photo below to use it as “before”.
+                  {t('photos.compareHint')}
                 </T>
               </>
             )}
-            <SectionTitle right={<T size={12} rounded color={C.textMute}>{photos.length} PHOTOS</T>}>Timeline</SectionTitle>
+            <SectionTitle right={<T size={12} rounded color={C.textMute}>{t('photos.count', { count: photos.length })}</T>}>{t('photos.timeline')}</SectionTitle>
             <View style={styles.grid}>
               {photos
                 .slice()
@@ -93,14 +94,14 @@ export default function ProgressPhotosScreen() {
                     <Image source={{ uri: journalPhotoUri(p.path) }} style={StyleSheet.absoluteFill} contentFit="cover" />
                     <View style={styles.cellLabel}>
                       <T size={10} rounded color={C.text}>
-                        {new Date(p.at).toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase()}
+                        {new Date(p.at).toLocaleDateString(locale, { month: 'short', day: 'numeric' }).toLocaleUpperCase(locale)}
                       </T>
                     </View>
                   </Pressable>
                 ))}
             </View>
             <T size={11} color={C.textMute}>
-              Long-press a photo to delete it.
+              {t('photos.longPressHint')}
             </T>
           </>
         )}
@@ -136,12 +137,12 @@ function Compare({ beforeUri, afterUri }: { beforeUri: string; afterUri: string 
       </View>
       <View style={[styles.tag, { left: 8 }]} pointerEvents="none">
         <T size={10} rounded color={C.ink}>
-          BEFORE
+          {t('photos.before')}
         </T>
       </View>
       <View style={[styles.tag, { right: 8, backgroundColor: C.lime }]} pointerEvents="none">
         <T size={10} rounded color={C.ink}>
-          NOW
+          {t('photos.now')}
         </T>
       </View>
     </View>

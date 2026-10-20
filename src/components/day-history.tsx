@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { C, Space } from '@/constants/theme';
+import { locale, t } from '@/lib/i18n';
 import { dayKey, lastNDays, loggedDays, macroTargets, summarize } from '@/lib/nutrition';
 import { useStore } from '@/lib/store';
 import type { Entry } from '@/lib/types';
@@ -18,9 +19,9 @@ const open = (key: string) => {
 const label = (k: string, todayKey: string) => {
   const y = new Date(todayKey + 'T12:00');
   y.setDate(y.getDate() - 1);
-  if (k === todayKey) return 'TODAY';
-  if (k === dayKey(y)) return 'YESTERDAY';
-  return new Date(k + 'T12:00').toLocaleDateString([], { weekday: 'long' }).toUpperCase();
+  if (k === todayKey) return t('common.today');
+  if (k === dayKey(y)) return t('common.yesterday');
+  return new Date(k + 'T12:00').toLocaleDateString(locale, { weekday: 'long' }).toUpperCase();
 };
 
 /**
@@ -30,7 +31,7 @@ const label = (k: string, todayKey: string) => {
 export function DayHistory({ todayKey }: { todayKey: string }) {
   const entries = useStore((s) => s.entries);
   const profile = useStore((s) => s.profile);
-  const t = macroTargets(profile);
+  const tg = macroTargets(profile);
 
   const strip = useMemo(() => {
     const logged = loggedDays(entries);
@@ -52,9 +53,9 @@ export function DayHistory({ todayKey }: { todayKey: string }) {
     <View style={{ gap: Space.sm }}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.strip}>
         {strip.map(({ k, logged, d }) => (
-          <Pressable key={k} onPress={() => open(k)} style={[styles.chip, k === todayKey && styles.today, !logged && { opacity: 0.45 }]} accessibilityLabel={`Open ${k}`}>
+          <Pressable key={k} onPress={() => open(k)} style={[styles.chip, k === todayKey && styles.today, !logged && { opacity: 0.45 }]} accessibilityLabel={t('log.openDay', { day: k })}>
             <T size={10} rounded color={k === todayKey ? C.ink : C.textDim}>
-              {d.toLocaleDateString([], { weekday: 'short' }).toUpperCase()}
+              {d.toLocaleDateString(locale, { weekday: 'short' }).toUpperCase()}
             </T>
             <T size={18} rounded color={k === todayKey ? C.ink : C.text}>
               {d.getDate()}
@@ -66,9 +67,9 @@ export function DayHistory({ todayKey }: { todayKey: string }) {
 
       {days.map(([k, list]) => {
         const s = summarize(list, k);
-        const left = Math.round(t.calories + s.burned - s.eaten);
+        const left = Math.round(tg.calories + s.burned - s.eaten);
         return (
-          <Pressable key={k} onPress={() => open(k)} accessibilityRole="button" accessibilityLabel={`Open ${label(k, todayKey)}`}>
+          <Pressable key={k} onPress={() => open(k)} accessibilityRole="button" accessibilityLabel={t('log.openDay', { day: label(k, todayKey) })}>
             {({ pressed }) => (
               <Card style={{ gap: 10, opacity: pressed ? 0.75 : 1 }} accent={k === todayKey ? C.orange + '99' : undefined}>
                 <View style={styles.head}>
@@ -77,26 +78,26 @@ export function DayHistory({ todayKey }: { todayKey: string }) {
                       {label(k, todayKey)}
                     </T>
                     <T size={11} color={C.textMute} weight="700">
-                      {new Date(k + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase()} · {list.length} ENTRIES
+                      {new Date(k + 'T12:00').toLocaleDateString(locale, { month: 'short', day: 'numeric' }).toUpperCase()} · {t('common.entries', { count: list.length })}
                     </T>
                   </View>
                   <View style={styles.openBtn}>
                     <T size={11} rounded color={C.cyan}>
-                      VIEW DAY
+                      {t('log.viewDay')}
                     </T>
                     <Icon name="chevron" size={12} color={C.cyan} />
                   </View>
                 </View>
                 <View style={styles.row}>
-                  <Stat label="EATEN" value={Math.round(s.eaten)} color={C.eaten} />
-                  <Stat label="BURNED" value={Math.round(s.burned)} color={C.burned} />
-                  <Stat label={left < 0 ? 'OVER' : 'LEFT'} value={Math.abs(left)} color={left < 0 ? C.danger : C.lime} />
+                  <Stat label={t('common.eaten')} value={Math.round(s.eaten)} color={C.eaten} />
+                  <Stat label={t('common.burned')} value={Math.round(s.burned)} color={C.burned} />
+                  <Stat label={left < 0 ? t('common.over') : t('common.left')} value={Math.abs(left)} color={left < 0 ? C.danger : C.lime} />
                 </View>
                 <View style={styles.row}>
                   {[
-                    ['P', s.protein, t.protein, C.protein],
-                    ['C', s.carbs, t.carbs, C.carbs],
-                    ['F', s.fat, t.fat, C.fat],
+                    [t('common.macroP'), s.protein, tg.protein, C.protein],
+                    [t('common.macroC'), s.carbs, tg.carbs, C.carbs],
+                    [t('common.macroF'), s.fat, tg.fat, C.fat],
                   ].map(([l, v, max, color]) => (
                     <View key={l as string} style={{ flex: 1, gap: 3 }}>
                       <T size={10} rounded color={C.textDim}>
@@ -122,7 +123,7 @@ function Stat({ label, value, color }: { label: string; value: number; color: st
         {label}
       </T>
       <T size={18} rounded color={color}>
-        {value.toLocaleString()}
+        {value.toLocaleString(locale)}
       </T>
     </View>
   );

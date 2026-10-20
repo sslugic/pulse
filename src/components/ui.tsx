@@ -18,6 +18,8 @@ export function T({
   rounded,
   style,
   numberOfLines,
+  adjustsFontSizeToFit,
+  minimumFontScale,
 }: {
   children: ReactNode;
   size?: number;
@@ -26,11 +28,14 @@ export function T({
   rounded?: boolean;
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
+  /** Shrink long text (e.g. a translated label) instead of cutting or wrapping it. */
+  adjustsFontSizeToFit?: boolean;
+  minimumFontScale?: number;
 }) {
   // Display faces ship a single weight; asking for bold would make iOS fall back to the system font.
   const face = rounded ? { fontFamily: Display.block } : { fontFamily: Fonts?.sans, fontWeight: weight };
   return (
-    <Text numberOfLines={numberOfLines} style={[{ fontSize: size, color }, face, style]}>
+    <Text numberOfLines={numberOfLines} adjustsFontSizeToFit={adjustsFontSizeToFit} minimumFontScale={minimumFontScale} style={[{ fontSize: size, color }, face, style]}>
       {children}
     </Text>
   );

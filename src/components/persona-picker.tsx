@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { C } from '@/constants/theme';
 import { tap } from '@/lib/haptics';
+import { t } from '@/lib/i18n';
 import { isPersonaUnlocked, PERSONAS, personaById } from '@/lib/personas';
 import { tokenBalance } from '@/lib/quests';
 import { actions, useStore } from '@/lib/store';
@@ -23,7 +24,7 @@ export function PersonaPicker() {
     <Card style={{ gap: 10 }} accent={C.violet + '88'}>
       <View style={styles.head}>
         <T size={12} color={C.textDim} style={{ flex: 1, lineHeight: 17 }}>
-          Same coaching brain, different personality and voice. Unlock more with quest tokens.
+          {t('crew.personaIntro')}
         </T>
         <TokenCount value={balance} />
       </View>
@@ -38,7 +39,7 @@ export function PersonaPicker() {
               setShort(actions.choosePersona(p.id) ? null : p.id);
             }}
             accessibilityRole="button"
-            accessibilityLabel={`${p.name}${open ? '' : `, ${p.price} tokens`}`}
+            accessibilityLabel={open ? p.name : t('crew.personaLockedA11y', { name: p.name, price: p.price })}
             style={({ pressed }) => [styles.row, active && styles.active, pressed && { opacity: 0.8 }]}>
             <View style={[styles.avatar, active && { borderColor: C.lime }]}>
               <T size={24}>{p.emoji}</T>
@@ -48,12 +49,12 @@ export function PersonaPicker() {
                 {p.name.toUpperCase()}
               </Comic>
               <T size={12} color={C.textDim}>
-                {short === p.id ? `Need ${p.price - balance} more tokens. Clear quests on HQ.` : p.tagline}
+                {short === p.id ? t('crew.personaNeedTokens', { count: p.price - balance }) : p.tagline}
               </T>
             </View>
             {active ? (
               <T size={11} rounded color={C.lime}>
-                ACTIVE
+                {t('crew.personaActive')}
               </T>
             ) : open ? (
               <Icon name="chevron" size={14} color={C.textMute} />

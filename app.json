@@ -13,11 +13,13 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Pulse uses the camera to snap meals and workouts so AI can log them.",
         "NSPhotoLibraryUsageDescription": "Pulse reads photos you pick to log meals and workouts.",
-        "NSMicrophoneUsageDescription": "Pulse uses the microphone so you can log by voice."
+        "NSMicrophoneUsageDescription": "Pulse uses the microphone so you can log by voice.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "appleTeamId": "8SX4DK48U6",
-      "buildNumber": "2",
-      "usesAppleSignIn": true
+      "buildNumber": "3",
+      "usesAppleSignIn": true,
+      "supportsTablet": false
     },
     "android": {
       "adaptiveIcon": {
@@ -94,7 +96,20 @@
           "NSHealthUpdateUsageDescription": false
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      [
+        "expo-localization",
+        {
+          "supportedLocales": [
+            "en",
+            "es",
+            "de",
+            "fr",
+            "it",
+            "pt"
+          ]
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -105,6 +120,13 @@
       "eas": {
         "projectId": "a1137655-125e-4b76-bc50-09a305246552"
       }
+    },
+    "locales": {
+      "es": "./locales/es.json",
+      "de": "./locales/de.json",
+      "fr": "./locales/fr.json",
+      "it": "./locales/it.json",
+      "pt": "./locales/pt.json"
     }
   }
 }

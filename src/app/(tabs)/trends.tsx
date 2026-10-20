@@ -7,11 +7,13 @@ import { WeightCard } from '@/components/weight-card';
 import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Radius, Space } from '@/constants/theme';
+import { locale, t } from '@/lib/i18n';
 import { lastNDays, macroTargets, streak, summarize } from '@/lib/nutrition';
 import { useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 
 const RANGES = { '7D': 7, '30D': 30 } as const;
+const RANGE_LABEL: Record<keyof typeof RANGES, string> = { '7D': t('stats.range7d'), '30D': t('stats.range30d') };
 
 export default function Trends() {
   const insets = useSafeAreaInsets();
@@ -40,38 +42,38 @@ export default function Trends() {
       style={{ flex: 1 }}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + Space.md, paddingBottom: Space.xl }]}>
       <View style={styles.headerRow}>
-        <Comic size={42}>STATS</Comic>
+        <Comic size={42}>{t('stats.title')}</Comic>
         <View style={{ flexDirection: 'row', gap: 6 }}>
           {(Object.keys(RANGES) as (keyof typeof RANGES)[]).map((r) => (
-            <Chip key={r} label={r} active={range === r} onPress={() => setRange(r)} />
+            <Chip key={r} label={RANGE_LABEL[r]} active={range === r} onPress={() => setRange(r)} />
           ))}
         </View>
       </View>
 
       {/* KPI tiles */}
       <View style={styles.grid}>
-        <Kpi label="Avg eaten" value={avg((d) => d.eaten).toLocaleString()} unit="kcal" color={C.eaten} />
-        <Kpi label="Avg burned" value={avg((d) => d.burned, days).toLocaleString()} unit="kcal" color={C.burned} />
-        <Kpi label="Avg protein" value={String(avg((d) => d.protein))} unit="g" color={C.protein} />
-        <Kpi label="Streak" value={String(streak(entries, frozen))} unit="days" color={C.lime} />
+        <Kpi label={t('stats.avgEaten')} value={avg((d) => d.eaten).toLocaleString(locale)} unit="kcal" color={C.eaten} />
+        <Kpi label={t('stats.avgBurned')} value={avg((d) => d.burned, days).toLocaleString(locale)} unit="kcal" color={C.burned} />
+        <Kpi label={t('stats.avgProtein')} value={String(avg((d) => d.protein))} unit="g" color={C.protein} />
+        <Kpi label={t('stats.streak')} value={String(streak(entries, frozen))} unit={t('stats.days', { count: streak(entries, frozen) })} color={C.lime} />
       </View>
 
       {/* Day by day: tap any day for its full breakdown */}
-      <SectionTitle>History</SectionTitle>
+      <SectionTitle>{t('stats.history')}</SectionTitle>
       <DayHistory todayKey={todayKey} />
 
       {/* Weight */}
-      <SectionTitle>Weight</SectionTitle>
+      <SectionTitle>{t('stats.weight')}</SectionTitle>
       <WeightCard weighIns={weights} profile={profile} />
 
       {/* Calories in vs out */}
-      <SectionTitle right={<Legend />}>Calories in vs out</SectionTitle>
+      <SectionTitle right={<Legend />}>{t('stats.caloriesInOut')}</SectionTitle>
       <Card>
         <View style={styles.chart}>
           {/* target line */}
           <View style={[styles.targetLine, { bottom: (target / maxBar) * 150 + (RANGES[range] <= 7 ? 19 : 0) }]}>
             <T size={9} color={C.textMute} weight="700" style={styles.targetLabel}>
-              GOAL {target}
+              {t('stats.goalLine', { n: target })}
             </T>
           </View>
           {days.map((d) => (
@@ -82,19 +84,19 @@ export default function Trends() {
               </View>
               {RANGES[range] <= 7 && (
                 <T size={10} color={d.key === todayKey ? C.text : C.textMute} weight="700">
-                  {new Date(d.key + 'T12:00').toLocaleDateString([], { weekday: 'narrow' })}
+                  {new Date(d.key + 'T12:00').toLocaleDateString(locale, { weekday: 'narrow' })}
                 </T>
               )}
             </View>
           ))}
         </View>
         <T size={12} color={C.textDim} style={{ marginTop: 10 }}>
-          {logged.length ? `On target ${onTarget} of ${logged.length} logged days (±10% net).` : 'Log a few days to see your pattern.'}
+          {logged.length ? t('stats.onTarget', { n: onTarget, total: logged.length }) : t('stats.logAFewDays')}
         </T>
       </Card>
 
       {/* Macro split */}
-      <SectionTitle>Average macro split</SectionTitle>
+      <SectionTitle>{t('stats.macroSplit')}</SectionTitle>
       <Card>
         <MacroSplit p={avg((d) => d.protein)} c={avg((d) => d.carbs)} f={avg((d) => d.fat)} />
       </Card>
@@ -108,7 +110,7 @@ function Kpi({ label, value, unit, color }: { label: string; value: string; unit
   return (
     <Card style={styles.kpi}>
       <T size={12} rounded color={C.textDim}>
-        {label.toUpperCase()}
+        {label.toLocaleUpperCase(locale)}
       </T>
       <T size={26} weight="800" rounded color={color}>
         {value} <T size={12} color={C.textMute}>{unit}</T>
@@ -121,8 +123,8 @@ function Legend() {
   return (
     <View style={{ flexDirection: 'row', gap: 10 }}>
       {[
-        ['In', C.eaten],
-        ['Out', C.burned],
+        [t('stats.legendIn'), C.eaten],
+        [t('stats.legendOut'), C.burned],
       ].map(([l, c]) => (
         <View key={l} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: c }} />
@@ -138,11 +140,11 @@ function Legend() {
 function MacroSplit({ p, c, f }: { p: number; c: number; f: number }) {
   const kp = p * 4, kc = c * 4, kf = f * 9;
   const total = kp + kc + kf;
-  if (!total) return <T size={13} color={C.textDim}>No meals logged in this range yet.</T>;
+  if (!total) return <T size={13} color={C.textDim}>{t('stats.noMeals')}</T>;
   const parts = [
-    { label: 'Protein', g: p, pct: kp / total, color: C.protein },
-    { label: 'Carbs', g: c, pct: kc / total, color: C.carbs },
-    { label: 'Fat', g: f, pct: kf / total, color: C.fat },
+    { label: t('stats.protein'), g: p, pct: kp / total, color: C.protein },
+    { label: t('stats.carbs'), g: c, pct: kc / total, color: C.carbs },
+    { label: t('stats.fat'), g: f, pct: kf / total, color: C.fat },
   ];
   return (
     <View style={{ gap: 14 }}>
@@ -161,7 +163,7 @@ function MacroSplit({ p, c, f }: { p: number; c: number; f: number }) {
               {Math.round(x.pct * 100)}%
             </T>
             <T size={11} color={C.textMute}>
-              {x.g} g/day
+              {t('stats.gramsPerDay', { g: x.g })}
             </T>
           </View>
         ))}

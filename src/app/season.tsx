@@ -9,6 +9,7 @@ import { Bar, Card, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { season, SEASON_BADGE_REWARD, SEASON_REWARD, seasonBadges } from '@/lib/seasons';
+import { locale, t } from '@/lib/i18n';
 import { actions, useStore } from '@/lib/store';
 
 /** This month's season: five challenges, a badge for clearing them all, and the trophy shelf. */
@@ -27,7 +28,7 @@ export default function SeasonScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
-              {new Date(s.month + '-15').toLocaleDateString([], { month: 'long', year: 'numeric' })} season · {s.daysLeft} days left
+              {t('season.header', { month: new Date(s.month + '-15').toLocaleDateString(locale, { month: 'long', year: 'numeric' }), count: s.daysLeft })}
             </T>
             <Comic size={34} color={s.theme.color}>
               {`${s.theme.emoji} ${s.theme.name}`}
@@ -39,15 +40,15 @@ export default function SeasonScreen() {
         <Card style={{ gap: 8 }} accent={s.theme.color + 'AA'}>
           <View style={styles.between}>
             <T size={13} rounded color={C.text}>
-              {s.cleared}/5 CHALLENGES
+              {t('season.challengesCleared', { n: s.cleared, total: 5 })}
             </T>
             <T size={12} rounded color={s.badge ? C.lime : C.textMute}>
-              {s.badge ? 'BADGE EARNED' : `BADGE +${SEASON_BADGE_REWARD.tokens}`}
+              {s.badge ? t('season.badgeEarned') : t('season.badgeReward', { tokens: SEASON_BADGE_REWARD.tokens })}
             </T>
           </View>
           <Bar value={s.cleared} max={5} color={s.theme.color} height={10} />
           <T size={12} color={C.textDim} style={{ lineHeight: 17 }}>
-            Each challenge pays +{SEASON_REWARD.xp} XP and +{SEASON_REWARD.tokens} tokens. Clear all five this month for the {s.theme.name} badge.
+            {t('season.intro', { xp: SEASON_REWARD.xp, tokens: SEASON_REWARD.tokens, theme: s.theme.name })}
           </T>
         </Card>
 
@@ -66,7 +67,7 @@ export default function SeasonScreen() {
                 ) : c.done ? (
                   <Pressable onPress={() => actions.claimSeason(c.id)} style={styles.claim} accessibilityRole="button">
                     <Comic size={15} color={C.ink} outline={C.yellow}>
-                      CLAIM
+                      {t('season.claim')}
                     </Comic>
                   </Pressable>
                 ) : (
@@ -80,11 +81,11 @@ export default function SeasonScreen() {
           ))}
         </View>
 
-        <SectionTitle>Trophy shelf</SectionTitle>
+        <SectionTitle>{t('season.trophyShelf')}</SectionTitle>
         <Card>
           {badges.length === 0 ? (
             <T size={13} color={C.textDim}>
-              Clear a full season to put your first badge on the shelf.
+              {t('season.shelfEmpty')}
             </T>
           ) : (
             <View style={styles.shelf}>
@@ -95,7 +96,7 @@ export default function SeasonScreen() {
                     {b.name}
                   </T>
                   <T size={9} rounded color={C.textMute}>
-                    {new Date(b.month + '-15').toLocaleDateString([], { month: 'short', year: '2-digit' }).toUpperCase()}
+                    {new Date(b.month + '-15').toLocaleDateString(locale, { month: 'short', year: '2-digit' }).toUpperCase()}
                   </T>
                 </View>
               ))}
@@ -105,7 +106,7 @@ export default function SeasonScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginTop: Space.sm }}>
           <TokenCoin size={14} />
           <T size={11} color={C.textMute}>
-            Spend tokens in the Arcade and on coaches in Crew.
+            {t('season.spendTokens')}
           </T>
         </View>
       </ScrollView>

@@ -11,6 +11,7 @@ import { T } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, Display, MaxContentWidth, Space } from '@/constants/theme';
 import { weeklyRecapCaptions } from '@/lib/gemini';
+import { locale, t } from '@/lib/i18n';
 import { fmtKg } from '@/lib/nutrition';
 import { personaById } from '@/lib/personas';
 import { fallbackCaptions, weekStats, type RecapCaptions } from '@/lib/recap';
@@ -18,7 +19,7 @@ import { canUseAI, getState, useStore } from '@/lib/store';
 import { moodEmoji } from '@/lib/wellbeing';
 
 const fmtRange = (a: string, b: string) => {
-  const f = (k: string) => new Date(k + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric' }).toUpperCase();
+  const f = (k: string) => new Date(k + 'T12:00').toLocaleDateString(locale, { month: 'short', day: 'numeric' }).toLocaleUpperCase(locale);
   return `${f(a)} – ${f(b)}`;
 };
 
@@ -53,10 +54,10 @@ export default function RecapScreen() {
     try {
       // view-shot's types predate RN's element refs; the runtime accepts the host view.
       const uri = await captureRef(page as never, { format: 'png', quality: 1 });
-      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: 'Share your week', UTI: 'public.png' });
-      else Alert.alert('Sharing isn’t available on this device.');
+      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: 'image/png', dialogTitle: t('recap.shareDialogTitle'), UTI: 'public.png' });
+      else Alert.alert(t('recap.sharingUnavailable'));
     } catch (err) {
-      Alert.alert('Couldn’t share', (err as Error).message);
+      Alert.alert(t('recap.shareFailed'), (err as Error).message);
     }
   };
 
@@ -67,9 +68,9 @@ export default function RecapScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
             <T size={13} color={C.textDim} weight="600">
-              Your last 7 days
+              {t('recap.subtitle')}
             </T>
-            <Comic size={36}>WEEKLY RECAP</Comic>
+            <Comic size={36}>{t('recap.title')}</Comic>
           </View>
           <GlassButton icon="close" onPress={() => router.back()} />
         </View>
@@ -78,20 +79,20 @@ export default function RecapScreen() {
         <View ref={page} collapsable={false} style={styles.page}>
           <View style={[styles.panel, styles.titlePanel]}>
             <T size={11} rounded color={C.ink}>
-              PULSE COMICS · {fmtRange(stats.from, stats.to)}
+              {t('recap.masthead', { range: fmtRange(stats.from, stats.to) })}
             </T>
             <Comic size={30} color={C.ink} outline="#fff" style={{ textAlign: 'center' }}>
               {captions.title}
             </Comic>
             <T size={12} rounded color={C.ink}>
-              {stats.daysLogged}/7 DAYS LOGGED
+              {t('recap.daysLogged', { n: stats.daysLogged })}
             </T>
             {loading && <ActivityIndicator color={C.ink} style={{ position: 'absolute', right: 10, top: 10 }} />}
           </View>
 
           <View style={styles.row}>
-            <StatPanel icon="dumbbell" color={C.lime} big={`${stats.workouts}`} label="WORKOUTS" sub={`${stats.activeMin} MIN · ${stats.burned} KCAL`} caption={captions.training} />
-            <StatPanel icon="fork" color={C.orange} big={`${stats.meals}`} label="MEALS" sub={`PROTEIN ✓ ${stats.proteinDays}/7`} caption={captions.fuel} />
+            <StatPanel icon="dumbbell" color={C.lime} big={`${stats.workouts}`} label={t('recap.workouts')} sub={t('recap.workoutsSub', { min: stats.activeMin, kcal: stats.burned })} caption={captions.training} />
+            <StatPanel icon="fork" color={C.orange} big={`${stats.meals}`} label={t('recap.meals')} sub={t('recap.mealsSub', { n: stats.proteinDays })} caption={captions.fuel} />
           </View>
 
           {stats.bestMoment && (
@@ -99,7 +100,7 @@ export default function RecapScreen() {
               <MomentArt scene={stats.bestMoment.scene} mood={stats.bestMoment.mood} height={130} />
               <View style={styles.bubble}>
                 <T size={10} rounded color={C.pink}>
-                  MOMENT OF THE WEEK
+                  {t('recap.momentOfWeek')}
                 </T>
                 <T size={13} color={C.ink} style={{ lineHeight: 18 }} numberOfLines={3}>
                   “{stats.bestMoment.summary}”
@@ -113,17 +114,17 @@ export default function RecapScreen() {
               icon="moon"
               color={C.violet}
               big={stats.avgSleep != null ? `${stats.avgSleep.toFixed(1)}h` : '—'}
-              label="AVG SLEEP"
-              sub={stats.avgMood != null ? `MOOD ${moodEmoji(stats.avgMood)}` : 'NO MOOD LOGGED'}
+              label={t('recap.avgSleep')}
+              sub={stats.avgMood != null ? t('recap.mood', { emoji: moodEmoji(stats.avgMood) }) : t('recap.noMood')}
               caption={captions.mind}
             />
             <StatPanel
               icon="target"
               color={C.yellow}
               big={`${stats.questsCleared}`}
-              label="QUESTS"
-              sub={`${stats.perfectDays} PERFECT · +${stats.tokensEarned} TOKENS`}
-              caption={stats.weightChangeKg != null ? `Weight ${stats.weightChangeKg < 0 ? '−' : '+'}${fmtKg(Math.abs(stats.weightChangeKg), profile.units)} this week.` : `+${stats.xpFromQuests} XP from quests.`}
+              label={t('recap.quests')}
+              sub={t('recap.questsSub', { perfect: stats.perfectDays, tokens: stats.tokensEarned })}
+              caption={stats.weightChangeKg != null ? t('recap.weightCaption', { change: `${stats.weightChangeKg < 0 ? '−' : '+'}${fmtKg(Math.abs(stats.weightChangeKg), profile.units)}` }) : t('recap.xpCaption', { xp: stats.xpFromQuests })}
             />
           </View>
 
@@ -133,7 +134,7 @@ export default function RecapScreen() {
             </View>
             <View style={[styles.bubble, { flex: 1 }]}>
               <T size={10} rounded color={C.violet}>
-                {persona.name.toUpperCase()} SAYS
+                {t('recap.personaSays', { name: persona.name.toUpperCase() })}
               </T>
               <T size={14} color={C.ink} style={{ lineHeight: 19, fontFamily: Display.block }}>
                 {captions.verdict}
@@ -143,9 +144,9 @@ export default function RecapScreen() {
         </View>
 
         <View style={{ flexDirection: 'row', gap: 10, marginTop: Space.md }}>
-          <ArcadeButton label="SHARE" size="md" onPress={share} icon={<Icon name="send" size={20} color="#FF7A1A" weight="bold" />} style={{ flex: 1 }} />
+          <ArcadeButton label={t('recap.share')} size="md" onPress={share} icon={<Icon name="send" size={20} color="#FF7A1A" weight="bold" />} style={{ flex: 1 }} />
           <ArcadeButton
-            label="REDRAW"
+            label={t('recap.redraw')}
             size="md"
             colors={['#5FE2FF', '#1E8FE0']}
             textColor="#fff"

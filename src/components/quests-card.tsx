@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { C, Display, Space } from '@/constants/theme';
+import { t } from '@/lib/i18n';
 import { fmtWater, macroTargets } from '@/lib/nutrition';
 import type { Profile } from '@/lib/types';
 import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type QuestState } from '@/lib/quests';
@@ -11,7 +12,7 @@ import { Icon, IconBadge } from './icon';
 import { Bar, Card, T } from './ui';
 import { Comic } from './underground';
 
-const TIER_LABEL = { 1: 'EASY', 2: 'MEDIUM', 3: 'HARD' } as const;
+const TIER_LABEL = { 1: t('quests.easy'), 2: t('quests.medium'), 3: t('quests.hard') };
 
 /** Arcade token: a brass coin with a stamped P. */
 export function TokenCoin({ size = 18 }: { size?: number }) {
@@ -48,7 +49,7 @@ export function QuestsCard({ todayKey }: { todayKey: string }) {
       <View style={styles.head}>
         <Icon name="target" size={18} color={C.yellow} />
         <T size={13} rounded color={C.text} style={{ flex: 1 }}>
-          DAILY QUESTS
+          {t('quests.dailyQuests')}
         </T>
         <TokenCount value={balance} />
       </View>
@@ -57,7 +58,7 @@ export function QuestsCard({ todayKey }: { todayKey: string }) {
       ))}
       <View style={styles.foot}>
         <T size={11} color={perfect ? C.lime : C.textMute} weight="700" style={{ flex: 1 }}>
-          {perfect ? 'PERFECT DAY CLEARED. NEW QUESTS AT MIDNIGHT.' : `${cleared}/3 CLEARED · CLEAR ALL FOR PERFECT DAY`}
+          {perfect ? t('quests.perfectCleared') : t('quests.clearedOf', { n: cleared })}
         </T>
         {!perfect && (
           <View style={styles.tokens}>
@@ -97,9 +98,9 @@ function QuestRow({ q, units, onClaim }: { q: QuestState; units: Profile['units'
           <Icon name="check" size={16} color={C.lime} weight="bold" />
         </View>
       ) : ready ? (
-        <Pressable onPress={onClaim} style={({ pressed }) => [styles.claim, pressed && { transform: [{ translateY: 2 }], borderBottomWidth: 2 }]} accessibilityRole="button" accessibilityLabel={`Claim ${q.title}`}>
+        <Pressable onPress={onClaim} style={({ pressed }) => [styles.claim, pressed && { transform: [{ translateY: 2 }], borderBottomWidth: 2 }]} accessibilityRole="button" accessibilityLabel={t('quests.claimLabel', { title: q.title })}>
           <Comic size={16} color={C.ink} outline={C.yellow}>
-            CLAIM
+            {t('quests.claim')}
           </Comic>
         </Pressable>
       ) : (
@@ -114,7 +115,7 @@ function QuestRow({ q, units, onClaim }: { q: QuestState; units: Profile['units'
             <TokenCoin size={12} />
           </View>
           <T size={10} rounded color={C.lime}>
-            +{q.xp} XP
+            {t('quests.xp', { n: q.xp })}
           </T>
         </View>
       )}

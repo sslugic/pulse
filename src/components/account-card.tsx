@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, View } from 'react-nat
 
 import { C } from '@/constants/theme';
 import { appleSignInAvailable, cloudConfigured, devBackend, devSignIn } from '@/lib/cloud';
+import { locale, t } from '@/lib/i18n';
 import { actions, useStore } from '@/lib/store';
 
 import { Icon } from './icon';
@@ -28,7 +29,7 @@ export function AccountCard() {
       await fn();
     } catch (e) {
       const err = e as { code?: string; message?: string };
-      if (err.code !== 'ERR_REQUEST_CANCELED') Alert.alert('Something went wrong', err.message ?? 'Try again.');
+      if (err.code !== 'ERR_REQUEST_CANCELED') Alert.alert(t('account.errorTitle'), err.message ?? t('account.tryAgain'));
     } finally {
       setBusy(null);
     }
@@ -38,19 +39,24 @@ export function AccountCard() {
     return (
       <Card>
         <T size={13} color={C.textDim}>
-          Accounts aren’t set up in this build yet.
+          {t('account.notSetUp')}
         </T>
       </Card>
     );
   }
 
   if (!account.userId) {
+    const [pitchBefore, pitchAfter] = t('account.signInPitch').split('{credits}');
     return (
       <Card style={{ gap: 12 }} accent={C.yellow + '99'}>
         <View style={styles.row}>
           <TokenCoin size={28} />
           <T size={13} color={C.text} style={{ flex: 1, lineHeight: 18 }}>
-            Sign in to get <T size={13} rounded color={C.yellow}>50 free AI credits</T>, buy more, and back up your progress.
+            {pitchBefore}
+            <T size={13} rounded color={C.yellow}>
+              {t('account.freeCredits')}
+            </T>
+            {pitchAfter}
           </T>
         </View>
         {apple ? (
@@ -67,7 +73,7 @@ export function AccountCard() {
           )
         ) : (
           <T size={12} color={C.textMute}>
-            Sign in with Apple isn’t available on this device.
+            {t('account.appleUnavailable')}
           </T>
         )}
         {__DEV__ && devBackend && (
@@ -86,10 +92,10 @@ export function AccountCard() {
       <View style={styles.row}>
         <View style={{ flex: 1 }}>
           <T size={11} rounded color={C.textDim}>
-            SIGNED IN
+            {t('account.signedIn')}
           </T>
           <T size={14} color={C.text} numberOfLines={1}>
-            {account.email?.endsWith('privaterelay.appleid.com') ? 'Apple ID (email hidden)' : (account.email ?? 'Apple ID')}
+            {account.email?.endsWith('privaterelay.appleid.com') ? t('account.emailHidden') : (account.email ?? 'Apple ID')}
           </T>
         </View>
         <Pressable onPress={() => router.push('/credits')} style={styles.credits} accessibilityRole="button">
@@ -107,39 +113,39 @@ export function AccountCard() {
       )}
       <Pressable onPress={() => router.push('/credits')} style={styles.action}>
         <T size={13} rounded color={C.ink}>
-          GET MORE CREDITS
+          {t('account.getMoreCredits')}
         </T>
       </Pressable>
       <View style={styles.row}>
         <Pressable onPress={() => run('backup', () => actions.backupNow())} style={styles.small}>
           {busy === 'backup' ? <ActivityIndicator size="small" color={C.cyan} /> : <Icon name="retry" size={13} color={C.cyan} />}
           <T size={12} rounded color={C.cyan}>
-            BACK UP NOW
+            {t('account.backUpNow')}
           </T>
         </Pressable>
         <Pressable onPress={() => run('signout', () => actions.signOut())} style={styles.small}>
           <T size={12} rounded color={C.textDim}>
-            SIGN OUT
+            {t('account.signOut')}
           </T>
         </Pressable>
       </View>
       <T size={11} color={C.textMute}>
-        {account.backedUpAt ? `Backed up ${new Date(account.backedUpAt).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}` : 'Your data backs up automatically while signed in.'}
+        {account.backedUpAt ? t('account.backedUpAt', { time: new Date(account.backedUpAt).toLocaleString(locale, { weekday: 'short', hour: 'numeric', minute: '2-digit' }) }) : t('account.autoBackup')}
       </T>
       <Pressable
         onPress={() =>
           Alert.alert(
-            'Delete your account?',
-            'This permanently deletes your Pulse account, your remaining credits and your cloud backup. Your logs stay on this phone. An active Pulse Pro subscription must be cancelled in your Apple ID settings.',
+            t('account.deleteTitle'),
+            t('account.deleteBody'),
             [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Delete account', style: 'destructive', onPress: () => run('delete', () => actions.deleteAccount()) },
+              { text: t('account.cancel'), style: 'cancel' },
+              { text: t('account.deleteAccount'), style: 'destructive', onPress: () => run('delete', () => actions.deleteAccount()) },
             ],
           )
         }
         hitSlop={8}>
         <T size={12} color={C.danger}>
-          {busy === 'delete' ? 'Deleting…' : 'Delete account'}
+          {busy === 'delete' ? t('account.deleting') : t('account.deleteAccount')}
         </T>
       </Pressable>
     </Card>

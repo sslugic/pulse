@@ -9,12 +9,15 @@ import { GlassButton, Icon } from '@/components/icon';
 import { Bar, Card, SectionTitle, T, tap } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
+import { locale, t } from '@/lib/i18n';
 import { dayKey, fmtWater, macroTargets, summarize } from '@/lib/nutrition';
 import { resultFor } from '@/lib/plans';
 import { dailyQuests } from '@/lib/quests';
 import { useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 import { dayWellbeing, LEVEL_COLOR, MOODS } from '@/lib/wellbeing';
+
+const LEVEL_KEY = { low: 'log.levelLow', moderate: 'log.levelModerate', high: 'log.levelHigh', 'very high': 'log.levelVeryHigh' } as const;
 
 const shift = (key: string, days: number) => {
   const d = new Date(key + 'T12:00');
@@ -32,7 +35,7 @@ export default function DayScreen() {
   const entries = useStore((s) => s.entries);
   const profile = useStore((s) => s.profile);
   const claims = useStore((s) => s.game.claims);
-  const t = macroTargets(profile);
+  const tg = macroTargets(profile);
 
   const day = useMemo(() => summarize(entries, key), [entries, key]);
   const list = useMemo(() => entries.filter((e) => dayKey(e.createdAt) === key), [entries, key]);
@@ -41,12 +44,12 @@ export default function DayScreen() {
   const workoutPlan = useStore((s) => s.workoutPlan);
   const history = useStore((s) => s.planHistory);
   const planResult = useMemo(() => resultFor(key, mealPlan, workoutPlan) ?? history[key], [key, mealPlan, workoutPlan, history]);
-  const quests = useMemo(() => dailyQuests(entries, t, key, claims), [entries, t, key, claims]);
+  const quests = useMemo(() => dailyQuests(entries, tg, key, claims), [entries, tg, key, claims]);
 
   const net = day.eaten - day.burned;
-  const onTarget = day.eaten > 0 && Math.abs(net - t.calories) <= t.calories * 0.12;
+  const onTarget = day.eaten > 0 && Math.abs(net - tg.calories) <= tg.calories * 0.12;
   const isToday = key === todayKey;
-  const title = isToday ? 'TODAY' : new Date(key + 'T12:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
+  const title = isToday ? t('common.today') : new Date(key + 'T12:00').toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' }).toUpperCase();
 
   const go = (days: number) => {
     tap();
@@ -61,7 +64,7 @@ export default function DayScreen() {
           <GlassButton icon="back" onPress={() => router.back()} />
           <View style={{ flex: 1, alignItems: 'center' }}>
             <T size={12} color={C.textDim} weight="600">
-              Day log
+              {t('log.dayLog')}
             </T>
             <Comic size={28}>{title}</Comic>
           </View>
@@ -69,24 +72,24 @@ export default function DayScreen() {
         </View>
 
         <View style={styles.nav}>
-          <Pressable onPress={() => go(-1)} style={styles.navBtn} accessibilityLabel="Previous day">
+          <Pressable onPress={() => go(-1)} style={styles.navBtn} accessibilityLabel={t('log.prevDay')}>
             <Icon name="back" size={16} color={C.text} weight="bold" />
             <T size={12} rounded>
-              PREV
+              {t('log.prev')}
             </T>
           </Pressable>
           {onTarget ? (
             <T size={12} rounded color={C.lime}>
-              ON TARGET
+              {t('log.onTarget')}
             </T>
           ) : (
             <T size={12} rounded color={C.textMute}>
-              {day.eaten > 0 ? 'OFF TARGET' : 'NO MEALS'}
+              {day.eaten > 0 ? t('log.offTarget') : t('log.noMeals')}
             </T>
           )}
-          <Pressable onPress={() => go(1)} disabled={isToday} style={[styles.navBtn, isToday && { opacity: 0.3 }]} accessibilityLabel="Next day">
+          <Pressable onPress={() => go(1)} disabled={isToday} style={[styles.navBtn, isToday && { opacity: 0.3 }]} accessibilityLabel={t('log.nextDay')}>
             <T size={12} rounded>
-              NEXT
+              {t('log.next')}
             </T>
             <Icon name="chevron" size={16} color={C.text} weight="bold" />
           </Pressable>
@@ -95,41 +98,41 @@ export default function DayScreen() {
         {/* Fuel */}
         <Card style={{ gap: 12 }}>
           <View style={styles.row3}>
-            <Stat label="EATEN" value={Math.round(day.eaten).toLocaleString()} color={C.eaten} />
-            <Stat label="BURNED" value={Math.round(day.burned).toLocaleString()} color={C.burned} />
-            <Stat label="NET" value={Math.round(net).toLocaleString()} sub={`of ${t.calories.toLocaleString()}`} color={onTarget ? C.lime : C.text} />
+            <Stat label={t('common.eaten')} value={Math.round(day.eaten).toLocaleString(locale)} color={C.eaten} />
+            <Stat label={t('common.burned')} value={Math.round(day.burned).toLocaleString(locale)} color={C.burned} />
+            <Stat label={t('common.net')} value={Math.round(net).toLocaleString(locale)} sub={t('log.ofTarget', { n: tg.calories.toLocaleString(locale) })} color={onTarget ? C.lime : C.text} />
           </View>
-          <Macro label="Protein" value={day.protein} target={t.protein} color={C.protein} unit="g" />
-          <Macro label="Carbs" value={day.carbs} target={t.carbs} color={C.carbs} unit="g" />
-          <Macro label="Fat" value={day.fat} target={t.fat} color={C.fat} unit="g" />
+          <Macro label={t('common.protein')} value={day.protein} target={tg.protein} color={C.protein} unit="g" />
+          <Macro label={t('common.carbs')} value={day.carbs} target={tg.carbs} color={C.carbs} unit="g" />
+          <Macro label={t('common.fat')} value={day.fat} target={tg.fat} color={C.fat} unit="g" />
           <View style={{ gap: 6 }}>
             <View style={styles.between}>
               <T size={13} rounded>
-                WATER
+                {t('log.water')}
               </T>
               <T size={13} color={C.textDim}>
                 <T size={13} rounded color={C.water}>
                   {fmtWater(day.water, profile.units)}
                 </T>{' '}
-                / {fmtWater(t.waterMl, profile.units)}
+                / {fmtWater(tg.waterMl, profile.units)}
               </T>
             </View>
-            <Bar value={day.water} max={t.waterMl} color={C.water} />
+            <Bar value={day.water} max={tg.waterMl} color={C.water} />
           </View>
           <T size={12} color={C.textMute} weight="700">
-            {day.meals} MEAL{day.meals === 1 ? '' : 'S'} · {day.workouts} WORKOUT{day.workouts === 1 ? '' : 'S'} · {day.activeMin} ACTIVE MIN
+            {t('log.meals', { count: day.meals })} · {t('log.workouts', { count: day.workouts })} · {t('log.activeMin', { n: day.activeMin })}
           </T>
         </Card>
 
         {/* Mind */}
         <Card style={{ gap: 8, marginTop: Space.sm }} accent={mind.level ? LEVEL_COLOR[mind.level] + 'AA' : undefined}>
           <T size={12} rounded color={mind.level ? LEVEL_COLOR[mind.level] : C.textDim}>
-            {mind.stress != null ? `STRESS ${mind.stress} · ${mind.level?.toUpperCase()}` : 'NO MIND CHECK-IN'}
+            {mind.stress != null ? t('log.stressLevel', { n: mind.stress, level: mind.level ? t(LEVEL_KEY[mind.level]) : '' }) : t('log.noMindCheckIn')}
           </T>
           <View style={styles.row3}>
-            <Stat label="SLEEP" value={mind.sleepHours != null ? `${mind.sleepHours}h` : '—'} color={C.violet} />
-            <Stat label="MOOD" value={mind.mood ? MOODS[Math.round(mind.mood) - 1].emoji : '—'} color={C.text} />
-            <Stat label="ENERGY" value={mind.energy ? `${mind.energy.toFixed(0)}/5` : '—'} color={C.lime} />
+            <Stat label={t('log.sleep')} value={mind.sleepHours != null ? `${mind.sleepHours}h` : '—'} color={C.violet} />
+            <Stat label={t('log.mood')} value={mind.mood ? MOODS[Math.round(mind.mood) - 1].emoji : '—'} color={C.text} />
+            <Stat label={t('log.energy')} value={mind.energy ? `${mind.energy.toFixed(0)}/5` : '—'} color={C.lime} />
           </View>
         </Card>
 
@@ -137,11 +140,11 @@ export default function DayScreen() {
         {planResult && (
           <Card style={{ gap: 6, marginTop: Space.sm }} accent={C.violet + '88'}>
             <T size={12} rounded color={C.violet}>
-              PLAN
+              {t('log.plan')}
             </T>
             <View style={styles.between}>
               <T size={14} color={C.text}>
-                Planned meals eaten
+                {t('log.plannedMealsEaten')}
               </T>
               <T size={14} rounded color={planResult.mealsEaten >= planResult.mealsPlanned && planResult.mealsPlanned ? C.lime : C.text}>
                 {planResult.mealsEaten}/{planResult.mealsPlanned}
@@ -150,10 +153,10 @@ export default function DayScreen() {
             {planResult.workout && (
               <View style={styles.between}>
                 <T size={14} color={C.text}>
-                  Planned workout
+                  {t('log.plannedWorkout')}
                 </T>
                 <T size={14} rounded color={planResult.workout === 'done' ? C.lime : planResult.workout === 'rest' ? C.cyan : isToday ? C.textDim : C.textMute}>
-                  {planResult.workout === 'done' ? 'DONE' : planResult.workout === 'rest' ? 'REST DAY' : isToday ? 'TO DO' : 'MISSED'}
+                  {planResult.workout === 'done' ? t('common.done') : planResult.workout === 'rest' ? t('log.restDay') : isToday ? t('log.toDo') : t('common.missed')}
                 </T>
               </View>
             )}
@@ -163,12 +166,12 @@ export default function DayScreen() {
         {/* Quests: today is live (same card as HQ, with Claim); past days show how they ended */}
         {isToday ? (
           <>
-            <SectionTitle>Quests</SectionTitle>
+            <SectionTitle>{t('log.quests')}</SectionTitle>
             <QuestsCard todayKey={key} />
           </>
         ) : (
           <>
-            <SectionTitle right={<T size={12} rounded color={C.textMute}>{quests.filter((q) => q.claimed).length}/3 CLAIMED</T>}>Quests</SectionTitle>
+            <SectionTitle right={<T size={12} rounded color={C.textMute}>{t('log.questsClaimed', { n: quests.filter((q) => q.claimed).length })}</T>}>{t('log.quests')}</SectionTitle>
             <Card style={{ gap: 10 }}>
               {quests.map((q) => (
                 <View key={q.id} style={styles.between}>
@@ -176,7 +179,7 @@ export default function DayScreen() {
                     {q.title}
                   </T>
                   <T size={12} rounded color={q.claimed ? C.lime : q.done ? C.yellow : C.textMute}>
-                    {q.claimed ? 'CLAIMED' : q.done ? 'DONE' : 'MISSED'}
+                    {q.claimed ? t('common.claimed') : q.done ? t('common.done') : t('common.missed')}
                   </T>
                 </View>
               ))}
@@ -185,11 +188,11 @@ export default function DayScreen() {
         )}
 
         {/* Log */}
-        <SectionTitle right={<T size={12} rounded color={C.textMute}>{list.length} ENTRIES</T>}>Log</SectionTitle>
+        <SectionTitle right={<T size={12} rounded color={C.textMute}>{t('common.entries', { count: list.length })}</T>}>{t('log.logTitle')}</SectionTitle>
         {list.length === 0 ? (
           <Card style={{ alignItems: 'center', paddingVertical: Space.lg }}>
             <T size={13} color={C.textDim}>
-              Nothing logged this day.
+              {t('log.nothingLogged')}
             </T>
           </Card>
         ) : (
