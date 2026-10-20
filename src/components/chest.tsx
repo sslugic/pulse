@@ -13,6 +13,7 @@ import { actions, getState } from '@/lib/store';
 
 import { Icon } from './icon';
 import { TokenCoin } from './quests-card';
+import { TagAvatar } from './tag-avatar';
 import { T } from './ui';
 import { ArcadeButton, Comic } from './underground';
 
@@ -122,6 +123,8 @@ function LootRow({ l, i }: { l: Loot; i: number }) {
       return row(<T size={28}>⚡</T>, t('arcade.tokenDoubler'), t('arcade.lootDoublerSub', { wins: l.wins }), C.orange);
     case 'game':
       return row(<Icon name={l.game.icon} size={28} color={l.game.color} />, t('arcade.lootGame', { game: l.game.title }), t('arcade.lootGameSub'), l.game.color);
+    case 'avatar':
+      return row(<TagAvatar size={34} online={false} avatar={l.avatar.id} />, t('arcade.lootAvatar', { name: l.avatar.name }), t('arcade.lootAvatarSub'), l.avatar.band);
   }
 }
 
@@ -138,6 +141,8 @@ function lootLine(l: Loot) {
       return `⚡ ${t('arcade.tokenDoubler')}`;
     case 'game':
       return t('arcade.lootGame', { game: l.game.title });
+    case 'avatar':
+      return t('arcade.lootAvatar', { name: l.avatar.name });
   }
 }
 

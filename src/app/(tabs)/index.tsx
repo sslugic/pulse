@@ -9,8 +9,9 @@ import { Icon } from '@/components/icon';
 import { openCoach } from '@/components/quick-fab';
 import { QuickLog } from '@/components/quick-log';
 import { TodayPlanCard } from '@/components/today-plan-card';
-import { QuestsCard, TokenCount } from '@/components/quests-card';
+import { CreditCount, QuestsCard, TokenCount } from '@/components/quests-card';
 import { TagAvatar } from '@/components/tag-avatar';
+import type { AvatarId } from '@/lib/avatars';
 import { Backdrop, Comic, DripLetter, Sticker } from '@/components/underground';
 import { WellbeingCard } from '@/components/wellbeing-card';
 import { Bar, Card, SectionTitle, T, tap } from '@/components/ui';
@@ -38,6 +39,7 @@ export default function Today() {
   const settings = useStore((s) => s.settings);
   const aiReady = useAiReady();
   const game = useStore((s) => s.game);
+  const credits = useStore((s) => (s.account.userId ? s.account.credits : undefined));
   const claims = game.claims;
 
   const todayKey = useTodayKey();
@@ -105,13 +107,24 @@ export default function Today() {
               </T>
             </Pressable>
           </View>
-          <Pressable onPress={() => router.navigate('/profile')} style={{ alignItems: 'center', gap: 4 }}>
-            <TagAvatar size={60} band={C.orange} letter={(profile.name || 'P')[0]} />
-            <T size={12} rounded color={C.text}>
-              {(profile.name || t('hq.player')).toUpperCase().slice(0, 10)}_{crew.level}
-            </T>
-            <TokenCount value={tokens} size={13} />
-          </Pressable>
+          <View style={{ alignItems: 'center', gap: 4 }}>
+            <Pressable onPress={() => router.navigate('/profile')} style={{ alignItems: 'center', gap: 4 }}>
+              <TagAvatar size={60} band={C.orange} letter={(profile.name || 'P')[0]} avatar={profile.avatar as AvatarId | undefined} />
+              <T size={12} rounded color={C.text}>
+                {(profile.name || t('hq.player')).toUpperCase().slice(0, 10)}_{crew.level}
+              </T>
+            </Pressable>
+            <View style={styles.wallet}>
+              <Pressable onPress={() => router.navigate('/arcade')} accessibilityRole="button" accessibilityLabel={t('hq.tokensA11y', { n: tokens })} hitSlop={4}>
+                <TokenCount value={tokens} size={13} />
+              </Pressable>
+              {credits != null && (
+                <Pressable onPress={() => router.push('/credits')} accessibilityRole="button" accessibilityLabel={t('hq.creditsA11y', { n: credits })} hitSlop={4}>
+                  <CreditCount value={credits} size={13} />
+                </Pressable>
+              )}
+            </View>
+          </View>
         </View>
 
         {/* Streak */}
@@ -408,6 +421,7 @@ function MiniMacro({ label, value, target, color }: { label: string; value: numb
 const styles = StyleSheet.create({
   content: { paddingHorizontal: Space.md, gap: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  wallet: { alignItems: 'center', gap: 3 },
   crew: {
     flexDirection: 'row',
     alignItems: 'center',

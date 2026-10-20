@@ -25,13 +25,25 @@ import { Bar, Card, Chip, SectionTitle, T, tap } from './ui';
 export function FreeCredits() {
   const [ref, setRef] = useState<ReferralStats | null>(null);
   const [trade, setTrade] = useState<TradeStatus | null>(null);
+  // Set when a load fails, so the card offers a retry instead of spinning forever.
+  const [refFailed, setRefFailed] = useState(false);
+  const [tradeFailed, setTradeFailed] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(() => {
-    myReferrals().then(setRef).catch(() => {});
-    xpTradeStatus().then(setTrade).catch(() => {});
+    myReferrals()
+      .then(setRef)
+      .catch(() => setRefFailed(true));
+    xpTradeStatus()
+      .then(setTrade)
+      .catch(() => setTradeFailed(true));
   }, []);
   useEffect(load, [load]);
+  const retry = () => {
+    setRefFailed(false);
+    setTradeFailed(false);
+    load();
+  };
 
   const fail = (e: unknown) => Alert.alert(t('credits.errorTitle'), (e as Error).message);
 
@@ -102,6 +114,8 @@ export function FreeCredits() {
               {ref.canClaim && <Chip label={t('credits.haveCode')} onPress={enterCode} />}
             </View>
           </>
+        ) : refFailed ? (
+          <LoadFailed onRetry={retry} />
         ) : (
           <ActivityIndicator color={C.textMute} />
         )}
@@ -145,11 +159,24 @@ export function FreeCredits() {
               </T>
             )}
           </>
+        ) : tradeFailed ? (
+          <LoadFailed onRetry={retry} />
         ) : (
           <ActivityIndicator color={C.textMute} />
         )}
       </Card>
     </>
+  );
+}
+
+function LoadFailed({ onRetry }: { onRetry: () => void }) {
+  return (
+    <View style={styles.between}>
+      <T size={12} color={C.textMute} style={{ flex: 1 }}>
+        {t('credits.loadFailed')}
+      </T>
+      <Chip label={t('credits.retry')} icon="retry" onPress={onRetry} />
+    </View>
   );
 }
 

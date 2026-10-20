@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FreeCredits } from '@/components/free-credits';
 import { GlassButton, Icon } from '@/components/icon';
-import { TokenCoin } from '@/components/quests-card';
+import { CreditGem } from '@/components/quests-card';
 import { Card, SectionTitle, T, tap } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
@@ -84,13 +84,13 @@ export default function CreditsScreen() {
           <GlassButton icon="close" onPress={() => router.back()} />
         </View>
 
-        <Card style={{ gap: 6, alignItems: 'center' }} accent={C.yellow + 'AA'}>
+        <Card style={{ gap: 6, alignItems: 'center' }} accent={C.cyan + 'AA'}>
           <T size={11} rounded color={C.textDim}>
             {t('credits.balance')}
           </T>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <TokenCoin size={34} />
-            <Comic size={48} color={C.yellow}>
+            <CreditGem size={34} />
+            <Comic size={48} color={C.cyan}>
               {account.credits != null ? account.credits.toLocaleString() : '—'}
             </Comic>
           </View>
@@ -159,7 +159,7 @@ export default function CreditsScreen() {
               {packs.map((o) => (
                 <Card key={o.id} style={{ gap: 8 }}>
                   <View style={styles.row}>
-                    <TokenCoin size={26} />
+                    <CreditGem size={26} />
                     <View style={{ flex: 1 }}>
                       <T size={16} rounded color={C.text}>
                         {o.title}

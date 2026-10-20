@@ -1,4 +1,5 @@
 import { GAMES, MAX_FREEZES, isUnlocked, type BrainId, type ChestTier, type GameDef } from './arcade';
+import { AVATARS, avatarGiftId, isRewardAvatar, type AvatarDef } from './avatars';
 import { t } from './i18n';
 import type { Claim, GameState } from './quests';
 
@@ -20,7 +21,7 @@ export interface Chest {
   at: number;
 }
 
-export type Loot = { kind: 'tokens'; amount: number } | { kind: 'xp'; amount: number } | { kind: 'freeze' } | { kind: 'doubler'; wins: number } | { kind: 'game'; game: GameDef };
+export type Loot = { kind: 'tokens'; amount: number } | { kind: 'xp'; amount: number } | { kind: 'freeze' } | { kind: 'doubler'; wins: number } | { kind: 'game'; game: GameDef } | { kind: 'avatar'; avatar: AvatarDef };
 
 export const CHEST_LOOK: Record<ChestTier, { name: string; body: string; trim: string; glow: string }> = {
   wood: {
@@ -72,9 +73,9 @@ export function rollLoot(tier: ChestTier, game: GameState, rand: () => number = 
   const xp = { wood: 15, silver: 30, gold: 60 }[tier];
   if (rand() < 0.6) loot.push({ kind: 'xp', amount: xp });
   const odds = {
-    wood: { freeze: 0.12, doubler: 0.1, game: 0 },
-    silver: { freeze: 0.25, doubler: 0.2, game: 0.08 },
-    gold: { freeze: 0.4, doubler: 0.3, game: 0.25 },
+    wood: { freeze: 0.12, doubler: 0.1, game: 0, avatar: 0 },
+    silver: { freeze: 0.25, doubler: 0.2, game: 0.08, avatar: 0.1 },
+    gold: { freeze: 0.4, doubler: 0.3, game: 0.25, avatar: 0.3 },
   }[tier];
   if ((game.freezes ?? 0) < MAX_FREEZES && rand() < odds.freeze) loot.push({ kind: 'freeze' });
   if (rand() < odds.doubler) loot.push({ kind: 'doubler', wins: 3 });
@@ -84,6 +85,9 @@ export function rollLoot(tier: ChestTier, game: GameState, rand: () => number = 
       kind: 'game',
       game: locked[Math.floor(rand() * locked.length)],
     });
+  // Reward avatars only come from chests.
+  const avatars = AVATARS.filter((a) => isRewardAvatar(a) && !game.unlocked.includes(avatarGiftId(a.id)));
+  if (avatars.length && rand() < odds.avatar) loot.push({ kind: 'avatar', avatar: avatars[Math.floor(rand() * avatars.length)] });
   return loot;
 }
 
