@@ -192,10 +192,12 @@ export function SprayLabel({ children, color = C.text, right }: { children: stri
 }
 
 /** Graffiti drip letter for the weekly streak row. */
-export function DripLetter({ letter, on, color = C.lime }: { letter: string; on: boolean; color?: string }) {
+/** One weekday in the streak strip: drips paint when the day was logged; today gets a marker even before that. */
+export function DripLetter({ letter, on, color = C.lime, today = false }: { letter: string; on: boolean; color?: string; today?: boolean }) {
   return (
     <View style={{ alignItems: 'center', width: 26 }}>
-      <Text style={[styles.drip, { color: on ? color : '#4A4E52', textShadowColor: on ? color : 'transparent' }]}>{letter}</Text>
+      <Text style={[styles.drip, { color: on ? color : today ? color + 'AA' : '#4A4E52', textShadowColor: on ? color : 'transparent' }]}>{letter}</Text>
+      {today && !on && <View style={{ width: 14, height: 3, borderRadius: 2, marginTop: -2, backgroundColor: color }} />}
       {on && (
         <Svg width={20} height={10} style={{ marginTop: -6 }}>
           <Line x1={6} y1={0} x2={6} y2={7} stroke={color} strokeWidth={2.5} strokeLinecap="round" />
