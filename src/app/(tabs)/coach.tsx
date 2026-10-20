@@ -100,9 +100,9 @@ export default function Coach() {
 
   function guardKey() {
     if (hasKey) return true;
-    Alert.alert('Connect Google AI', 'Add your Gemini API key in Profile to start logging.', [
+    Alert.alert('Sign in to use the Coach', 'Sign in with Apple in Crew → Account. You start with 50 free AI credits.', [
       { text: 'Later', style: 'cancel' },
-      { text: 'Open Profile', onPress: () => router.navigate('/profile') },
+      { text: 'Open Crew', onPress: () => router.navigate('/profile') },
     ]);
     return false;
   }

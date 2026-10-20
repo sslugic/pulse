@@ -82,7 +82,8 @@ async function aiFetch(
     if (bal != null && balanceListener) balanceListener(Number(bal));
     return res;
   }
-  if (!opts.apiKey) throw new AiError('Sign in (Crew → Account) or add a Gemini key to use AI features.', false);
+  // Release builds only ever talk to Pulse cloud, which holds the Gemini key as a server secret.
+  if (!__DEV__ || !opts.apiKey) throw new AiError('Sign in (Crew → Account) to use AI features.', false);
   const q = opts.method === 'streamGenerateContent' ? '?alt=sse' : '';
   return fetchImpl(`${ENDPOINT}/${opts.model}:${opts.method}${q}`, {
     method: 'POST',
@@ -92,8 +93,8 @@ async function aiFetch(
   });
 }
 
-/** True when AI features can run: signed in to Pulse cloud, or a personal Gemini key is set. */
-export const aiAvailable = (apiKey: string) => !!cloudAI() || !!apiKey;
+/** True when AI features can run: signed in to Pulse cloud, or (development builds only) a local Gemini key is set. */
+export const aiAvailable = (apiKey: string) => !!cloudAI() || (__DEV__ && !!apiKey);
 
 const GOALS = ['lose', 'recomp', 'maintain', 'gain'];
 const PACES = ['gentle', 'standard', 'aggressive'];

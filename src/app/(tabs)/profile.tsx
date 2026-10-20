@@ -1,6 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, IconBadge } from '@/components/icon';
@@ -10,7 +9,7 @@ import { Field, inputStyle, ProfileFields } from '@/components/profile-form';
 import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic, MetalPanel } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
-import { COACH_VOICES, DEFAULT_MODEL } from '@/lib/gemini';
+import { COACH_VOICES } from '@/lib/gemini';
 import { GOAL_INFO, macroTargets, PACE_INFO } from '@/lib/nutrition';
 import { actions, useStore } from '@/lib/store';
 
@@ -19,8 +18,6 @@ export default function ProfileScreen() {
   const profile = useStore((s) => s.profile);
   const settings = useStore((s) => s.settings);
   const entries = useStore((s) => s.entries);
-  const [key, setKey] = useState(settings.apiKey);
-  const [model, setModel] = useState(settings.model);
   const t = macroTargets(profile);
 
   return (
@@ -135,7 +132,7 @@ export default function ProfileScreen() {
             ))}
           </View>
           <T size={12} color={C.textMute}>
-            Natural voices come from Google Gemini and use your API key. Offline uses the iPhone’s built-in voice.
+            Natural voices come from Google Gemini and use AI credits. Offline uses the iPhone’s built-in voice.
           </T>
         </Card>
 
@@ -145,50 +142,6 @@ export default function ProfileScreen() {
             <TextInput value={profile.name} onChangeText={(name) => actions.updateProfile({ name })} placeholder="Your first name" placeholderTextColor={C.textMute} style={inputStyle} />
           </Field>
           <ProfileFields p={profile} set={actions.updateProfile} showGoal={false} />
-        </Card>
-
-        <SectionTitle>Own Gemini key (developer)</SectionTitle>
-        <Card style={{ gap: 14 }}>
-          <Field label="Gemini API key">
-            <TextInput
-              value={key}
-              onChangeText={(v) => {
-                setKey(v);
-                actions.setApiKey(v);
-              }}
-              placeholder="AIza…"
-              placeholderTextColor={C.textMute}
-              secureTextEntry
-              textContentType="none"
-              autoComplete="off"
-              importantForAutofill="no"
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={inputStyle}
-            />
-          </Field>
-          <Field label="Model">
-            <TextInput
-              value={model}
-              onChangeText={setModel}
-              onBlur={() => actions.setModel(model)}
-              placeholder={DEFAULT_MODEL}
-              placeholderTextColor={C.textMute}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={inputStyle}
-            />
-          </Field>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <T size={12} color={settings.apiKey ? C.lime : C.orange} weight="700">
-              {settings.apiKey ? '● Connected · key stored in Keychain' : '● Not connected'}
-            </T>
-            <Pressable onPress={() => Linking.openURL('https://aistudio.google.com/apikey')}>
-              <T size={12} color={C.cyan} weight="700">
-                Get a key ↗
-              </T>
-            </Pressable>
-          </View>
         </Card>
 
         <SectionTitle>Data</SectionTitle>

@@ -21,7 +21,9 @@ Pulse app ── Sign in with Apple ──▶ Supabase Auth  (account, 50 free c
   renewals, refunds, sign-up bonus and AI usage are all rows, each with an idempotency key.
 - Prices live in the database (`feature_costs`, `products`), so you can change them without an
   app update.
-- Without Supabase configured, the app still works with a personal Gemini key (development).
+- The Gemini key lives only on the server, as the `GEMINI_API_KEY` Supabase secret. Release builds never
+  accept or store a key; development builds can set `EXPO_PUBLIC_GEMINI_API_KEY` in the gitignored
+  `.env.local` to call Gemini directly.
 
 ## 1. Supabase
 
