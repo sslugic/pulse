@@ -15,7 +15,7 @@ import { dayKey, loggedDays, macroTargets, recommendedTargets } from './nutritio
 import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, MAX_FREEZES, SHOP, gameById, isUnlocked, type BrainId, type ChestTier, type GameId } from './arcade';
 import { BEST_BONUS, CHESTS_PER_DAY, PAID_WINS_PER_DAY, WIN_TOKENS, WIN_XP, chestFor, chestsEarnedToday, dailyChestId, rollLoot, winsToday, type Loot, type RunResult } from './brain';
 import { season, SEASON_BADGE_REWARD, SEASON_REWARD } from './seasons';
-import { isPersonaUnlocked, personaById, personaUnlockId, type PersonaId } from './personas';
+import { isPersonaUnlocked, personaById, personaUnlockId, starterCoachId, type PersonaId } from './personas';
 import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, type GameState } from './quests';
 import { t } from './i18n';
 import { logXp } from './rank';
@@ -44,6 +44,8 @@ interface State {
   planHistory: Record<string, PlanDayResult>;
   /** Latest "+XP" pop-up; not persisted. */
   reward: Reward | null;
+  /** Step of the guided app tour that's showing, or null; not persisted. */
+  tourStep: number | null;
 }
 
 export interface Reward {
@@ -84,6 +86,7 @@ let state: State = {
   planHistory: {},
   account: { costs: {} },
   reward: null,
+  tourStep: null,
 };
 
 const listeners = new Set<() => void>();
@@ -411,8 +414,15 @@ onSessionChange((s) => {
 onCreditBalance((credits) => set({ account: { ...state.account, credits } }));
 
 export const actions = {
-  completeOnboarding(profile: Partial<Profile>) {
-    set((s) => ({ onboarded: true, profile: { ...s.profile, ...profile } }));
+  completeOnboarding(profile: Partial<Profile>, opts: { tour?: boolean } = {}) {
+    set((s) => ({ onboarded: true, profile: { ...s.profile, ...profile }, tourStep: opts.tour ? 0 : null }));
+  },
+  /** Starts (or replays) the guided tour of the app. */
+  startTour() {
+    set({ tourStep: 0 });
+  },
+  setTourStep(step: number | null) {
+    set({ tourStep: step });
   },
   updateProfile(patch: Partial<Profile>) {
     set((s) => ({ profile: { ...s.profile, ...patch } }));
@@ -450,6 +460,19 @@ export const actions = {
     if (state.settings.coachVoice !== 'device') actions.setCoachVoice(p.voice);
     actions.speakMessage('voice-preview', p.sample);
     return true;
+  },
+  /** During setup a new player gets one coach free; picking again swaps the free one. */
+  pickStarterCoach(id: PersonaId) {
+    const p = personaById(id);
+    set((s) => ({
+      game: {
+        ...s.game,
+        unlocked: [...s.game.unlocked.filter((u) => !u.startsWith('gift:persona:')), ...(p.price ? [starterCoachId(id)] : [])],
+      },
+    }));
+    actions.updateProfile({ persona: id });
+    if (state.settings.coachVoice !== 'device') actions.setCoachVoice(p.voice);
+    actions.speakMessage('voice-preview', p.sample);
   },
   /** Turns the evening streak reminder on at `hour`, or off with undefined. Asks for permission first. */
   async setReminder(hour: number | undefined) {

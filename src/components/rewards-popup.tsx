@@ -27,6 +27,7 @@ type Pending = { key: string; tier: ChestTier; claim?: () => string | null; ches
 
 export function RewardsPopup() {
   const chests = useStore((s) => s.game.chests);
+  const touring = useStore((s) => s.tourStep != null);
   const claims = useStore((s) => s.game.claims);
   const challenges = useSquad((s) => s.challenges);
   const lastWeek = useSquad((s) => s.lastWeek);
@@ -58,7 +59,9 @@ export function RewardsPopup() {
   // iOS can't stack the two.
   const latest = useRef(pending);
   const showing = useRef(false);
+  const touringRef = useRef(false);
   useEffect(() => {
+    touringRef.current = touring;
     latest.current = pending;
     showing.current = visible || queue.length > 0;
   });
@@ -67,7 +70,7 @@ export function RewardsPopup() {
     const timer = setTimeout(
       () => {
         const now = latest.current;
-        if (!now.length || showing.current) return;
+        if (!now.length || showing.current || touringRef.current) return;
         AsyncStorage.getItem(SEEN_KEY)
           .then((raw) => {
             const seen = raw ? (JSON.parse(raw) as { at: number; keys: string[] }) : { at: 0, keys: [] };
