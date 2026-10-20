@@ -200,7 +200,7 @@ async function load() {
       db.from('friendships').select('user_a, user_b'),
       db.from('weekly_scores').select('user_id, week, xp').in('week', [week, prev]),
       db.from('crews').select('id, name, invite_code'),
-      db.from('challenges').select('id, template, target, starts, ends, created_by, opponent, declined_at, hard').gte('ends', dayKey(Date.now() - 21 * 864e5)),
+      db.from('challenges').select('*').gte('ends', dayKey(Date.now() - 21 * 864e5)),
       db.from('challenge_progress').select('challenge_id, user_id, progress, completed_at'),
       db.from('nudges').select('id, sender, recipient, day, created_at, seen_at').gte('created_at', new Date(Date.now() - 7 * 864e5).toISOString()).order('created_at', { ascending: false }),
     ]);
@@ -244,7 +244,7 @@ async function load() {
       progressBy.set(p.challenge_id, m);
     }
     const challengeList: Challenge[] = ((challenges.data ?? []) as {
-      id: string; template: ChallengeTemplate; target: number; starts: string; ends: string; created_by: string; opponent: string | null; declined_at: string | null; hard: boolean;
+      id: string; template: ChallengeTemplate; target: number; starts: string; ends: string; created_by: string; opponent: string | null; declined_at: string | null; hard?: boolean;
     }[]).map((c) => ({
       id: c.id,
       template: c.template,
@@ -497,7 +497,15 @@ export function challengeProgress(
 }
 
 export async function createChallenge(template: ChallengeTemplate, days: ChallengeDays, opponent: string | null, hard = false) {
-  await rpc('create_challenge', { p_template: template, p_target: challengeTarget(template, days, hard), p_starts: todayKey(), p_days: days, p_opponent: opponent, p_hard: hard });
+  await rpc('create_challenge', {
+    p_template: template,
+    p_target: challengeTarget(template, days, hard),
+    p_starts: todayKey(),
+    p_days: days,
+    p_opponent: opponent,
+    // Left out unless set, so a server without hard mode still takes ordinary challenges.
+    ...(hard ? { p_hard: true } : {}),
+  });
   await reportChallengeProgress().catch(() => {});
   await refreshSquad();
 }

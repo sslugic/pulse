@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Modal, Pressable, StyleSheet, View } from 'react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 
@@ -53,24 +53,39 @@ export function RewardsPopup() {
     return () => sub.remove();
   }, []);
 
-  // Decide whether to show: something new since last time, and not within the cooldown.
+  // Only decide at launch (once Squad has had a moment to load) and when the app comes back, never
+  // in reaction to a chest appearing: that happens while another chest screen is already open, and
+  // iOS can't stack the two.
+  const latest = useRef(pending);
+  const showing = useRef(false);
   useEffect(() => {
-    if (!pending.length || visible || queue.length) return;
+    latest.current = pending;
+    showing.current = visible || queue.length > 0;
+  });
+  useEffect(() => {
     let cancelled = false;
-    AsyncStorage.getItem(SEEN_KEY)
-      .then((raw) => {
-        const seen = raw ? (JSON.parse(raw) as { at: number; keys: string[] }) : { at: 0, keys: [] };
-        const fresh = pending.some((p) => !seen.keys.includes(p.key));
-        if (!cancelled && fresh && Date.now() - seen.at > COOLDOWN_MS) {
-          setVisible(true);
-          playSfx('reward');
-        }
-      })
-      .catch(() => {});
+    const timer = setTimeout(
+      () => {
+        const now = latest.current;
+        if (!now.length || showing.current) return;
+        AsyncStorage.getItem(SEEN_KEY)
+          .then((raw) => {
+            const seen = raw ? (JSON.parse(raw) as { at: number; keys: string[] }) : { at: 0, keys: [] };
+            const fresh = now.some((p) => !seen.keys.includes(p.key));
+            if (!cancelled && !showing.current && fresh && Date.now() - seen.at > COOLDOWN_MS) {
+              setVisible(true);
+              playSfx('reward');
+            }
+          })
+          .catch(() => {});
+      },
+      foreground === 0 ? 2500 : 800,
+    );
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, [pending, foreground]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [foreground]);
 
   const remember = () =>
     AsyncStorage.setItem(SEEN_KEY, JSON.stringify({ at: Date.now(), keys: pending.map((p) => p.key) })).catch(() => {});

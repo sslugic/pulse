@@ -672,7 +672,8 @@ export const actions = {
   grantChest(tier: ChestTier, claimId: string, from: 'challenge' | 'league') {
     if (state.game.claims.some((c) => c.questId === claimId)) return null;
     const now = Date.now();
-    const id = `c${now}`;
+    // Several can be granted in the same millisecond (the rewards pop-up claims them together).
+    const id = `c${now}${uid()}`;
     set((s) => ({
       game: {
         ...s.game,
