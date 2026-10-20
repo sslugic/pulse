@@ -20,6 +20,7 @@ import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, typ
 import { t } from './i18n';
 import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
+import { trackById, trackUnlockId, type TrackId } from './music';
 import { configureSound, playSfx } from './sound';
 import { speak, speakStream, stopSpeaking } from './voice';
 
@@ -94,6 +95,11 @@ function set(patch: Partial<State> | ((s: State) => Partial<State>)) {
   schedulePersist();
 }
 
+function applySound() {
+  const { settings } = state;
+  configureSound({ music: settings.music !== false, sfx: settings.sfx !== false, track: settings.musicTrack as TrackId | undefined, volume: settings.musicVolume });
+}
+
 let persistTimer: ReturnType<typeof setTimeout> | undefined;
 function schedulePersist() {
   if (!state.ready) return;
@@ -114,6 +120,8 @@ function schedulePersist() {
       autoPlans: settings.autoPlans,
       music: settings.music,
       sfx: settings.sfx,
+      musicTrack: settings.musicTrack,
+      musicVolume: settings.musicVolume,
       game,
       mealPlan,
       workoutPlan,
@@ -162,6 +170,8 @@ export async function hydrate() {
         autoPlans: data.autoPlans,
         music: data.music,
         sfx: data.sfx,
+        musicTrack: data.musicTrack,
+        musicVolume: data.musicVolume,
       },
       // Plans from before per-day dates are dropped.
       mealPlan: data.mealPlan?.days?.[0]?.day ? data.mealPlan : undefined,
@@ -184,7 +194,7 @@ export async function hydrate() {
     // corrupt storage: start fresh rather than crash
   }
   state = { ...state, ready: true };
-  configureSound({ music: state.settings.music !== false, sfx: state.settings.sfx !== false });
+  applySound();
   emit();
 }
 
@@ -410,9 +420,18 @@ export const actions = {
   setModel(model: string) {
     set((s) => ({ settings: { ...s.settings, model: model.trim() || DEFAULT_MODEL } }));
   },
-  setSound(patch: { music?: boolean; sfx?: boolean }) {
+  setSound(patch: { music?: boolean; sfx?: boolean; musicTrack?: TrackId; musicVolume?: number }) {
     set((s) => ({ settings: { ...s.settings, ...patch } }));
-    configureSound({ music: state.settings.music !== false, sfx: state.settings.sfx !== false });
+    applySound();
+  },
+  /** Unlocks a jukebox track early with XP. Returns false if it isn't affordable. */
+  unlockTrack(id: TrackId, spendableXp: number) {
+    const track = trackById(id);
+    if (!track.xp || spendableXp < track.xp || state.game.unlocked.includes(trackUnlockId(id))) return false;
+    set((s) => ({ game: { ...s.game, unlocked: [...s.game.unlocked, trackUnlockId(id)], xpSpent: (s.game.xpSpent ?? 0) + track.xp } }));
+    celebrate();
+    playSfx('fanfare');
+    return true;
   },
   setVoiceReplies(voiceReplies: boolean) {
     set((s) => ({ settings: { ...s.settings, voiceReplies } }));

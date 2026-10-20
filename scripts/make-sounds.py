@@ -1,8 +1,8 @@
-"""Synthesizes Pulse's arcade music loop and sound effects (8-bit chiptune), so the app ships its own
-audio with no licensing to worry about.
+"""Synthesizes Pulse's sound effects (8-bit chiptune), so the app ships its own audio with no licensing
+to worry about. The music loops are made by scripts/make-music.py.
 
 Run: python3 scripts/make-sounds.py   (needs numpy; macOS afconvert turns the WAVs into .m4a)
-Writes assets/audio/arcade-loop.wav and {chest,reward,fanfare,nudge}.m4a
+Writes assets/audio/{chest,reward,fanfare,nudge}.m4a
 """
 
 import os
@@ -89,75 +89,6 @@ def write(name: str, data: np.ndarray, peak=0.85, lossless=False):
     print('wrote', os.path.relpath(dst))
 
 
-# ---------- Music: a 16-bar chiptune loop at 132 BPM ----------
-
-def music():
-    bpm = 132
-    beat = 60 / bpm
-    step = beat / 4  # sixteenth notes
-    bars = 16
-    total = int(bars * 4 * beat * SR)
-    out = np.zeros(total)
-    s = lambda k: int(k * step * SR)  # sixteenth index -> sample
-
-    # Am - F - C - G, twice, then a lifted variation (Dm - F - C - E).
-    prog = ['A', 'F', 'C', 'G'] * 2 + ['A', 'F', 'C', 'G', 'D', 'F', 'C', 'E']
-    chords = {
-        'A': ['A3', 'C4', 'E4'], 'F': ['F3', 'A3', 'C4'], 'C': ['C4', 'E4', 'G4'],
-        'G': ['G3', 'B3', 'D4'], 'D': ['D4', 'F4', 'A4'], 'E': ['E3', 'G#3', 'B3'],
-    }
-    bass = {'A': 'A2', 'F': 'F2', 'C': 'C3', 'G': 'G2', 'D': 'D3', 'E': 'E2'}
-
-    for bar, ch in enumerate(prog):
-        base = bar * 16
-        # Bass: driving eighths on the root, octave jump on the off-beat.
-        for i in range(8):
-            f = freq(bass[ch]) * (2 if i % 2 else 1)
-            n = s(2) - 200
-            place(out, s(base + i * 2), 0.32 * triangle(f, n) * env(n, decay=0.05, sustain=0.7))
-        # Arpeggio: fast 12.5% square, up and down the chord.
-        notes = chords[ch] + [chords[ch][1]]
-        for i in range(16):
-            f = freq(notes[i % 4]) * 2
-            n = s(1) - 100
-            place(out, s(base + i), 0.09 * square(f, n, 0.125) * env(n, decay=0.04, sustain=0.3))
-        # Drums: kick on 1 and 3, snare on 2 and 4, closed hat on every eighth.
-        for b in range(4):
-            k = s(base + b * 4)
-            if b % 2 == 0:
-                n = int(0.12 * SR)
-                t = np.arange(n) / SR
-                kick = np.sin(2 * np.pi * (150 * np.exp(-t * 30) + 45) * t) * np.exp(-t * 18)
-                place(out, k, 0.5 * kick)
-            else:
-                n = int(0.1 * SR)
-                place(out, k, 0.16 * noise(n, bar * 4 + b) * np.exp(-np.arange(n) / SR * 30))
-            for h in range(2):
-                n = int(0.03 * SR)
-                place(out, k + s(h * 2), 0.05 * noise(n, 99 + bar * 8 + b * 2 + h) * np.exp(-np.arange(n) / SR * 120))
-
-    # Lead melody: a hooky phrase over bars 9-16, square 50%.
-    lead = [
-        # (sixteenth offset within bar 8.., length in sixteenths, note)
-        (0, 2, 'E5'), (2, 2, 'A5'), (4, 2, 'C6'), (6, 4, 'B5'), (10, 2, 'A5'), (12, 4, 'G5'),
-        (16, 2, 'F5'), (18, 2, 'A5'), (20, 2, 'C6'), (22, 4, 'A5'), (26, 2, 'G5'), (28, 4, 'F5'),
-        (32, 2, 'E5'), (34, 2, 'G5'), (36, 2, 'C6'), (38, 4, 'E6'), (42, 2, 'D6'), (44, 4, 'C6'),
-        (48, 2, 'D5'), (50, 2, 'G5'), (52, 2, 'B5'), (54, 6, 'D6'), (60, 4, 'B5'),
-        (64, 2, 'D5'), (66, 2, 'F5'), (68, 2, 'A5'), (70, 4, 'D6'), (74, 2, 'C6'), (76, 4, 'A5'),
-        (80, 2, 'F5'), (82, 2, 'A5'), (84, 2, 'C6'), (86, 4, 'F6'), (90, 2, 'E6'), (92, 4, 'C6'),
-        (96, 2, 'E5'), (98, 2, 'G5'), (100, 2, 'C6'), (102, 4, 'G5'), (106, 2, 'E5'), (108, 4, 'C5'),
-        (112, 2, 'E5'), (114, 2, 'G#5'), (116, 2, 'B5'), (118, 6, 'E6'), (124, 4, 'B5'),
-    ]
-    for off, length, note in lead:
-        n = s(length) - 300
-        sig = square(freq(note), n, 0.5) * env(n, decay=0.1, sustain=0.55, release=0.04)
-        place(out, s(8 * 16 + off), 0.11 * sig)
-
-    # Notes ringing past the last bar wrap to the start, so the loop is seamless.
-    out = out[:total]
-    write('arcade-loop', out, peak=0.7, lossless=True)
-
-
 # ---------- Sound effects ----------
 
 def seq(notes, dur, duty=0.25, vol=0.6, gap=0.0):
@@ -223,7 +154,6 @@ def nudge():
 
 
 if __name__ == '__main__':
-    music()
     chest()
     reward()
     fanfare()

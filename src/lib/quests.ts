@@ -149,6 +149,8 @@ export interface GameState {
   bests?: Partial<Record<BrainId, number>>;
   /** Last day any arcade game was finished; unlocks that day's free chest. */
   playedDay?: string;
+  /** XP spent on unlocks (jukebox tracks). Doesn't lower the rank; it comes out of spendable XP. */
+  xpSpent?: number;
 }
 
 // Clamped so a later price change can never leave a negative balance.
