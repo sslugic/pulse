@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { FreeCredits } from '@/components/free-credits';
 import { GlassButton, Icon } from '@/components/icon';
 import { TokenCoin } from '@/components/quests-card';
 import { Card, SectionTitle, T, tap } from '@/components/ui';
@@ -100,6 +101,8 @@ export default function CreditsScreen() {
             </T>
           )}
         </Card>
+
+        {account.userId && <FreeCredits />}
 
         {!account.userId ? (
           <Card style={{ gap: 10 }}>

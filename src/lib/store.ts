@@ -20,6 +20,7 @@ import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, typ
 import { t } from './i18n';
 import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
+import { configureSound, playSfx } from './sound';
 import { speak, speakStream, stopSpeaking } from './voice';
 
 interface State {
@@ -111,6 +112,8 @@ function schedulePersist() {
       reminderHour: settings.reminderHour,
       health: settings.health,
       autoPlans: settings.autoPlans,
+      music: settings.music,
+      sfx: settings.sfx,
       game,
       mealPlan,
       workoutPlan,
@@ -157,6 +160,8 @@ export async function hydrate() {
         reminderHour: data.reminderHour,
         health: data.health,
         autoPlans: data.autoPlans,
+        music: data.music,
+        sfx: data.sfx,
       },
       // Plans from before per-day dates are dropped.
       mealPlan: data.mealPlan?.days?.[0]?.day ? data.mealPlan : undefined,
@@ -179,6 +184,7 @@ export async function hydrate() {
     // corrupt storage: start fresh rather than crash
   }
   state = { ...state, ready: true };
+  configureSound({ music: state.settings.music !== false, sfx: state.settings.sfx !== false });
   emit();
 }
 
@@ -403,6 +409,10 @@ export const actions = {
   },
   setModel(model: string) {
     set((s) => ({ settings: { ...s.settings, model: model.trim() || DEFAULT_MODEL } }));
+  },
+  setSound(patch: { music?: boolean; sfx?: boolean }) {
+    set((s) => ({ settings: { ...s.settings, ...patch } }));
+    configureSound({ music: state.settings.music !== false, sfx: state.settings.sfx !== false });
   },
   setVoiceReplies(voiceReplies: boolean) {
     set((s) => ({ settings: { ...s.settings, voiceReplies } }));
@@ -635,6 +645,7 @@ export const actions = {
       },
     }));
     celebrate();
+    playSfx('chest');
     return loot;
   },
   /** Buys a Token Doubler: the next few Brain Gym wins pay double tokens. */
@@ -670,6 +681,7 @@ export const actions = {
       },
     }));
     celebrate();
+    playSfx('fanfare');
     return id;
   },
   /** Claims a finished season challenge; the last one also pays the season badge. */

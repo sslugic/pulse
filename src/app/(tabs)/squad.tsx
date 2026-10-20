@@ -467,7 +467,7 @@ function Challenges() {
     const o = outcome(c);
     if (o === 'running') return true;
     if (o === 'off') return false;
-    const claimable = !!challengeChest(o) && !claims.some((x) => x.questId === challengeClaimId(c.id));
+    const claimable = !!challengeChest(o, c.hard) && !claims.some((x) => x.questId === challengeClaimId(c.id));
     return claimable || c.ends >= recent;
   });
   return (
@@ -505,7 +505,7 @@ function ChallengeCard({ c, claimed, onChest }: { c: Challenge; claimed: boolean
   const def = CHALLENGES[c.template];
   const o = outcome(c, uid);
   const other = c.opponent ? (c.createdBy === uid ? c.opponent : c.createdBy) : null;
-  const tier = challengeChest(o);
+  const tier = challengeChest(o, c.hard);
   const today = dayKey(new Date());
   const daysLeft = Math.max(0, Math.round((new Date(c.ends + 'T12:00').getTime() - new Date(today + 'T12:00').getTime()) / 864e5) + 1);
   const title = challengeTitle(c.template, c.target, challengeLength(c));
@@ -525,6 +525,7 @@ function ChallengeCard({ c, claimed, onChest }: { c: Challenge; claimed: boolean
         <T size={14} rounded color={C.text} style={{ flex: 1 }}>
           {title}
         </T>
+        {c.hard && <Sticker text={t('squad.hard')} color={C.danger} rotate={4} size={11} />}
         <OutcomeBadge o={o} daysLeft={daysLeft} />
       </View>
       <ProgressLine label={t('squad.youShort')} value={c.progress[uid]?.progress ?? 0} target={c.target} color={def.color} />

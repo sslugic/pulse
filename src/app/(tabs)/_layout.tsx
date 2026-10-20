@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router/tabs';
 import { View } from 'react-native';
 
 import { QuickFab } from '@/components/quick-fab';
+import { RewardsPopup } from '@/components/rewards-popup';
 import { StreetTabBar } from '@/components/street-tab-bar';
 import { C } from '@/constants/theme';
 
@@ -18,6 +19,7 @@ export default function TabsLayout() {
         <Tabs.Screen name="profile" />
       </Tabs>
       <QuickFab />
+      <RewardsPopup />
     </View>
   );
 }

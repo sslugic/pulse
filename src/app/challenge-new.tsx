@@ -10,7 +10,7 @@ import { Card, Chip, SectionTitle, T, tap } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { t } from '@/lib/i18n';
-import { CHALLENGE_DAYS, CHALLENGES, challengeTarget, createChallenge, useSquad, type ChallengeDays, type ChallengeTemplate } from '@/lib/social';
+import { CHALLENGE_DAYS, CHALLENGE_GROUPS, CHALLENGES, challengeTarget, createChallenge, useSquad, type ChallengeDays, type ChallengeTemplate } from '@/lib/social';
 
 /** Starts a challenge: pick what, how long, and solo or against a friend. */
 export default function NewChallenge() {
@@ -21,15 +21,16 @@ export default function NewChallenge() {
   const [template, setTemplate] = useState<ChallengeTemplate>('logging');
   const [days, setDays] = useState<ChallengeDays>(7);
   const [opponent, setOpponent] = useState<string | null>(params.opponent ?? null);
+  const [hard, setHard] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const target = challengeTarget(template, days);
+  const target = challengeTarget(template, days, hard);
   const preview = challengeTitle(template, target, days);
 
   const start = async () => {
     setBusy(true);
     try {
-      await createChallenge(template, days, opponent);
+      await createChallenge(template, days, opponent, hard);
       router.back();
     } catch (e) {
       squadFail(e);
@@ -52,27 +53,37 @@ export default function NewChallenge() {
           <GlassButton icon="close" onPress={() => router.back()} />
         </View>
 
-        <SectionTitle>{t('squad.pickGoal')}</SectionTitle>
-        {(Object.keys(CHALLENGES) as ChallengeTemplate[]).map((k) => {
-          const def = CHALLENGES[k];
-          const on = template === k;
-          return (
-            <Pressable key={k} onPress={() => (tap(), setTemplate(k))} accessibilityRole="radio" accessibilityState={{ selected: on }}>
-              <Card accent={on ? def.color : undefined} style={styles.row}>
-                <Icon name={def.icon} size={22} color={def.color} />
-                <View style={{ flex: 1 }}>
-                  <T size={14} rounded color={C.text}>
-                    {t(`squad.goal_${k}`)}
-                  </T>
-                  <T size={12} color={C.textDim}>
-                    {t(`squad.goal_${k}_blurb`)}
-                  </T>
-                </View>
-                {on && <Icon name="check" size={18} color={def.color} weight="bold" />}
-              </Card>
-            </Pressable>
-          );
-        })}
+        {CHALLENGE_GROUPS.map((g) => (
+          <View key={g} style={{ gap: 8 }}>
+            <SectionTitle>{t(`squad.group_${g}`)}</SectionTitle>
+            <View style={styles.grid}>
+              {(Object.keys(CHALLENGES) as ChallengeTemplate[])
+                .filter((k) => CHALLENGES[k].group === g)
+                .map((k) => {
+                  const def = CHALLENGES[k];
+                  const on = template === k;
+                  return (
+                    <Pressable
+                      key={k}
+                      onPress={() => (tap(), setTemplate(k))}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: on }}
+                      style={[styles.tile, on && { borderColor: def.color, backgroundColor: def.color + '22' }]}>
+                      <View style={styles.row}>
+                        <Icon name={def.icon} size={18} color={def.color} />
+                        <T size={13} rounded color={C.text} style={{ flex: 1 }} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>
+                          {t(`squad.goal_${k}`)}
+                        </T>
+                      </View>
+                      <T size={11} color={C.textDim} numberOfLines={2}>
+                        {t(`squad.goal_${k}_blurb`)}
+                      </T>
+                    </Pressable>
+                  );
+                })}
+            </View>
+          </View>
+        ))}
 
         <SectionTitle>{t('squad.howLong')}</SectionTitle>
         <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -80,6 +91,21 @@ export default function NewChallenge() {
             <Chip key={d} label={t('squad.nDays', { count: d })} active={days === d} onPress={() => setDays(d)} />
           ))}
         </View>
+
+        <Pressable onPress={() => (tap(), setHard((h) => !h))} style={[styles.hard, hard && { borderColor: C.danger, backgroundColor: '#FF41411F' }]} accessibilityRole="switch" accessibilityState={{ checked: hard }}>
+          <T size={20}>{hard ? '🔥' : '💪'}</T>
+          <View style={{ flex: 1 }}>
+            <T size={14} rounded color={hard ? C.danger : C.text}>
+              {t('squad.hardMode')}
+            </T>
+            <T size={11} color={C.textDim}>
+              {t('squad.hardModeBlurb')}
+            </T>
+          </View>
+          <View style={[styles.switch, hard && { backgroundColor: C.danger, alignItems: 'flex-end' }]}>
+            <View style={styles.knob} />
+          </View>
+        </Pressable>
 
         <SectionTitle>{t('squad.whoAgainst')}</SectionTitle>
         <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
@@ -104,9 +130,9 @@ export default function NewChallenge() {
             {preview}
           </T>
           <View style={styles.row}>
-            <ChestArt tier={opponent ? 'gold' : 'silver'} size={44} />
+            <ChestArt tier={opponent || hard ? 'gold' : 'silver'} size={44} />
             <T size={12} color={C.textDim} style={{ flex: 1, lineHeight: 17 }}>
-              {opponent ? t('squad.duelPrize') : t('squad.soloPrize')}
+              {opponent ? (hard ? t('squad.duelPrizeHard') : t('squad.duelPrize')) : hard ? t('squad.soloPrizeHard') : t('squad.soloPrize')}
             </T>
           </View>
         </Card>
@@ -120,6 +146,11 @@ export default function NewChallenge() {
 const styles = StyleSheet.create({
   content: { padding: Space.md, paddingTop: Space.lg, gap: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tile: { width: '48.6%', gap: 4, padding: 10, borderRadius: 12, borderWidth: 2, borderColor: C.ink, backgroundColor: C.surface },
+  hard: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, borderWidth: 2, borderColor: C.ink, backgroundColor: C.surface, marginTop: 4 },
+  switch: { width: 46, height: 28, borderRadius: 14, backgroundColor: C.surfaceHi, padding: 3, alignItems: 'flex-start', borderWidth: 2, borderColor: C.ink },
+  knob: { width: 18, height: 18, borderRadius: 9, backgroundColor: C.text },
   friend: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: C.surface, borderWidth: 2, borderColor: C.ink },
 });

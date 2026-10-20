@@ -137,6 +137,17 @@ export default function ProfileScreen() {
           </T>
         </Card>
 
+        <SectionTitle>{t('crew.sectionSound')}</SectionTitle>
+        <Card style={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            <Chip label={t('crew.music')} icon="music" active={settings.music !== false} onPress={() => actions.setSound({ music: settings.music === false })} />
+            <Chip label={t('crew.sfx')} icon="speaker" active={settings.sfx !== false} onPress={() => actions.setSound({ sfx: settings.sfx === false })} />
+          </View>
+          <T size={12} color={C.textMute}>
+            {t('crew.soundNote')}
+          </T>
+        </Card>
+
         <SectionTitle>{t('crew.sectionDetails')}</SectionTitle>
         <Card style={{ gap: 18 }}>
           <Field label={t('crew.fieldName')}>

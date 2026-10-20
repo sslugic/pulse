@@ -5,6 +5,7 @@ import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
 import { synthesizeSpeech, aiAvailable } from './gemini';
+import { duckMusic } from './sound';
 
 // expo-speech throws on import when its native code isn't in the build (an app binary built
 // before it was added), which would crash the app at launch. Load it only when it's there.
@@ -17,6 +18,7 @@ let speakingId: string | null = null;
 const listeners = new Set<() => void>();
 const setSpeaking = (id: string | null) => {
   speakingId = id;
+  duckMusic('voice', !!id);
   listeners.forEach((l) => l());
 };
 
