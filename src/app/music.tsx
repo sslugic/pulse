@@ -26,7 +26,7 @@ export default function MusicScreen() {
   const game = useStore((s) => s.game);
   const level = useMemo(() => crewRank(entries, questXp(game.claims), game.frozenDays).level, [entries, game.claims, game.frozenDays]);
   const current = (settings.musicTrack as TrackId | undefined) ?? DEFAULT_TRACK;
-  const musicOn = settings.music !== false;
+  const musicOn = settings.music === true;
   const volume = settings.musicVolume ?? 0.5;
   const [xp, setXp] = useState<number | null>(null);
   const [previewing, setPreviewing] = useState<TrackId | null>(null);

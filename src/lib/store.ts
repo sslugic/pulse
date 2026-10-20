@@ -97,7 +97,7 @@ function set(patch: Partial<State> | ((s: State) => Partial<State>)) {
 
 function applySound() {
   const { settings } = state;
-  configureSound({ music: settings.music !== false, sfx: settings.sfx !== false, track: settings.musicTrack as TrackId | undefined, volume: settings.musicVolume });
+  configureSound({ music: settings.music === true, sfx: settings.sfx !== false, track: settings.musicTrack as TrackId | undefined, volume: settings.musicVolume });
 }
 
 let persistTimer: ReturnType<typeof setTimeout> | undefined;
