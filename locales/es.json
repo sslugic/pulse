@@ -4,6 +4,7 @@
     "NSCameraUsageDescription": "Pulse usa la cámara para fotografiar comidas y entrenos y que la IA los registre, y para escanear códigos de barras.",
     "NSPhotoLibraryUsageDescription": "Pulse lee las fotos que eliges para registrar comidas y entrenos.",
     "NSMicrophoneUsageDescription": "Pulse usa el micrófono para que registres por voz.",
-    "NSHealthShareUsageDescription": "Pulse lee tus pasos, entrenos, sueño y peso para que se registren solos y ganes XP."
+    "NSHealthShareUsageDescription": "Pulse lee tus pasos, entrenos, sueño y peso para que se registren solos y ganes XP.",
+    "NSHealthUpdateUsageDescription": "Pulse solo lee tus datos de Salud para registrar entrenos, sueño y peso. Nunca escribe en Apple Health."
   }
 }

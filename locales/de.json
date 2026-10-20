@@ -4,6 +4,7 @@
     "NSCameraUsageDescription": "Pulse nutzt die Kamera, um Mahlzeiten und Workouts zu fotografieren, damit die KI sie erfasst, und um Barcodes zu scannen.",
     "NSPhotoLibraryUsageDescription": "Pulse liest die Fotos, die du auswählst, um Mahlzeiten und Workouts zu erfassen.",
     "NSMicrophoneUsageDescription": "Pulse nutzt das Mikrofon, damit du per Sprache erfassen kannst.",
-    "NSHealthShareUsageDescription": "Pulse liest deine Schritte, Workouts, deinen Schlaf und dein Gewicht, damit sie sich selbst eintragen und XP bringen."
+    "NSHealthShareUsageDescription": "Pulse liest deine Schritte, Workouts, deinen Schlaf und dein Gewicht, damit sie sich selbst eintragen und XP bringen.",
+    "NSHealthUpdateUsageDescription": "Pulse liest deine Health-Daten nur, um Workouts, Schlaf und Gewicht zu erfassen. Es schreibt nie in Apple Health."
   }
 }
