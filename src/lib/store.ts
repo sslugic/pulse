@@ -236,6 +236,23 @@ function cleanEntry<T extends Partial<Entry>>(e: T): T {
 
 const hasNutrition = (e: Partial<Entry>) => !!e.nutrition && e.nutrition.calories > 0;
 
+// Safety net: models sometimes put the burn in `nutrition` (dropped for exercise) or only in the reply,
+// which logged workouts as 0 kcal. Recover it from there, else estimate it with METs like the prompt asks.
+const MET = { low: 3.5, moderate: 6, high: 9 } as const;
+const BURN_IN_TEXT = /burn\w*\D{0,25}?(\d{2,4})\s*(?:k?cal|calories)|(\d{2,4})\s*(?:k?cal|calories)\s*burn/i;
+
+function fillExercise<T extends Partial<Entry>>(e: T, reply: string, onlyWorkout: boolean, weightKg: number): T {
+  if (e.kind !== 'exercise' || (e.caloriesBurned ?? 0) > 0) return e;
+  const fromNutrition = e.nutrition?.calories;
+  const m = (e.note ?? '').match(BURN_IN_TEXT) ?? (onlyWorkout ? reply.match(BURN_IN_TEXT) : null);
+  const fromText = m ? Number(m[1] ?? m[2]) : NaN;
+  const minutes = e.durationMin ?? 0;
+  const estimate = minutes > 0 ? (MET[e.intensity ?? 'moderate'] * weightKg * minutes) / 60 : 0;
+  const kcal = fromNutrition && fromNutrition > 0 ? fromNutrition : fromText > 0 ? fromText : estimate;
+  if (!(kcal > 0)) console.warn('[coach] exercise logged without calories', e.title);
+  return kcal > 0 ? { ...e, caloriesBurned: Math.round(kcal) } : e;
+}
+
 function fillJournal<T extends Partial<Entry>>(e: T): T {
   if (e.kind !== 'journal' || e.sleepHours != null) return e;
   const text = `${e.summary ?? ''} ${(e.tags ?? []).join(' ')}`.toLowerCase().replace(/(\d+)\s+and\s+a\s+half/g, '$1.5');
@@ -1007,7 +1024,12 @@ export const actions = {
       result.removeEntryIds.forEach(actions.removeEntry);
       if (result.goalUpdate) actions.setGoal(result.goalUpdate.goal, result.goalUpdate.pace, result.goalUpdate.note);
       const source: Entry['source'] = input.audio ? 'voice' : input.image ? 'photo' : 'text';
-      const added = result.entries.map(cleanEntry).map(fillJournal).map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
+      const onlyWorkout = result.entries.filter((e) => e.kind === 'exercise').length === 1;
+      const added = result.entries
+        .map((e) => fillExercise(e, result.reply, onlyWorkout, state.profile.weightKg))
+        .map(cleanEntry)
+        .map(fillJournal)
+        .map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
         actions.addEntry({
           ...e,
           source,
