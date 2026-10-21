@@ -14,6 +14,7 @@ import type { AvatarId } from '@/lib/avatars';
 import { COACH_VOICES } from '@/lib/gemini';
 import { locale, t } from '@/lib/i18n';
 import { goalLabel, macroTargets, paceLabel } from '@/lib/nutrition';
+import { NOTIFY_KINDS } from '@/lib/reminders';
 import { actions, useStore } from '@/lib/store';
 
 export default function ProfileScreen() {
@@ -88,7 +89,7 @@ export default function ProfileScreen() {
                   label={t('crew.syncNow')}
                   onPress={async () => {
                     const n = await actions.syncHealth();
-                    Alert.alert('Apple Health', n ? t('crew.healthImported', { count: n }) : t('crew.healthUpToDate'));
+                    Alert.alert('Apple Health', n == null ? t('crew.healthFailed') : n ? t('crew.healthImported', { count: n }) : t('crew.healthUpToDate'));
                   }}
                 />
                 <Chip label={t('crew.disconnect')} onPress={() => actions.disconnectHealth()} />
@@ -108,22 +109,48 @@ export default function ProfileScreen() {
           </T>
         </Card>
 
-        <SectionTitle>{t('crew.sectionReminder')}</SectionTitle>
+        <SectionTitle>{t('notify.section')}</SectionTitle>
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {[undefined, 18, 20, 21].map((h) => (
+            {[false, true].map((on) => (
               <Chip
-                key={String(h)}
-                label={h == null ? t('crew.reminderOff') : new Date(2000, 0, 1, h).toLocaleTimeString(locale, { hour: 'numeric' })}
-                active={settings.reminderHour === h}
+                key={String(on)}
+                label={on ? t('notify.on') : t('notify.off')}
+                active={(settings.reminderHour != null) === on}
                 onPress={async () => {
-                  if (!(await actions.setReminder(h))) Alert.alert(t('crew.notificationsOffTitle'), t('crew.notificationsOffBody'));
+                  if (!(await actions.setReminder(on ? (settings.reminderHour ?? 20) : undefined))) Alert.alert(t('crew.notificationsOffTitle'), t('crew.notificationsOffBody'));
                 }}
               />
             ))}
           </View>
+          {settings.reminderHour != null && (
+            <>
+              <T size={12} rounded color={C.textDim}>
+                {t('notify.kinds')}
+              </T>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {NOTIFY_KINDS.map((kind) => {
+                  const on = !settings.notifyOff?.includes(kind);
+                  return <Chip key={kind} label={t(`notify.kind_${kind}`)} active={on} onPress={() => actions.setNotifyKind(kind, !on)} />;
+                })}
+              </View>
+              <T size={12} rounded color={C.textDim}>
+                {t('notify.eveningAt')}
+              </T>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {[18, 20, 21].map((h) => (
+                  <Chip
+                    key={h}
+                    label={new Date(2000, 0, 1, h).toLocaleTimeString(locale, { hour: 'numeric' })}
+                    active={settings.reminderHour === h}
+                    onPress={() => actions.setReminder(h)}
+                  />
+                ))}
+              </View>
+            </>
+          )}
           <T size={12} color={C.textMute}>
-            {t('crew.reminderNote')}
+            {t('notify.note')}
           </T>
         </Card>
 
