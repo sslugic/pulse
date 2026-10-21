@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Image } from 'expo-image';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming, ZoomIn } from 'react-native-reanimated';
@@ -127,6 +128,8 @@ function LootRow({ l, i }: { l: Loot; i: number }) {
       return row(<TagAvatar size={34} online={false} avatar={l.avatar.id} />, t('arcade.lootAvatar', { name: l.avatar.name }), t('arcade.lootAvatarSub'), l.avatar.band);
     case 'track':
       return row(<T size={28}>{l.track.emoji}</T>, t('arcade.lootTrack', { name: l.track.name }), t('arcade.lootTrackSub'), C.violet);
+    case 'icon':
+      return row(<Image source={l.icon.thumb} style={{ width: 34, height: 34, borderRadius: 8 }} />, t('arcade.lootIcon', { name: l.icon.name }), t('arcade.lootIconSub'), C.yellow);
   }
 }
 
@@ -147,6 +150,8 @@ function lootLine(l: Loot) {
       return t('arcade.lootAvatar', { name: l.avatar.name });
     case 'track':
       return t('arcade.lootTrack', { name: l.track.name });
+    case 'icon':
+      return t('arcade.lootIcon', { name: l.icon.name });
   }
 }
 

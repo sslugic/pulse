@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pulse Icons</title>
+<style>body { margin: 0; background: #000; } svg { display: block; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// Alternate Pulse app icons (1024 x 1024). Each keeps the identity: a bold P and a heartbeat line.
+const S = 1024;
+const P = (x, y, size, fill, extra = '') =>
+  `<text x="${x}" y="${y}" text-anchor="middle" font-family="Impact, 'Helvetica Neue', Arial" font-weight="900" font-style="italic" font-size="${size}" fill="${fill}" ${extra}>P</text>`;
+const ekg = (y, x0 = 60, x1 = 964) => `M ${x0} ${y} L 300 ${y} L 360 ${y - 110} L 440 ${y + 90} L 520 ${y - 180} L 600 ${y} L ${x1} ${y}`;
+const defs = `
+  <filter id="soft" filterUnits="userSpaceOnUse" x="-200" y="-200" width="1424" height="1424"><feGaussianBlur stdDeviation="14"/></filter>
+  <filter id="bloom" filterUnits="userSpaceOnUse" x="-200" y="-200" width="1424" height="1424"><feGaussianBlur stdDeviation="40"/></filter>`;
+const wrap = (d, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}"><defs>${defs}${d}</defs>${body}</svg>`;
+const neonPath = (d, c, w = 26) => `<path d="${d}" stroke="${c}" stroke-width="${w * 1.8}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" filter="url(#soft)"/><path d="${d}" stroke="${c}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="#fff" stroke-width="${w / 3}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>`;
+
+function synthwave() {
+  let grid = '';
+  for (let i = -12; i <= 12; i++) grid += `<line x1="${512 + i * 14}" y1="640" x2="${512 + i * 150}" y2="1024" stroke="#ff3fd0" stroke-width="4" opacity="0.8"/>`;
+  for (let k = 1; k < 10; k++) { const y = 640 + Math.pow(k / 9, 2) * 384; grid += `<line x1="0" y1="${y}" x2="1024" y2="${y}" stroke="#ff3fd0" stroke-width="${2 + k / 2}" opacity="0.7"/>`; }
+  let bands = '';
+  for (let i = 0; i < 6; i++) bands += `<rect x="0" y="${480 + i * 30}" width="1024" height="${6 + i * 3}" fill="#1a0630"/>`;
+  return wrap(`<linearGradient id="sw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#12052e"/><stop offset="0.6" stop-color="#8a1666"/><stop offset="0.625" stop-color="#14031f"/></linearGradient>
+      <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe86b"/><stop offset="1" stop-color="#ff2e7e"/></linearGradient>
+      <linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#9fd8ff"/><stop offset="0.5" stop-color="#2a3a6a"/><stop offset="0.75" stop-color="#ff9ad8"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+      <clipPath id="sunc"><circle cx="512" cy="520" r="260"/></clipPath>`,
+    `<rect width="${S}" height="${S}" fill="url(#sw)"/>
+     <circle cx="512" cy="520" r="330" fill="#ff4f8b" opacity="0.4" filter="url(#bloom)"/>
+     <g clip-path="url(#sunc)"><rect x="0" y="260" width="1024" height="520" fill="url(#sun)"/>${bands}</g>
+     <rect y="640" width="1024" height="384" fill="#14031f"/>${grid}
+     ${P(530, 640, 620, '#0b0216', 'transform="translate(14 14)"')}
+     ${P(530, 640, 620, 'url(#chrome)', 'stroke="#0b0216" stroke-width="18" paint-order="stroke"')}
+     ${neonPath(ekg(820), '#2ee6ff', 22)}`);
+}
+
+function neonSign() {
+  return wrap(`<radialGradient id="wall" cx="0.5" cy="0.45" r="0.7"><stop offset="0" stop-color="#2a1a40"/><stop offset="1" stop-color="#07040e"/></radialGradient>`,
+    `<rect width="${S}" height="${S}" fill="url(#wall)"/>
+     ${Array.from({ length: 22 }, (_, r) => Array.from({ length: 9 }, (_, c) => `<rect x="${(r % 2 ? -60 : 0) + c * 120 + 4}" y="${r * 48 + 4}" width="112" height="40" rx="4" fill="#ffffff" opacity="0.025"/>`).join('')).join('')}
+     <circle cx="512" cy="430" r="300" fill="#2ee6ff" opacity="0.14" filter="url(#bloom)"/>
+     <text x="512" y="660" text-anchor="middle" font-family="Impact, Arial" font-weight="900" font-style="italic" font-size="620" fill="none" stroke="#2ee6ff" stroke-width="44" opacity="0.55" filter="url(#soft)">P</text>
+     <text x="512" y="660" text-anchor="middle" font-family="Impact, Arial" font-weight="900" font-style="italic" font-size="620" fill="none" stroke="#2ee6ff" stroke-width="20">P</text>
+     <text x="512" y="660" text-anchor="middle" font-family="Impact, Arial" font-weight="900" font-style="italic" font-size="620" fill="none" stroke="#e8fdff" stroke-width="7">P</text>
+     ${neonPath(ekg(830), '#ff2e7e', 24)}`);
+}
+
+function goldLegend() {
+  return wrap(`<radialGradient id="blk" cx="0.5" cy="0.4" r="0.8"><stop offset="0" stop-color="#2a2218"/><stop offset="1" stop-color="#050404"/></radialGradient>
+      <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset="0.3" stop-color="#f0c040"/><stop offset="0.55" stop-color="#8a5a10"/><stop offset="0.75" stop-color="#ffd860"/><stop offset="1" stop-color="#a06a10"/></linearGradient>`,
+    `<rect width="${S}" height="${S}" fill="url(#blk)"/>
+     ${Array.from({ length: 16 }, (_, i) => `<line x1="512" y1="440" x2="${512 + Math.cos(i / 16 * Math.PI * 2) * 900}" y2="${440 + Math.sin(i / 16 * Math.PI * 2) * 900}" stroke="#ffd860" stroke-width="40" opacity="0.04"/>`).join('')}
+     <circle cx="512" cy="440" r="300" fill="#ffcc40" opacity="0.18" filter="url(#bloom)"/>
+     ${P(530, 680, 640, '#000', 'transform="translate(16 18)" opacity="0.7"')}
+     ${P(530, 680, 640, 'url(#gold)', 'stroke="#3a2608" stroke-width="16" paint-order="stroke"')}
+     ${neonPath(ekg(840), '#ffd860', 22)}`);
+}
+
+function midnightRain() {
+  let bokeh = '', rain = '';
+  const cols = ['#ff2e7e', '#2ee6ff', '#b45cff', '#ffcc33'];
+  for (let i = 0; i < 30; i++) {
+    const x = (i * 337) % 1024, y = 120 + ((i * 211) % 760), r = 30 + ((i * 53) % 70);
+    bokeh += `<circle cx="${x}" cy="${y}" r="${r}" fill="${cols[i % 4]}" opacity="0.22" filter="url(#soft)"/>`;
+  }
+  for (let i = 0; i < 160; i++) { const x = (i * 97) % 1024, y = (i * 61) % 1024; rain += `<line x1="${x}" y1="${y}" x2="${x - 10}" y2="${y + 50}" stroke="#bfe6ff" stroke-width="2" opacity="0.25"/>`; }
+  return wrap(`<linearGradient id="mr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05070f"/><stop offset="1" stop-color="#1a1236"/></linearGradient>
+      <linearGradient id="mrP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#b9c8ff"/></linearGradient>`,
+    `<rect width="${S}" height="${S}" fill="url(#mr)"/>${bokeh}
+     ${P(530, 680, 620, '#05070f', 'transform="translate(14 14)" opacity="0.8"')}
+     ${P(530, 680, 620, 'url(#mrP)', 'stroke="#05070f" stroke-width="16" paint-order="stroke"')}
+     ${rain}
+     ${neonPath(ekg(840), '#2ee6ff', 22)}`);
+}
+
+function arcade8bit() {
+  const px = 64;
+  const shape = ['1111100', '1100110', '1100110', '1111100', '1100000', '1100000', '1100000'];
+  let p = '', shadow = '';
+  shape.forEach((row, y) => [...row].forEach((c, x) => {
+    if (c !== '1') return;
+    shadow += `<rect x="${290 + x * px + 16}" y="${170 + y * px + 16}" width="${px}" height="${px}" fill="#3a0a40"/>`;
+    p += `<rect x="${290 + x * px}" y="${170 + y * px}" width="${px}" height="${px}" fill="${y < 3 ? '#ffe14d' : '#ff9a1a'}"/><rect x="${290 + x * px}" y="${170 + y * px}" width="${px}" height="8" fill="#fff" opacity="0.35"/>`;
+  }));
+  const steps = [[0, 0], [4, 0], [5, -2], [6, 2], [7, -4], [8, 0], [14, 0]];
+  let line = '';
+  for (let i = 0; i < steps.length - 1; i++) {
+    const [x0, y0] = steps[i], [x1, y1] = steps[i + 1];
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let k = 0; k <= n; k++) {
+      const x = Math.round(x0 + ((x1 - x0) * k) / n), y = Math.round(y0 + ((y1 - y0) * k) / n);
+      line += `<rect x="${64 + x * 64}" y="${830 + y * 32}" width="64" height="32" fill="#4dff9a"/>`;
+    }
+  }
+  let scan = '';
+  for (let y = 0; y < S; y += 8) scan += `<rect x="0" y="${y}" width="${S}" height="3" fill="#000" opacity="0.18"/>`;
+  return wrap(`<radialGradient id="crt" cx="0.5" cy="0.5" r="0.75"><stop offset="0" stop-color="#1a1046"/><stop offset="1" stop-color="#05030f"/></radialGradient>`,
+    `<rect width="${S}" height="${S}" fill="url(#crt)"/>
+     <circle cx="512" cy="420" r="320" fill="#7a5cff" opacity="0.25" filter="url(#bloom)"/>
+     ${shadow}${p}
+     <g filter="url(#soft)" opacity="0.7">${line}</g>${line}
+     ${scan}`);
+}
+
+const ICONS = { synthwave, 'neon-sign': neonSign, 'gold-legend': goldLegend, 'midnight-rain': midnightRain, arcade: arcade8bit };
+const which = new URLSearchParams(location.search).get('s');
+document.getElementById('root').innerHTML = Object.entries(ICONS).filter(([k]) => !which || k === which).map(([, f]) => f()).join('');
+</script>
+</body>
+</html>
