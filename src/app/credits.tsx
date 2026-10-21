@@ -11,7 +11,7 @@ import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { locale, t } from '@/lib/i18n';
 import { LEGAL } from '@/lib/legal';
-import { buy, loadOffers, purchasesConfigured, restore, type CreditOffer } from '@/lib/purchases';
+import { buy, loadOffers, purchasesConfigured, restore, type CreditOffer, describePurchaseError } from '@/lib/purchases';
 import { actions, useStore } from '@/lib/store';
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -61,7 +61,7 @@ export default function CreditsScreen() {
         Alert.alert(t('credits.thanksTitle'), t('credits.thanksBody'));
       }
     } catch (e) {
-      Alert.alert(t('credits.purchaseFailed'), (e as Error).message);
+      Alert.alert(t('credits.purchaseFailed'), describePurchaseError(e));
     } finally {
       setBusy(null);
     }
