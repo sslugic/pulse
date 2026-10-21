@@ -555,7 +555,7 @@ export const actions = {
     const before = logXp(state.entries);
     set((s) => ({ entries: [entry, ...s.entries].sort((a, b) => b.createdAt - a.createdAt) }));
     pushReward(logXp(state.entries) - before, 0, t('rewards.logged'));
-    // Today's logged now, so tonight's reminder moves to tomorrow.
+    // Today's logged now, so tonight's reminder becomes a check-in instead of a streak warning.
     actions.refreshReminder();
     // The latest weigh-in keeps the profile weight current so calorie math follows; a back-dated one doesn't.
     if (entry.kind === 'weight' && entry.weightKg && latestWeight(state.entries)?.id === entry.id) actions.updateProfile({ weightKg: entry.weightKg });
