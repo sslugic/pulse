@@ -97,6 +97,7 @@
         }
       ],
       "expo-apple-authentication",
+      "./plugins/with-app-intents",
       [
         "expo-localization",
         {

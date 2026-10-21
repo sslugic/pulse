@@ -68,6 +68,8 @@ export type Feature =
 export const LITE_MODEL = 'gemini-3.5-flash-lite';
 const LITE_FEATURES = new Set<Feature>(['insight', 'wellbeing', 'meal_plan', 'meal_plan_3d', 'workout_plan', 'workout_plan_3d', 'workout_plan_7d', 'recap', 'estimate']);
 const modelFor = (feature: Feature, model: string) => (LITE_FEATURES.has(feature) ? LITE_MODEL : model);
+// The Coach is a live conversation (and often spoken), so it thinks minimally too: the first words arrive sooner.
+const QUICK_FEATURES = new Set<Feature>([...LITE_FEATURES, 'coach', 'coach_media']);
 
 let balanceListener: ((credits: number) => void) | null = null;
 /** Called with the new credit balance after every signed-in AI call. */
@@ -289,7 +291,7 @@ function withLanguage(body: Record<string, unknown>) {
 }
 
 function requestBody(body: Record<string, unknown>, model: string, feature: Feature) {
-  const level = LITE_FEATURES.has(feature) ? 'minimal' : 'low';
+  const level = QUICK_FEATURES.has(feature) ? 'minimal' : 'low';
   const generationConfig = {
     ...(body.generationConfig as object),
     ...(noThinking.has(model) ? {} : { thinkingConfig: { thinkingLevel: level } }),
