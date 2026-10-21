@@ -9,7 +9,7 @@ import { deleteJournalPhoto, pickImage, saveJournalPhoto, saveProgressPhoto } fr
 import { celebrate } from './haptics';
 import { deleteAccount, fetchBalance, fetchCosts, fetchSubscription, loadBackup, onSessionChange, saveBackup, signInWithApple, signOut } from './cloud';
 import { linkPurchases, unlinkPurchases } from './purchases';
-import { activeEnergyByDay, connectHealth, healthAvailable, pullHealth } from './health';
+import { activeEnergyByDay, connectHealth, healthAvailable, pullHealth, ensureHealthAccess } from './health';
 import { cancelReminders, enableReminders, scheduleReminder } from './reminders';
 import { dayKey, loggedDays, macroTargets, recommendedTargets } from './nutrition';
 import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, MAX_FREEZES, SHOP, gameById, isUnlocked, type BrainId, type ChestTier, type GameId } from './arcade';
@@ -120,6 +120,7 @@ function schedulePersist() {
       voiceReplies: settings.voiceReplies,
       coachVoice: settings.coachVoice,
       reminderHour: settings.reminderHour,
+      notifyOff: settings.notifyOff,
       health: settings.health,
       autoPlans: settings.autoPlans,
       music: settings.music,
@@ -170,6 +171,7 @@ export async function hydrate() {
         voiceReplies: data.voiceReplies ?? true,
         coachVoice: data.coachVoice || DEFAULT_VOICE,
         reminderHour: data.reminderHour,
+        notifyOff: data.notifyOff,
         health: data.health,
         autoPlans: data.autoPlans,
         music: data.music,
@@ -380,21 +382,26 @@ async function syncEverydayActivity(since: Date) {
   }
 }
 
-let healthSyncing: Promise<number> | null = null;
+let healthSyncing: Promise<number | null> | null = null;
 
-async function runHealthSync() {
+/** Imports what's new in Apple Health. Returns how many entries came in, or null if Health couldn't be read. */
+async function runHealthSync(): Promise<number | null> {
   const h = state.settings.health!;
-  const since = new Date(h.lastSync ? h.lastSync - 6 * 3600_000 : Date.now() - 7 * 86400_000);
-  const known = new Set(state.entries.flatMap((e) => (e.healthId ? [e.healthId] : [])));
+  // Look back at least 3 days: a watch or scale often hands Health its data hours later with the
+  // original time, which a window starting at the last sync would miss. Ids keep it from duplicating.
+  const floor = Date.now() - 3 * 86400_000;
+  const since = new Date(h.lastSync ? Math.min(h.lastSync - 6 * 3600_000, floor) : Date.now() - 7 * 86400_000);
+  const known = new Set([...state.entries.flatMap((e) => (e.healthId ? [e.healthId] : [])), ...(h.ignored ?? [])]);
   try {
+    await ensureHealthAccess();
     const fresh = await pullHealth(since, known);
     fresh.sort((a, b) => a.createdAt - b.createdAt).forEach((e) => actions.addEntry(e));
     await syncEverydayActivity(since);
-    set((s) => ({ settings: { ...s.settings, health: { on: true, lastSync: Date.now() } } }));
+    set((s) => ({ settings: { ...s.settings, health: { ...s.settings.health, on: true, lastSync: Date.now() } } }));
     return fresh.length;
   } catch (err) {
     console.warn('[health] sync failed', err);
-    return 0;
+    return null;
   }
 }
 
@@ -507,7 +514,7 @@ export const actions = {
     if (state.settings.coachVoice !== 'device') actions.setCoachVoice(p.voice);
     actions.speakMessage('voice-preview', p.sample);
   },
-  /** Turns the evening streak reminder on at `hour`, or off with undefined. Asks for permission first. */
+  /** Turns notifications on with the evening check-in at `hour`, or all off with undefined. Asks for permission first. */
   async setReminder(hour: number | undefined) {
     if (hour == null) {
       set((s) => ({ settings: { ...s.settings, reminderHour: undefined } }));
@@ -520,22 +527,42 @@ export const actions = {
     return true;
   },
   refreshReminder() {
-    const { settings, entries, game } = state;
+    const { settings, entries, game, profile } = state;
     if (settings.reminderHour == null) return Promise.resolve();
-    return scheduleReminder(entries, settings.reminderHour, game.frozenDays).catch(() => {});
+    const today = dayKey(Date.now());
+    return scheduleReminder({
+      entries,
+      profile,
+      hour: settings.reminderHour,
+      frozen: game.frozenDays,
+      off: settings.notifyOff,
+      chestsWaiting: game.chests?.length ?? 0,
+      playedToday: game.playedDay === today || game.claims.some((c) => c.day === today && c.questId === ARCADE_CLAIM),
+    }).catch((err) => console.warn('[reminders] schedule failed', err));
+  },
+  /** Switches one kind of notification (meals, water, …) on or off. */
+  setNotifyKind(kind: string, on: boolean) {
+    set((s) => {
+      const off = new Set(s.settings.notifyOff ?? []);
+      if (on) off.delete(kind);
+      else off.add(kind);
+      return { settings: { ...s.settings, notifyOff: [...off] } };
+    });
+    return actions.refreshReminder();
   },
   /** Turns Apple Health sync on (asking permission) and pulls the last 7 days. */
   async connectHealth() {
     if (!(await connectHealth())) return false;
-    set((s) => ({ settings: { ...s.settings, health: { on: true, lastSync: s.settings.health?.lastSync } } }));
+    set((s) => ({ settings: { ...s.settings, health: { ...s.settings.health, on: true } } }));
     await actions.syncHealth();
     return true;
   },
   disconnectHealth() {
-    set((s) => ({ settings: { ...s.settings, health: { on: false, lastSync: s.settings.health?.lastSync } } }));
+    set((s) => ({ settings: { ...s.settings, health: { ...s.settings.health, on: false } } }));
   },
   /** Imports new Health workouts, weigh-ins and sleep since the last sync (first sync: 7 days). Returns how many. */
-  async syncHealth() {
+  /** Imports new Apple Health data; resolves to the number imported, or null if Health couldn't be read. */
+  async syncHealth(): Promise<number | null> {
     const h = state.settings.health;
     if (!h?.on || !healthAvailable()) return 0;
     // Launch, HQ and coming back to the app can all ask at once; one sync at a time.
@@ -565,6 +592,11 @@ export const actions = {
   removeEntry(id: string) {
     const removed = state.entries.find((e) => e.id === id);
     if (removed?.photo) deleteJournalPhoto(removed.photo);
+    // A deleted Health import stays deleted: the next sync would otherwise bring it back.
+    const healthId = removed?.healthId;
+    if (healthId && state.settings.health) {
+      set((s) => ({ settings: { ...s.settings, health: { ...s.settings.health!, ignored: [...(s.settings.health!.ignored ?? []), healthId].slice(-300) } } }));
+    }
     set((s) => ({ entries: s.entries.filter((e) => e.id !== id) }));
     // Deleting the latest weigh-in falls back to the one before it.
     if (removed?.kind === 'weight') {

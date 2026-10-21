@@ -57,12 +57,12 @@ export default function Coach() {
   const [text, setText] = useState('');
   const inputRef = useRef<React.ComponentRef<typeof TextInput>>(null);
   const listRef = useRef<FlatList<ChatMessage>>(null);
-  const didInitialScroll = useRef(false);
 
   const recorder = useAudioRecorder(VOICE_PRESET);
   const rec = useAudioRecorderState(recorder, 80);
   const recSeconds = Math.floor(rec.durationMillis / 1000);
 
+  const newestFirst = useMemo(() => [...messages].reverse(), [messages]);
   const entryById = useMemo(() => new Map(entries.map((e) => [e.id, e])), [entries]);
 
   // Recent meals become one-tap "again" chips — logging a repeat should take zero typing.
@@ -99,7 +99,7 @@ export default function Coach() {
   }, [rec.isRecording, recSeconds]);
 
   useEffect(() => {
-    if (messages.length) setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 80);
+    if (messages.length) setTimeout(() => listRef.current?.scrollToOffset({ offset: 0, animated: true }), 80);
   }, [messages.length, thinking]);
 
   function guardKey() {
@@ -226,18 +226,14 @@ export default function Coach() {
       ) : (
         <FlatList
           ref={listRef}
-          data={messages}
+          // Inverted (newest first) so the chat always opens on the latest message: a normal list only
+          // renders its first few rows at first, so scrolling to its end landed mid-history.
+          inverted
+          data={newestFirst}
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.list}
           keyboardDismissMode="interactive"
           extraData={speakingId}
-          onContentSizeChange={() => {
-            // Open on the latest message, not the oldest.
-            if (!didInitialScroll.current) {
-              didInitialScroll.current = true;
-              listRef.current?.scrollToEnd({ animated: false });
-            }
-          }}
           renderItem={({ item }) => <Bubble msg={item} entryById={entryById} speaking={speakingId === item.id} />}
         />
       )}

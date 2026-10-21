@@ -1,5 +1,6 @@
 import {
   CategoryValueSleepAnalysis,
+  getRequestStatusForAuthorization,
   isHealthDataAvailable,
   queryCategorySamples,
   queryQuantitySamples,
@@ -31,6 +32,15 @@ const READ = [
 export async function connectHealth() {
   if (!healthAvailable()) return false;
   return requestAuthorization({ toRead: READ });
+}
+
+/**
+ * Asks again only if iOS says there's something to ask (a data type added since the user last
+ * answered, or access that was reset). iOS never says whether reading was denied, so this is all we can check.
+ */
+export async function ensureHealthAccess() {
+  // 1 = AuthorizationRequestStatus.shouldRequest
+  if ((await getRequestStatusForAuthorization({ toRead: READ })) === 1) await requestAuthorization({ toRead: READ });
 }
 
 // [log.* title key, emoji]

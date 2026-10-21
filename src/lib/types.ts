@@ -102,9 +102,13 @@ export interface Settings {
   /** Gemini voice name for the Coach, or 'device' for the built-in offline voice. */
   coachVoice: string;
   /** Hour (0-23) for the evening streak reminder; undefined = reminders off. */
+  /** Notifications are on when set: the evening check-in hour. */
   reminderHour?: number;
+  /** Notification kinds switched off (see NOTIFY_KINDS). */
+  notifyOff?: string[];
   /** Apple Health sync on, and when it last pulled. */
-  health?: { on: boolean; lastSync?: number };
+  /** Apple Health sync. `ignored`: Health ids of imported entries the user deleted, so a sync doesn't bring them back. */
+  health?: { on: boolean; lastSync?: number; ignored?: string[] };
   /** Generate today's meal and workout plans automatically each day (default on). */
   autoPlans?: boolean;
   /** Background music (default off; the player turns it on in Crew or the jukebox). */

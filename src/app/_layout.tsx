@@ -40,6 +40,12 @@ export default function RootLayout() {
   useEffect(() => {
     if (ready) scheduleSync();
   }, [ready, entries, game.claims]);
+  // Reminders follow chests and arcade play (the 1pm rewards nudge), debounced so a burst is one reschedule.
+  useEffect(() => {
+    if (!ready) return;
+    const timer = setTimeout(() => actions.refreshReminder(), 1500);
+    return () => clearTimeout(timer);
+  }, [ready, game.chests, game.claims, todayKey]);
   // A tapped nudge notification opens Squad.
   useEffect(() => {
     const open = (r: Notifications.NotificationResponse | null) => {
