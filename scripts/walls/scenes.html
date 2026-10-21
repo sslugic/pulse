@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pulse Backgrounds</title>
+<style>
+  :root { --bg: #0b0c0d; }
+  body { margin: 0; background: var(--bg); }
+  .scene { width: 430px; height: 932px; position: relative; overflow: hidden; display: block; }
+  svg { display: block; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// Pulse's 15 rank walls, drawn as SVG at phone size (430 x 932) and rendered to images for the app.
+const W = 430, H = 932;
+
+function rng(seed) { let s = seed; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
+
+// A row of buildings: returns path + lit windows.
+function skyline({ seed, top, bottom, minW = 18, maxW = 54, color, lit, litChance = 0.18, windowSize = 2.2, glowColor, antenna = 0.15 }) {
+  const r = rng(seed);
+  let x = -10, out = '';
+  const wins = [];
+  while (x < W + 10) {
+    const bw = minW + r() * (maxW - minW);
+    const bh = top + r() * (bottom - top) * 0.75;
+    out += `<rect x="${x.toFixed(1)}" y="${bh.toFixed(1)}" width="${(bw + 0.6).toFixed(1)}" height="${(H - bh).toFixed(1)}" fill="${color}"/>`;
+    if (r() < antenna) out += `<rect x="${(x + bw / 2).toFixed(1)}" y="${(bh - 18 - r() * 22).toFixed(1)}" width="1.4" height="40" fill="${color}"/><circle cx="${(x + bw / 2 + 0.7).toFixed(1)}" cy="${(bh - 20).toFixed(1)}" r="1.6" fill="#ff3b5c" opacity="0.9"/>`;
+    for (let wy = bh + 6; wy < bottom + 60; wy += windowSize * 3) {
+      for (let wx = x + 4; wx < x + bw - 4; wx += windowSize * 2.6) {
+        if (r() < litChance) wins.push(`<rect x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" width="${windowSize}" height="${(windowSize * 1.3).toFixed(1)}" fill="${lit}" opacity="${(0.45 + r() * 0.55).toFixed(2)}"/>`);
+      }
+    }
+    x += bw;
+  }
+  return `<g>${out}</g><g ${glowColor ? 'filter="url(#winGlow)"' : ''}>${wins.join('')}</g>`;
+}
+
+function stars(seed, n, maxY, color = '#fff') {
+  const r = rng(seed); let s = '';
+  for (let i = 0; i < n; i++) s += `<circle cx="${(r() * W).toFixed(1)}" cy="${(r() * maxY).toFixed(1)}" r="${(0.3 + r() * 1.1).toFixed(2)}" fill="${color}" opacity="${(0.25 + r() * 0.7).toFixed(2)}"/>`;
+  return s;
+}
+
+
+function neonText(txt, x, y, size, color, family, weight = 400) {
+  const t = (stroke, w, extra) => `<text x="${x}" y="${y}" text-anchor="middle" font-family="${family}" font-weight="${weight}" font-size="${size}" fill="none" stroke="${stroke}" stroke-width="${w}" ${extra}>${txt}</text>`;
+  return t(color, size / 6, 'opacity="0.7" filter="url(#soft)"') + t(color, size / 14, '') + t('#ffffff', size / 30, 'opacity="0.9"');
+}
+
+const commonDefs = `
+  <filter id="soft" filterUnits="userSpaceOnUse" x="-200" y="-200" width="830" height="1332"><feGaussianBlur stdDeviation="6"/></filter>
+  <filter id="bloom" filterUnits="userSpaceOnUse" x="-200" y="-200" width="830" height="1332"><feGaussianBlur stdDeviation="14"/></filter>
+  <filter id="haze" filterUnits="userSpaceOnUse" x="-200" y="-200" width="830" height="1332"><feGaussianBlur stdDeviation="22"/></filter>
+  <filter id="winGlow" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="0.6"/></filter>
+  <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.05 0"/></filter>
+  <linearGradient id="readable" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#05060a" stop-opacity="0"/>
+    <stop offset="0.45" stop-color="#05060a" stop-opacity="0.15"/>
+    <stop offset="1" stop-color="#05060a" stop-opacity="0.78"/>
+  </linearGradient>`;
+
+// Shared finish: film grain + a darker lower half so cards stay readable.
+const finish = `<rect width="${W}" height="${H}" fill="url(#readable)"/><rect width="${W}" height="${H}" filter="url(#grain)"/>`;
+
+function svg(defs, body) {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs>${commonDefs}${defs}</defs>${body}${finish}</svg>`;
+}
+
+// 1. Sunset Grid: synthwave sun over neon-rimmed mountains and a glowing perspective grid.
+function sunsetGrid(tower = false) {
+  const horizon = 520;
+  let grid = '';
+  for (let i = -24; i <= 24; i++) {
+    const x2 = W / 2 + i * 70;
+    grid += `<line x1="${W / 2 + i * 6}" y1="${horizon}" x2="${x2}" y2="${H}" stroke="#ff3fd0" stroke-width="1.3" opacity="0.75"/>`;
+  }
+  for (let k = 1; k < 26; k++) {
+    const y = horizon + Math.pow(k / 25, 2.1) * (H - horizon);
+    grid += `<line x1="0" y1="${y.toFixed(1)}" x2="${W}" y2="${y.toFixed(1)}" stroke="#ff3fd0" stroke-width="${(0.6 + k / 20).toFixed(2)}" opacity="${(0.25 + k / 40).toFixed(2)}"/>`;
+  }
+  let bands = '';
+  for (let i = 0; i < 7; i++) {
+    const y = 410 + i * 16, hgt = 3 + i * 1.6;
+    bands += `<rect x="0" y="${y}" width="${W}" height="${hgt}" fill="#1a0630"/>`;
+  }
+  const mtn = (pts, fill, stroke) => `<polygon points="${pts}" fill="${fill}" stroke="${stroke}" stroke-width="1.6" stroke-linejoin="round"/>`;
+  return svg(`
+    <linearGradient id="sky1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0a0320"/><stop offset="0.35" stop-color="#2a0a4a"/><stop offset="0.52" stop-color="#7a1260"/><stop offset="0.6" stop-color="#d4316b"/><stop offset="0.62" stop-color="#160423"/>
+    </linearGradient>
+    <linearGradient id="sun1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe86b"/><stop offset="0.5" stop-color="#ff8a3d"/><stop offset="1" stop-color="#ff2e7e"/></linearGradient>
+    <linearGradient id="floor1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b0530"/><stop offset="1" stop-color="#05010c"/></linearGradient>
+    <clipPath id="sunClip"><circle cx="${W / 2}" cy="420" r="120"/></clipPath>`,
+    `<rect width="${W}" height="${H}" fill="url(#sky1)"/>
+     ${stars(11, 120, 330)}
+     <circle cx="${W / 2}" cy="420" r="170" fill="#ff4f8b" opacity="0.35" filter="url(#haze)"/>
+     <g clip-path="url(#sunClip)"><rect x="0" y="290" width="${W}" height="260" fill="url(#sun1)"/>${bands}</g>
+     ${mtn(`-20,${horizon} 40,470 90,495 150,440 210,${horizon}`, '#12031f', '#ff4fd8')}
+     ${mtn(`200,${horizon} 270,455 320,480 380,430 450,${horizon}`, '#12031f', '#ff4fd8')}
+     ${mtn(`-20,${horizon} 70,490 130,505 190,${horizon}`, '#0b0216', '#7a2cff')}
+     <rect y="${horizon}" width="${W}" height="${H - horizon}" fill="url(#floor1)"/>
+     <g>${grid}</g>
+     <rect y="${horizon - 2}" width="${W}" height="4" fill="#ff8fe6" filter="url(#soft)"/>
+     ${tower ? pulseTowerSilhouette(horizon) : ''}`);
+}
+
+// 2. Neon Rain: a wet city street at night, neon bokeh, rain streaks and reflections.
+function neonRain() {
+  const r = rng(22);
+  let bokeh = '', rain = '', reflections = '';
+  const neon = ['#ff2e7e', '#2ee6ff', '#b45cff', '#ffcc33', '#4dff9a'];
+  for (let i = 0; i < 26; i++) {
+    const c = neon[Math.floor(r() * neon.length)], x = r() * W, y = 240 + r() * 300, rad = 6 + r() * 26;
+    bokeh += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rad.toFixed(1)}" fill="${c}" opacity="${(0.12 + r() * 0.3).toFixed(2)}" filter="url(#soft)"/>`;
+    reflections += `<rect x="${(x - rad / 3).toFixed(1)}" y="${(620 + (y - 240) * 0.2).toFixed(1)}" width="${(rad / 1.5).toFixed(1)}" height="${(90 + r() * 140).toFixed(1)}" fill="${c}" opacity="${(0.08 + r() * 0.18).toFixed(2)}" filter="url(#soft)"/>`;
+  }
+  for (let i = 0; i < 260; i++) {
+    const x = r() * W, y = r() * H, len = 14 + r() * 26;
+    rain += `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x - 4).toFixed(1)}" y2="${(y + len).toFixed(1)}" stroke="#bfe6ff" stroke-width="0.8" opacity="${(0.1 + r() * 0.25).toFixed(2)}"/>`;
+  }
+  return svg(`
+    <linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05070f"/><stop offset="0.55" stop-color="#101a33"/><stop offset="0.66" stop-color="#1c1236"/><stop offset="1" stop-color="#05060b"/></linearGradient>
+    <linearGradient id="street2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0b1020"/><stop offset="1" stop-color="#030409"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#sky2)"/>
+     ${skyline({ seed: 5, top: 120, bottom: 360, color: '#0b1222', lit: '#7fb8ff', litChance: 0.1 })}
+     <rect y="300" width="${W}" height="260" fill="#2a3c7a" opacity="0.25" filter="url(#haze)"/>
+     ${skyline({ seed: 9, top: 230, bottom: 470, minW: 30, maxW: 80, color: '#070a14', lit: '#ffd58a', litChance: 0.14 })}
+     <g>${bokeh}</g>
+     ${neonText('OPEN', 92, 452, 30, '#ff2e7e', 'Brush Script MT, cursive')}
+     ${['H','O','T','E','L'].map((c, i) => neonText(c, 279, 418 + i * 24, 22, '#2ee6ff', 'Helvetica, Arial', 700)).join('')}
+     <g opacity="0.35" transform="translate(0 1235) scale(1 -1)">
+       ${neonText('OPEN', 92, 452, 30, '#ff2e7e', 'Brush Script MT, cursive')}
+     </g>
+     <rect y="560" width="${W}" height="${H - 560}" fill="url(#street2)"/>
+     <g>${reflections}</g>
+     <rect x="0" y="560" width="${W}" height="2" fill="#2ee6ff" opacity="0.25" filter="url(#soft)"/>
+     <g>${rain}</g>`);
+}
+
+// 3. Skyline Dusk: layered skylines fading into haze, a big moon and a violet-to-amber sky.
+function skylineDusk(bridge = false) {
+  return svg(`
+    <linearGradient id="sky3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#090b1f"/><stop offset="0.4" stop-color="#2b1b4f"/><stop offset="0.62" stop-color="#8a3d6b"/><stop offset="0.72" stop-color="#e0864f"/><stop offset="0.74" stop-color="#1a1230"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#sky3)"/>
+     ${stars(31, 90, 300)}
+     <circle cx="300" cy="230" r="60" fill="#ffe9c9" opacity="0.92"/>
+     <circle cx="300" cy="230" r="110" fill="#ffd2a0" opacity="0.25" filter="url(#haze)"/>
+     <g opacity="0.55">${skyline({ seed: 41, top: 420, bottom: 600, minW: 14, maxW: 40, color: '#4a2f62', lit: '#ffd9a8', litChance: 0.05, antenna: 0.25 })}</g>
+     <rect y="520" width="${W}" height="140" fill="#c46a6a" opacity="0.18" filter="url(#haze)"/>
+     <g opacity="0.85">${skyline({ seed: 42, top: 470, bottom: 640, minW: 22, maxW: 56, color: '#24173a', lit: '#ffcf7a', litChance: 0.1 })}</g>
+     ${bridge ? bridgeLayer() : skyline({ seed: 43, top: 560, bottom: 720, minW: 34, maxW: 90, color: '#0b0814', lit: '#ffb347', litChance: 0.16 })}`);
+}
+
+// 4. Subway Platform: tiled tunnel in perspective, lights running to a vanishing point, a train headlight.
+function subway() {
+  const vx = W / 2, vy = 400;
+  let tiles = '', lights = '';
+  for (let k = 0; k < 16; k++) {
+    const t = Math.pow(k / 15, 1.8);
+    const xl = vx - (vx + 40) * t, xr = vx + (W - vx + 40) * t, yt = vy - (vy - 40) * t, yb = vy + (H - vy + 120) * t;
+    tiles += `<line x1="${xl.toFixed(1)}" y1="${yt.toFixed(1)}" x2="${xl.toFixed(1)}" y2="${yb.toFixed(1)}" stroke="#2f3d3a" stroke-width="${(0.5 + t * 2).toFixed(2)}"/>`;
+    tiles += `<line x1="${xr.toFixed(1)}" y1="${yt.toFixed(1)}" x2="${xr.toFixed(1)}" y2="${yb.toFixed(1)}" stroke="#2f3d3a" stroke-width="${(0.5 + t * 2).toFixed(2)}"/>`;
+    lights += `<rect x="${(vx - 10 - 70 * t).toFixed(1)}" y="${(yt + 4).toFixed(1)}" width="${(20 + 140 * t).toFixed(1)}" height="${(1.5 + 5 * t).toFixed(1)}" rx="2" fill="#fff4d0" opacity="${(0.4 + t * 0.5).toFixed(2)}"/>`;
+  }
+  let rows = '';
+  for (let i = -10; i <= 10; i++) rows += `<line x1="${vx}" y1="${vy}" x2="${vx + i * 70}" y2="${i % 2 ? -100 : H + 100}" stroke="#24302e" stroke-width="0.8" opacity="0.5"/>`;
+  return svg(`
+    <radialGradient id="tun4" cx="0.5" cy="0.43" r="0.75"><stop offset="0" stop-color="#3a4a40"/><stop offset="0.35" stop-color="#1a2420"/><stop offset="1" stop-color="#060807"/></radialGradient>
+    <linearGradient id="stripe4" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#d9a400"/><stop offset="1" stop-color="#ffcc33"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#tun4)"/>
+     <g>${rows}${tiles}</g>
+     <g filter="url(#winGlow)">${lights}</g>
+     <polygon points="${vx},${vy} -40,${H - 60} -40,${H - 40} ${vx},${vy + 3}" fill="url(#stripe4)" opacity="0.85"/>
+     <polygon points="${vx},${vy} ${W + 40},${H - 60} ${W + 40},${H - 40} ${vx},${vy + 3}" fill="url(#stripe4)" opacity="0.85"/>
+     <circle cx="${vx}" cy="${vy + 4}" r="9" fill="#fffbe8"/>
+     <circle cx="${vx}" cy="${vy + 4}" r="70" fill="#fff2c4" opacity="0.35" filter="url(#bloom)"/>
+     <polygon points="${vx},${vy + 4} -60,${H} ${W + 60},${H}" fill="#fff2c4" opacity="0.06"/>
+     <rect x="${vx - 56}" y="150" width="112" height="30" rx="4" fill="#0e1412" stroke="#cfd8d3" stroke-width="1.2"/>
+     <text x="${vx}" y="171" text-anchor="middle" font-family="Helvetica, Arial" font-weight="700" font-size="15" fill="#e8efe9" letter-spacing="2">PULSE ST</text>`);
+}
+
+// 5. Rooftop: a water tower and rooftop edge against a starry sky with a warm city glow below.
+function rooftop() {
+  return svg(`
+    <linearGradient id="sky5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#04060f"/><stop offset="0.5" stop-color="#0f1838"/><stop offset="0.72" stop-color="#3a2a52"/><stop offset="0.8" stop-color="#b8664a"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#sky5)"/>
+     ${stars(51, 220, 560)}
+     <path d="M -20 160 Q 200 80 460 200" stroke="#7fd6ff" stroke-width="30" fill="none" opacity="0.08" filter="url(#haze)"/>
+     <g opacity="0.7">${skyline({ seed: 52, top: 610, bottom: 720, minW: 10, maxW: 30, color: '#1d1530', lit: '#ffcf8a', litChance: 0.22, windowSize: 1.6 })}</g>
+     <rect y="650" width="${W}" height="120" fill="#ff9a5c" opacity="0.18" filter="url(#haze)"/>
+     <g fill="#05060a">
+       <rect x="0" y="720" width="${W}" height="${H - 720}"/>
+       <rect x="240" y="440" width="120" height="120" rx="8"/>
+       <polygon points="232,440 300,395 368,440"/>
+       <rect x="250" y="560" width="6" height="160"/><rect x="344" y="560" width="6" height="160"/>
+       <line x1="253" y1="580" x2="347" y2="700" stroke="#05060a" stroke-width="3"/>
+       <line x1="347" y1="580" x2="253" y2="700" stroke="#05060a" stroke-width="3"/>
+       <rect x="40" y="660" width="90" height="60"/>
+       <rect x="60" y="640" width="10" height="20"/>
+     </g>
+     <g stroke="#2a3150" stroke-width="1">${Array.from({ length: 6 }, (_, i) => `<line x1="240" y1="${452 + i * 18}" x2="360" y2="${452 + i * 18}"/>`).join('')}</g>
+     <rect x="0" y="716" width="${W}" height="4" fill="#ffb27a" opacity="0.5" filter="url(#soft)"/>`);
+}
+
+// 6. Neon Club: a dark room with neon signs (heartbeat, dumbbell, PULSE), light beams through haze
+// and a glossy floor that mirrors the signs.
+function neonClub() {
+  const r = rng(61);
+  let beams = '';
+  const cols = ['#ff2e7e', '#2ee6ff', '#b45cff'];
+  for (let i = 0; i < 6; i++) {
+    const x = 40 + i * 70, c = cols[i % 3], spread = 60 + r() * 60;
+    beams += `<polygon points="${x},0 ${x - spread},${H * 0.7} ${x + spread},${H * 0.7}" fill="${c}" opacity="0.08"/>`;
+  }
+  const tube = (d, c, w = 8) => `<path d="${d}" stroke="${c}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.65" filter="url(#soft)"/><path d="${d}" stroke="${c}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="${d}" stroke="#fff" stroke-width="1" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>`;
+  const ekg = 'M 30 300 L 120 300 L 140 270 L 160 330 L 180 220 L 205 360 L 225 300 L 400 300';
+  const bell = 'M 150 400 L 280 400 M 150 385 L 150 415 M 136 390 L 136 410 M 280 385 L 280 415 M 294 390 L 294 410';
+  const signs = `${tube(ekg, '#ff2e7e')}${tube(bell, '#2ee6ff', 7)}${neonText('PULSE', W / 2, 500, 52, '#b45cff', 'Helvetica, Arial', 800)}`;
+  return svg(`
+    <linearGradient id="room6" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a0614"/><stop offset="0.6" stop-color="#170b2b"/><stop offset="0.62" stop-color="#0a0612"/><stop offset="1" stop-color="#030206"/></linearGradient>
+    <linearGradient id="floorFade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#030206" stop-opacity="0.2"/><stop offset="1" stop-color="#030206" stop-opacity="1"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#room6)"/>
+     <g filter="url(#soft)">${beams}</g>
+     <rect y="160" width="${W}" height="420" fill="#5a2a8a" opacity="0.14" filter="url(#haze)"/>
+     ${signs}
+     <g opacity="0.4" transform="translate(0 1156) scale(1 -1)">${signs}</g>
+     <rect y="578" width="${W}" height="${H - 578}" fill="url(#floorFade)"/>
+     <rect y="576" width="${W}" height="2" fill="#b45cff" opacity="0.35" filter="url(#soft)"/>`);
+}
+
+
+// ---------- Shared pieces for the rank scenes ----------
+
+function bricks(y0, y1, color = '#2a1814', mortar = '#140c0a', seed = 1, opacity = 1) {
+  const r = rng(seed); let out = `<rect x="0" y="${y0}" width="${W}" height="${y1 - y0}" fill="${mortar}" opacity="${opacity}"/>`;
+  for (let row = 0, y = y0; y < y1; row++, y += 14) {
+    for (let x = row % 2 ? -18 : 0; x < W; x += 36) {
+      const shade = 0.75 + r() * 0.35;
+      out += `<rect x="${x + 1}" y="${y + 1}" width="34" height="12" fill="${color}" opacity="${(opacity * shade).toFixed(2)}"/>`;
+    }
+  }
+  return out;
+}
+
+function chainLink(y0, y1, color = '#8a9aa8', opacity = 0.22) {
+  let out = '';
+  for (let x = -H; x < W + H; x += 16) {
+    out += `<line x1="${x}" y1="${y0}" x2="${x + (y1 - y0)}" y2="${y1}" stroke="${color}" stroke-width="1" opacity="${opacity}"/>`;
+    out += `<line x1="${x}" y1="${y1}" x2="${x + (y1 - y0)}" y2="${y0}" stroke="${color}" stroke-width="1" opacity="${opacity}"/>`;
+  }
+  return `<g clip-path="url(#fenceClip)">${out}</g><rect x="0" y="${y0}" width="${W}" height="3" fill="${color}" opacity="${opacity * 2}"/>`;
+}
+
+function lamp(x, y, color = '#ffb347', size = 1) {
+  return `<rect x="${x - 2}" y="${y}" width="4" height="${H - y}" fill="#06070a"/>
+    <path d="M ${x} ${y} q 0 -18 22 -18" stroke="#06070a" stroke-width="4" fill="none"/>
+    <circle cx="${x + 24}" cy="${y - 14}" r="${70 * size}" fill="${color}" opacity="0.28" filter="url(#bloom)"/>
+    <ellipse cx="${x + 24}" cy="${y - 13}" rx="7" ry="3.5" fill="#fff3d6"/>
+    <polygon points="${x + 18},${y - 12} ${x + 30},${y - 12} ${x + 110},${H} ${x - 62},${H}" fill="${color}" opacity="0.07"/>`;
+}
+
+function pulseTowerSilhouette(horizon) {
+  const x = W / 2, top = 120;
+  return `<g fill="#0d0218">
+      <polygon points="${x - 26},${horizon} ${x - 10},${top + 140} ${x + 10},${top + 140} ${x + 26},${horizon}"/>
+      <rect x="${x - 22}" y="${top + 110}" width="44" height="34" rx="6"/>
+      <rect x="${x - 3}" y="${top}" width="6" height="${120}"/>
+    </g>
+    <rect x="${x - 22}" y="${top + 122}" width="44" height="4" fill="#2ee6ff" opacity="0.9"/>
+    <rect x="${x - 22}" y="${top + 122}" width="44" height="4" fill="#2ee6ff" filter="url(#soft)"/>
+    <circle cx="${x}" cy="${top}" r="4" fill="#ff3b5c"/>
+    <circle cx="${x}" cy="${top}" r="40" fill="#ff3b5c" opacity="0.35" filter="url(#bloom)"/>
+    ${neonText('PULSE', x, top + 180, 13, '#2ee6ff', 'Helvetica, Arial', 800)}`;
+}
+
+function bridgeLayer() {
+  const deck = 640, towers = [110, 330];
+  let cables = '', lamps = '';
+  for (const tx of towers) {
+    for (let k = 1; k <= 9; k++) {
+      cables += `<line x1="${tx}" y1="430" x2="${tx - k * 22}" y2="${deck}" stroke="#2b1d3c" stroke-width="1"/>`;
+      cables += `<line x1="${tx}" y1="430" x2="${tx + k * 22}" y2="${deck}" stroke="#2b1d3c" stroke-width="1"/>`;
+    }
+  }
+  for (let x = 10; x < W; x += 28) lamps += `<circle cx="${x}" cy="${deck - 4}" r="1.8" fill="#ffd58a"/><circle cx="${x}" cy="${deck - 4}" r="8" fill="#ffb347" opacity="0.35" filter="url(#soft)"/>`;
+  let refl = '';
+  const r = rng(91);
+  for (let i = 0; i < 60; i++) {
+    const x = r() * W, y = deck + 30 + r() * 260;
+    refl += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${(6 + r() * 26).toFixed(1)}" height="1.4" fill="#ffb347" opacity="${(0.08 + r() * 0.25).toFixed(2)}"/>`;
+  }
+  return `${cables}
+    ${towers.map((tx) => `<rect x="${tx - 9}" y="410" width="18" height="${deck - 410 + 40}" fill="#120c1c"/><rect x="${tx - 13}" y="470" width="26" height="6" fill="#120c1c"/>`).join('')}
+    <rect x="0" y="${deck}" width="${W}" height="14" fill="#0d0816"/>
+    ${lamps}
+    <rect x="0" y="${deck + 14}" width="${W}" height="${H - deck}" fill="#0c0a18"/>
+    ${refl}
+    <rect x="0" y="${deck + 14}" width="${W}" height="60" fill="#e0864f" opacity="0.08" filter="url(#haze)"/>`;
+}
+
+// 1. Back Alley: brick walls, a fire escape, one sodium lamp and steam from a grate.
+function backAlley() {
+  let escape = '';
+  for (let i = 0; i < 4; i++) {
+    const y = 160 + i * 120;
+    escape += `<rect x="250" y="${y}" width="150" height="5" fill="#07080b"/>
+      ${Array.from({ length: 8 }, (_, k) => `<rect x="${252 + k * 20}" y="${y - 40}" width="2" height="40" fill="#07080b"/>`).join('')}
+      <rect x="250" y="${y - 42}" width="150" height="3" fill="#07080b"/>
+      <line x1="${i % 2 ? 260 : 390}" y1="${y + 5}" x2="${i % 2 ? 390 : 260}" y2="${y + 115}" stroke="#07080b" stroke-width="4"/>`;
+  }
+  const r = rng(7);
+  let steam = '';
+  for (let i = 0; i < 7; i++) steam += `<ellipse cx="${(150 + r() * 60).toFixed(1)}" cy="${(700 - i * 45).toFixed(1)}" rx="${(40 + i * 8).toFixed(1)}" ry="${(24 + i * 4).toFixed(1)}" fill="#c9d3dd" opacity="${(0.12 - i * 0.012).toFixed(3)}" filter="url(#haze)"/>`;
+  return svg(`<linearGradient id="alleySky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a1016"/><stop offset="1" stop-color="#1a1410"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#alleySky)"/>
+     ${bricks(0, H, '#3a2018', '#1a0e0a', 3, 0.85)}
+     <rect width="${W}" height="${H}" fill="#06080c" opacity="0.25"/>
+     <ellipse cx="90" cy="320" rx="220" ry="300" fill="#ff9a40" opacity="0.12" filter="url(#haze)"/>
+     <rect x="0" y="0" width="${W}" height="${H}" fill="url(#alleyLight)"/>
+     ${escape}
+     <rect x="20" y="640" width="130" height="80" rx="4" fill="#0c1410"/><rect x="16" y="630" width="138" height="12" rx="3" fill="#0f1a14"/>
+     ${steam}
+     <rect x="140" y="730" width="90" height="8" fill="#07080b"/>
+     ${lamp(60, 300, '#ffa040', 1.2)}
+     <rect y="740" width="${W}" height="${H - 740}" fill="#07080b" opacity="0.6"/>
+     <ellipse cx="${W / 2}" cy="800" rx="160" ry="14" fill="#ffa040" opacity="0.08" filter="url(#soft)"/>`
+    .replace('<rect x="0" y="0" width="${W}" height="${H}" fill="url(#alleyLight)"/>', ''));
+}
+
+// 2. Handball Court: a tall painted court wall at dusk, a skyline behind and a chain-link fence.
+function handballCourt() {
+  return svg(`<linearGradient id="hbSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#14183a"/><stop offset="0.5" stop-color="#5a2f5e"/><stop offset="0.7" stop-color="#d9784f"/></linearGradient>
+    <clipPath id="fenceClip"><rect x="0" y="420" width="${W}" height="${H - 420}"/></clipPath>`,
+    `<rect width="${W}" height="${H}" fill="url(#hbSky)"/>
+     ${stars(17, 40, 200)}
+     <g opacity="0.8">${skyline({ seed: 18, top: 330, bottom: 470, minW: 16, maxW: 44, color: '#2a1d3a', lit: '#ffd08a', litChance: 0.08 })}</g>
+     <polygon points="40,300 390,330 390,700 40,700" fill="#3b4a5e"/>
+     <polygon points="40,300 390,330 390,340 40,312" fill="#4e6178"/>
+     <line x1="40" y1="520" x2="390" y2="528" stroke="#e8d9b0" stroke-width="3" opacity="0.7"/>
+     <line x1="215" y1="316" x2="215" y2="700" stroke="#e8d9b0" stroke-width="2" opacity="0.4"/>
+     <circle cx="300" cy="460" r="7" fill="#ff5a5a" opacity="0.8"/>
+     ${neonText('', 0, 0, 1, '#000', 'Arial')}
+     <polygon points="0,700 ${W},700 ${W},${H} 0,${H}" fill="#1c2430"/>
+     ${Array.from({ length: 7 }, (_, i) => `<line x1="${i * 70}" y1="700" x2="${i * 70 - 120}" y2="${H}" stroke="#e8d9b0" stroke-width="1.5" opacity="0.18"/>`).join('')}
+     ${lamp(395, 240, '#ffcf7a', 1)}
+     ${chainLink(420, H, '#b8c4cf', 0.16)}`);
+}
+
+// 4. Bodega Corner: a lit corner store with a striped awning, neon signs and a wet sidewalk.
+function bodegaCorner() {
+  let stripes = '';
+  for (let i = 0; i < 12; i++) stripes += `<polygon points="${30 + i * 32},430 ${62 + i * 32},430 ${66 + i * 32},480 ${26 + i * 32},480" fill="${i % 2 ? '#e8e0cc' : '#9e2a2b'}" opacity="0.9"/>`;
+  return svg(`<linearGradient id="bdSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070a14"/><stop offset="1" stop-color="#16101c"/></linearGradient>
+    <linearGradient id="shopGlow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe2a6"/><stop offset="1" stop-color="#e09a4a"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#bdSky)"/>
+     ${bricks(0, 430, '#2c1c1a', '#140c0c', 5, 0.7)}
+     <rect width="${W}" height="430" fill="#05060a" opacity="0.5"/>
+     ${Array.from({ length: 3 }, (_, i) => `<rect x="${50 + i * 120}" y="${110}" width="80" height="110" fill="#1a1320"/><rect x="${54 + i * 120}" y="114" width="72" height="102" fill="${i === 1 ? '#ffcf7a' : '#2a2238'}" opacity="${i === 1 ? 0.5 : 1}"/>`).join('')}
+     ${neonText('BODEGA', W / 2, 300, 40, '#ff3b5c', 'Helvetica, Arial', 800)}
+     ${neonText('24 HRS', W / 2, 380, 22, '#2ee6ff', 'Helvetica, Arial', 700)}
+     ${stripes}
+     <rect x="30" y="480" width="370" height="200" fill="url(#shopGlow)" opacity="0.55"/>
+     <rect x="30" y="480" width="370" height="200" fill="#1a0f08" opacity="0.35"/>
+     ${Array.from({ length: 5 }, (_, i) => `<rect x="${44 + i * 72}" y="${520}" width="50" height="${70 + (i % 2) * 20}" rx="3" fill="#3a2614" opacity="0.6"/>`).join('')}
+     <rect x="198" y="490" width="34" height="190" fill="#140c08" opacity="0.7"/>
+     <rect x="30" y="476" width="370" height="6" fill="#100808"/>
+     <ellipse cx="${W / 2}" cy="580" rx="230" ry="120" fill="#ffc06a" opacity="0.22" filter="url(#bloom)"/>
+     <rect y="680" width="${W}" height="${H - 680}" fill="#0b0b10"/>
+     <rect x="30" y="690" width="370" height="140" fill="#ffc06a" opacity="0.1" filter="url(#soft)"/>
+     <rect x="${W / 2 - 60}" y="700" width="120" height="70" fill="#ff3b5c" opacity="0.05" filter="url(#soft)"/>`);
+}
+
+// 5. Basketball Court: night court under floodlights, a hoop silhouette and a cage fence.
+function basketballCourt() {
+  return svg(`<linearGradient id="bbSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#04070f"/><stop offset="1" stop-color="#101a2a"/></linearGradient>
+    <clipPath id="fenceClip"><rect x="0" y="260" width="${W}" height="${H - 260}"/></clipPath>
+    <linearGradient id="court" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f3a5a"/><stop offset="1" stop-color="#0b1626"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#bbSky)"/>
+     ${stars(27, 60, 260)}
+     <g opacity="0.7">${skyline({ seed: 28, top: 380, bottom: 520, minW: 18, maxW: 50, color: '#0e1626', lit: '#9fc4ff', litChance: 0.08 })}</g>
+     ${[70, 360].map((x) => `<rect x="${x - 2}" y="120" width="4" height="${H - 120}" fill="#05070c"/><rect x="${x - 22}" y="110" width="44" height="14" rx="2" fill="#0b0f18"/>
+        ${[0, 1, 2].map((k) => `<circle cx="${x - 14 + k * 14}" cy="117" r="3.5" fill="#f4fbff"/>`).join('')}
+        <circle cx="${x}" cy="117" r="90" fill="#cfe8ff" opacity="0.3" filter="url(#bloom)"/>
+        <polygon points="${x - 22},124 ${x + 22},124 ${x + (x < 200 ? 260 : 60)},${H} ${x - (x < 200 ? 60 : 260)},${H}" fill="#cfe8ff" opacity="0.07"/>`).join('')}
+     <polygon points="0,560 ${W},560 ${W},${H} 0,${H}" fill="url(#court)"/>
+     <ellipse cx="${W / 2}" cy="720" rx="150" ry="40" fill="none" stroke="#f2e6c8" stroke-width="2" opacity="0.35"/>
+     <line x1="0" y1="620" x2="${W}" y2="620" stroke="#f2e6c8" stroke-width="2" opacity="0.3"/>
+     <rect x="${W / 2 - 3}" y="300" width="6" height="260" fill="#05070c"/>
+     <rect x="${W / 2 - 50}" y="270" width="100" height="64" rx="3" fill="none" stroke="#e8eef5" stroke-width="3" opacity="0.8"/>
+     <rect x="${W / 2 - 18}" y="300" width="36" height="26" fill="none" stroke="#e8eef5" stroke-width="2" opacity="0.7"/>
+     <ellipse cx="${W / 2}" cy="340" rx="18" ry="4" fill="none" stroke="#ff7a1a" stroke-width="3"/>
+     ${Array.from({ length: 6 }, (_, k) => `<line x1="${W / 2 - 16 + k * 6.4}" y1="341" x2="${W / 2 - 10 + k * 4}" y2="366" stroke="#e8eef5" stroke-width="1" opacity="0.6"/>`).join('')}
+     ${chainLink(260, H, '#9fb3c8', 0.14)}`);
+}
+
+// 8. Subway Tunnel: arches receding into the dark, a red signal and rails catching the light.
+function subwayTunnel() {
+  const vx = W / 2, vy = 420;
+  let arches = '', bulbs = '';
+  for (let k = 14; k >= 0; k--) {
+    const t = Math.pow((k + 1) / 15, 1.7), w = 30 + 520 * t, h = 40 + 760 * t;
+    arches += `<rect x="${(vx - w / 2).toFixed(1)}" y="${(vy - h * 0.55).toFixed(1)}" width="${w.toFixed(1)}" height="${(h * 1.2).toFixed(1)}" rx="${(w / 2).toFixed(1)}" fill="none" stroke="#1a1f22" stroke-width="${(1 + t * 10).toFixed(1)}"/>`;
+    for (const d of [-1, 1]) bulbs += `<circle cx="${(vx + d * (w / 2 - 6 - 8 * t)).toFixed(1)}" cy="${(vy + h * 0.05).toFixed(1)}" r="${(1 + 3 * t).toFixed(1)}" fill="#ffd38a" opacity="${(0.4 + 0.5 * t).toFixed(2)}"/>`;
+  }
+  return svg(`<radialGradient id="tunnel8" cx="0.5" cy="0.45" r="0.7"><stop offset="0" stop-color="#20282a"/><stop offset="0.4" stop-color="#0d1112"/><stop offset="1" stop-color="#030404"/></radialGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#tunnel8)"/>
+     ${arches}
+     <g filter="url(#winGlow)">${bulbs}</g>
+     ${[-1, 1].map((d) => `<polygon points="${vx + d * 6},${vy + 30} ${vx + d * 9},${vy + 30} ${vx + d * 160},${H} ${vx + d * 150},${H}" fill="#9aa7ad" opacity="0.5"/>`).join('')}
+     ${Array.from({ length: 16 }, (_, k) => { const t = Math.pow((k + 1) / 16, 1.8), y = vy + 30 + (H - vy - 30) * t, hw = 10 + 190 * t; return `<rect x="${vx - hw}" y="${y.toFixed(1)}" width="${(hw * 2).toFixed(1)}" height="${(1 + t * 8).toFixed(1)}" fill="#141210"/>`; }).join('')}
+     <rect x="${vx + 70}" y="300" width="22" height="50" rx="5" fill="#0a0c0d"/>
+     <circle cx="${vx + 81}" cy="314" r="6" fill="#ff2e2e"/><circle cx="${vx + 81}" cy="314" r="40" fill="#ff2e2e" opacity="0.35" filter="url(#bloom)"/>
+     <circle cx="${vx + 81}" cy="335" r="6" fill="#16301e"/>
+     <circle cx="${vx}" cy="${vy + 10}" r="5" fill="#fff3d0" opacity="0.7"/><circle cx="${vx}" cy="${vy + 10}" r="50" fill="#fff3d0" opacity="0.15" filter="url(#bloom)"/>`);
+}
+
+// 9. Train Yard: tracks fanning out, painted train cars under a floodlight tower.
+function trainYard() {
+  const r = rng(99);
+  const car = (x, y, w, h, flip) => {
+    let paint = '';
+    const cols = ['#ff2e7e', '#2ee6ff', '#ffcc33', '#7a5cff', '#4dff9a'];
+    for (let i = 0; i < 6; i++) paint += `<ellipse cx="${(x + r() * w).toFixed(1)}" cy="${(y + h * 0.3 + r() * h * 0.5).toFixed(1)}" rx="${(14 + r() * 30).toFixed(1)}" ry="${(8 + r() * 14).toFixed(1)}" fill="${cols[i % cols.length]}" opacity="0.35"/>`;
+    return `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#2b313a"/>${paint}<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#0a0d12" opacity="0.45"/>
+      ${Array.from({ length: Math.floor(w / 26) }, (_, i) => `<rect x="${x + 8 + i * 26}" y="${y + 10}" width="16" height="12" fill="#0b0f16"/>`).join('')}
+      <rect x="${x}" y="${y + h}" width="${w}" height="10" fill="#07090c"/>`;
+  };
+  let tracks = '';
+  for (let i = -3; i <= 3; i++) tracks += `<line x1="${W / 2 + i * 14}" y1="560" x2="${W / 2 + i * 180}" y2="${H}" stroke="#7b8590" stroke-width="2" opacity="0.5"/>`;
+  for (let k = 1; k < 18; k++) { const t = Math.pow(k / 17, 2); tracks += `<rect x="0" y="${(560 + (H - 560) * t).toFixed(1)}" width="${W}" height="${(1 + t * 6).toFixed(1)}" fill="#1b1612" opacity="0.8"/>`; }
+  return svg(`<linearGradient id="tySky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#060a14"/><stop offset="0.6" stop-color="#1c2236"/><stop offset="0.62" stop-color="#0c0e14"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#tySky)"/>
+     ${stars(98, 70, 300)}
+     <g opacity="0.6">${skyline({ seed: 97, top: 420, bottom: 560, minW: 14, maxW: 40, color: '#141a2a', lit: '#ffd08a', litChance: 0.06 })}</g>
+     <rect x="300" y="140" width="5" height="440" fill="#06080c"/>
+     <rect x="282" y="132" width="42" height="16" fill="#0b0f16"/>
+     ${[0, 1, 2].map((k) => `<circle cx="${290 + k * 13}" cy="140" r="4" fill="#fffbe8"/>`).join('')}
+     <circle cx="303" cy="140" r="110" fill="#fff2c4" opacity="0.28" filter="url(#bloom)"/>
+     <polygon points="282,148 324,148 ${W + 40},${H} 40,${H}" fill="#fff2c4" opacity="0.05"/>
+     ${car(-20, 470, 200, 80)}${car(190, 480, 170, 74)}${car(370, 470, 120, 80)}
+     <rect y="560" width="${W}" height="${H - 560}" fill="#0f0d0c"/>
+     ${tracks}`);
+}
+
+// 12. Block Party: strings of lights between brownstones, speakers and a warm crowd glow.
+function blockParty() {
+  const r = rng(12);
+  let lights = '';
+  for (let s = 0; s < 4; s++) {
+    const y0 = 180 + s * 70, sag = 60 + s * 10;
+    let d = `M -10 ${y0} Q ${W / 2} ${y0 + sag * 2} ${W + 10} ${y0}`;
+    lights += `<path d="${d}" stroke="#0a0608" stroke-width="1.5" fill="none"/>`;
+    for (let i = 0; i <= 18; i++) {
+      const t = i / 18, x = -10 + (W + 20) * t, y = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * (y0 + sag * 2) + t * t * y0;
+      const c = ['#ffcf6a', '#ff6a8a', '#7ad8ff', '#ffe9a8'][Math.floor(r() * 4)];
+      lights += `<circle cx="${x.toFixed(1)}" cy="${(y + 4).toFixed(1)}" r="3.2" fill="${c}"/><circle cx="${x.toFixed(1)}" cy="${(y + 4).toFixed(1)}" r="10" fill="${c}" opacity="0.35" filter="url(#soft)"/>`;
+    }
+  }
+  let crowd = '';
+  for (let i = 0; i < 40; i++) {
+    const x = r() * W, y = 640 + r() * 80, s = 0.8 + r() * 0.5;
+    crowd += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(11 * s).toFixed(1)}" fill="#0a0608"/><rect x="${(x - 16 * s).toFixed(1)}" y="${(y + 8 * s).toFixed(1)}" width="${(32 * s).toFixed(1)}" height="${(80 * s).toFixed(1)}" rx="${(12 * s).toFixed(1)}" fill="#0a0608"/>`;
+  }
+  return svg(`<linearGradient id="bpSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a0a1c"/><stop offset="1" stop-color="#2a1422"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#bpSky)"/>
+     <rect x="-10" y="100" width="150" height="${H}" fill="#24140f"/><rect x="290" y="80" width="150" height="${H}" fill="#24140f"/>
+     ${[0, 1, 2, 3].map((k) => `<rect x="20" y="${140 + k * 110}" width="38" height="56" fill="${k % 2 ? '#ffb85c' : '#1a0f0c'}" opacity="${k % 2 ? 0.55 : 1}"/><rect x="80" y="${140 + k * 110}" width="38" height="56" fill="${k === 2 ? '#ffb85c' : '#1a0f0c'}" opacity="${k === 2 ? 0.5 : 1}"/><rect x="312" y="${120 + k * 110}" width="38" height="56" fill="${k === 1 ? '#ffb85c' : '#1a0f0c'}" opacity="${k === 1 ? 0.5 : 1}"/><rect x="372" y="${120 + k * 110}" width="38" height="56" fill="${k % 2 ? '#1a0f0c' : '#ffb85c'}" opacity="${k % 2 ? 1 : 0.45}"/>`).join('')}
+     ${lights}
+     <ellipse cx="${W / 2}" cy="700" rx="260" ry="120" fill="#ff8a4a" opacity="0.3" filter="url(#bloom)"/>
+     <rect x="150" y="560" width="54" height="110" rx="4" fill="#0b0b0f"/><rect x="226" y="560" width="54" height="110" rx="4" fill="#0b0b0f"/>
+     ${[150, 226].map((x) => `<circle cx="${x + 27}" cy="590" r="12" fill="#1c1c24"/><circle cx="${x + 27}" cy="635" r="18" fill="#1c1c24"/>`).join('')}
+     ${crowd}`);
+}
+
+// 13. Billboard Square: towers wrapped in glowing billboards over a bright, hazy square.
+function billboardSquare() {
+  const r = rng(13);
+  const boards = [
+    [20, 150, 120, 180, '#ff2e7e', '#7a1240', 'PULSE'], [160, 90, 110, 120, '#2ee6ff', '#0a4a6a', 'XP'], [290, 140, 130, 160, '#ffcc33', '#7a4a00', 'GO'],
+    [30, 360, 110, 90, '#7a5cff', '#2a1a6a', ''], [170, 240, 90, 150, '#4dff9a', '#0a5a3a', ''], [290, 330, 120, 90, '#ff7a1a', '#6a2a00', 'RUN'],
+  ];
+  let b = '';
+  for (const [x, y, w, h, c1, c2, txt] of boards) {
+    b += `<defs><linearGradient id="bb${x}${y}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c1}"/><stop offset="1" stop-color="${c2}"/></linearGradient></defs>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="url(#bb${x}${y})" opacity="0.85"/>
+      <rect x="${x - 10}" y="${y - 10}" width="${w + 20}" height="${h + 20}" fill="${c1}" opacity="0.25" filter="url(#soft)"/>
+      ${txt ? `<text x="${x + w / 2}" y="${y + h / 2 + 12}" text-anchor="middle" font-family="Helvetica, Arial" font-weight="900" font-size="${Math.min(w, h) / 3}" fill="#fff" opacity="0.85">${txt}</text>` : ''}`;
+  }
+  let ticker = '';
+  for (let i = 0; i < 30; i++) ticker += `<rect x="${i * 15}" y="472" width="9" height="6" fill="#ff3b3b" opacity="${(0.4 + r() * 0.6).toFixed(2)}"/>`;
+  return svg(`<linearGradient id="bsSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#06040e"/><stop offset="1" stop-color="#1a1030"/></linearGradient>`,
+    `<rect width="${W}" height="${H}" fill="url(#bsSky)"/>
+     <rect x="0" y="60" width="150" height="${H}" fill="#0c0a14"/><rect x="150" y="30" width="130" height="${H}" fill="#0a0812"/><rect x="280" y="70" width="150" height="${H}" fill="#0c0a14"/>
+     ${b}
+     <rect x="0" y="466" width="${W}" height="18" fill="#100808"/>${ticker}
+     <rect y="480" width="${W}" height="300" fill="#b45cff" opacity="0.18" filter="url(#haze)"/>
+     <rect y="560" width="${W}" height="${H - 560}" fill="#0a0812"/>
+     ${Array.from({ length: 50 }, () => { const x = r() * W, y = 600 + r() * 120; return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(7 + r() * 4).toFixed(1)}" fill="#05040a"/><rect x="${(x - 11).toFixed(1)}" y="${(y + 6).toFixed(1)}" width="22" height="60" rx="9" fill="#05040a"/>`; }).join('')}
+     <rect y="560" width="${W}" height="80" fill="#ff7ad8" opacity="0.08" filter="url(#soft)"/>`);
+}
+
+// 14. Hall of Fame: a legendary graffiti wall under spotlights.
+function hallOfFame() {
+  const letters = (txt, x, y, size, c1, c2, rot) => `<g transform="rotate(${rot} ${x} ${y})">
+      <text x="${x + 5}" y="${y + 6}" text-anchor="middle" font-family="Impact, Haettenschweiler, sans-serif" font-size="${size}" fill="#000" opacity="0.6">${txt}</text>
+      <text x="${x}" y="${y}" text-anchor="middle" font-family="Impact, Haettenschweiler, sans-serif" font-size="${size}" fill="url(#${c1})" stroke="#0a0a0a" stroke-width="${size / 12}" paint-order="stroke" stroke-linejoin="round">${txt}</text>
+      <text x="${x}" y="${y}" text-anchor="middle" font-family="Impact, Haettenschweiler, sans-serif" font-size="${size}" fill="none" stroke="${c2}" stroke-width="2" opacity="0.8">${txt}</text></g>`;
+  return svg(`<linearGradient id="hofA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset="1" stop-color="#ff5a1a"/></linearGradient>
+    <linearGradient id="hofB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5af0ff"/><stop offset="1" stop-color="#7a3cff"/></linearGradient>
+    <linearGradient id="hofC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7ad8"/><stop offset="1" stop-color="#ff2e5e"/></linearGradient>
+    <clipPath id="fenceClip"><rect x="0" y="640" width="${W}" height="${H - 640}"/></clipPath>`,
+    `<rect width="${W}" height="${H}" fill="#0c0b0a"/>
+     ${bricks(0, 680, '#3a3632', '#1a1816', 21, 0.9)}
+     <rect width="${W}" height="680" fill="#06060a" opacity="0.35"/>
+     <ellipse cx="120" cy="220" rx="110" ry="80" fill="#2a8a7a" opacity="0.35"/><ellipse cx="330" cy="470" rx="130" ry="90" fill="#8a2a6a" opacity="0.35"/>
+     ${letters('HALL', 215, 250, 110, 'hofA', '#fff6c0', -6)}
+     ${letters('OF', 120, 380, 80, 'hofC', '#ffd0ee', 4)}
+     ${letters('FAME', 250, 500, 120, 'hofB', '#d8f6ff', -3)}
+     <polygon points="40,0 90,0 260,680 -60,680" fill="#fff4d0" opacity="0.08"/>
+     <polygon points="340,0 390,0 480,680 170,680" fill="#fff4d0" opacity="0.08"/>
+     ${[65, 365].map((x) => `<circle cx="${x}" cy="10" r="60" fill="#fff4d0" opacity="0.25" filter="url(#bloom)"/>`).join('')}
+     <rect y="680" width="${W}" height="${H - 680}" fill="#0b0b0d"/>
+     ${chainLink(640, H, '#9aa4ad', 0.14)}`);
+}
+
+const SCENES = {
+  'back-alley': backAlley, 'handball-court': handballCourt, 'night-street': neonRain, 'bodega-corner': bodegaCorner,
+  'basketball-court': basketballCourt, 'rooftop': rooftop, 'subway-station': subway, 'subway-tunnel': subwayTunnel,
+  'train-yard': trainYard, 'bridge-underpass': () => skylineDusk(true), 'neon-club': neonClub, 'block-party': blockParty,
+  'billboard-square': billboardSquare, 'hall-of-fame': hallOfFame, 'pulse-tower': () => sunsetGrid(true),
+};
+const which = new URLSearchParams(location.search).get('s');
+document.getElementById('root').innerHTML = Object.entries(SCENES)
+  .filter(([k]) => !which || k === which)
+  .map(([k, f]) => `<div class="scene" id="${k}">${f()}</div>`).join('');
+</script>
+</body>
+</html>
