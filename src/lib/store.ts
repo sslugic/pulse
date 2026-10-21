@@ -12,6 +12,7 @@ import { linkPurchases, unlinkPurchases } from './purchases';
 import { activeEnergyByDay, connectHealth, healthAvailable, pullHealth, ensureHealthAccess } from './health';
 import { cancelReminders, enableReminders, scheduleReminder } from './reminders';
 import { dayKey, loggedDays, macroTargets, recommendedTargets } from './nutrition';
+import { appIconUnlockId } from './app-icons';
 import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, MAX_FREEZES, SHOP, gameById, isUnlocked, type BrainId, type ChestTier, type GameId } from './arcade';
 import { BEST_BONUS, CHESTS_PER_DAY, PAID_WINS_PER_DAY, WIN_TOKENS, WIN_XP, chestFor, chestsEarnedToday, dailyChestId, rollLoot, winsToday, type Loot, type RunResult } from './brain';
 import { season, SEASON_BADGE_REWARD, SEASON_REWARD } from './seasons';
@@ -744,7 +745,7 @@ export const actions = {
     const freeze = loot.some((l) => l.kind === 'freeze');
     const doubler = loot.reduce((n, l) => n + (l.kind === 'doubler' ? l.wins : 0), 0);
     const gifts = loot.flatMap((l) =>
-      l.kind === 'game' ? [`gift:${l.game.id}`] : l.kind === 'avatar' ? [avatarGiftId(l.avatar.id)] : l.kind === 'track' ? [trackUnlockId(l.track.id)] : [],
+      l.kind === 'game' ? [`gift:${l.game.id}`] : l.kind === 'avatar' ? [avatarGiftId(l.avatar.id)] : l.kind === 'track' ? [trackUnlockId(l.track.id)] : l.kind === 'icon' ? [appIconUnlockId(l.icon.id)] : [],
     );
     set((s) => ({
       game: {

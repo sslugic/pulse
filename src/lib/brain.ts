@@ -1,3 +1,4 @@
+import { APP_ICONS, appIconUnlockId, type AppIconDef } from './app-icons';
 import { GAMES, MAX_FREEZES, isUnlocked, type BrainId, type ChestTier, type GameDef } from './arcade';
 import { AVATARS, avatarGiftId, isRewardAvatar, type AvatarDef } from './avatars';
 import { t } from './i18n';
@@ -29,7 +30,8 @@ export type Loot =
   | { kind: 'doubler'; wins: number }
   | { kind: 'game'; game: GameDef }
   | { kind: 'avatar'; avatar: AvatarDef }
-  | { kind: 'track'; track: MusicTrack };
+  | { kind: 'track'; track: MusicTrack }
+  | { kind: 'icon'; icon: AppIconDef };
 
 export const CHEST_LOOK: Record<ChestTier, { name: string; body: string; trim: string; glow: string }> = {
   wood: {
@@ -99,6 +101,9 @@ export function rollLoot(tier: ChestTier, game: GameState, rand: () => number = 
   // A few jukebox tracks only drop from gold chests, and rarely, so they stay special.
   const tracks = TRACKS.filter((x) => x.chest && !game.unlocked.includes(trackUnlockId(x.id)));
   if (tier === 'gold' && tracks.length && rand() < 0.06) loot.push({ kind: 'track', track: tracks[Math.floor(rand() * tracks.length)] });
+  // The Arcade app icon only drops from gold chests, rarer still.
+  const icons = APP_ICONS.filter((x) => x.chest && !game.unlocked.includes(appIconUnlockId(x.id)));
+  if (tier === 'gold' && icons.length && rand() < 0.04) loot.push({ kind: 'icon', icon: icons[Math.floor(rand() * icons.length)] });
   return loot;
 }
 
