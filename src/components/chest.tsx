@@ -125,6 +125,8 @@ function LootRow({ l, i }: { l: Loot; i: number }) {
       return row(<Icon name={l.game.icon} size={28} color={l.game.color} />, t('arcade.lootGame', { game: l.game.title }), t('arcade.lootGameSub'), l.game.color);
     case 'avatar':
       return row(<TagAvatar size={34} online={false} avatar={l.avatar.id} />, t('arcade.lootAvatar', { name: l.avatar.name }), t('arcade.lootAvatarSub'), l.avatar.band);
+    case 'track':
+      return row(<T size={28}>{l.track.emoji}</T>, t('arcade.lootTrack', { name: l.track.name }), t('arcade.lootTrackSub'), C.violet);
   }
 }
 
@@ -143,6 +145,8 @@ function lootLine(l: Loot) {
       return t('arcade.lootGame', { game: l.game.title });
     case 'avatar':
       return t('arcade.lootAvatar', { name: l.avatar.name });
+    case 'track':
+      return t('arcade.lootTrack', { name: l.track.name });
   }
 }
 

@@ -1,7 +1,8 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 import { AppState, Platform } from 'react-native';
 
-import { DEFAULT_TRACK, TRACK_FILES, type TrackId } from './music';
+import { DEFAULT_TRACK, type TrackId } from './music';
+import { saveTrack, trackSource } from './music-cache';
 
 // Background music (scripts/make-music.py) and reward sounds (scripts/make-sounds.py). Music is off
 // until the player turns it on, then loops while the app is open; the track, its volume, and both
@@ -45,11 +46,11 @@ function sync() {
   try {
     if (shouldPlay) {
       if (!music) {
-        music = createAudioPlayer(TRACK_FILES[want]);
+        music = createAudioPlayer(trackSource(want));
         music.loop = true;
         loaded = want;
       } else if (loaded !== want) {
-        music.replace(TRACK_FILES[want]);
+        music.replace(trackSource(want));
         music.loop = true;
         loaded = want;
       }
@@ -66,6 +67,8 @@ export function configureSound(opts: { music: boolean; sfx: boolean; track?: Tra
   musicOn = opts.music;
   sfxOn = opts.sfx;
   track = opts.track ?? DEFAULT_TRACK;
+  // A chosen track that streams gets saved, so it loops offline from then on.
+  saveTrack(track).catch(() => {});
   volume = Math.min(1, Math.max(0, opts.volume ?? 0.5));
   sync();
 }

@@ -743,7 +743,9 @@ export const actions = {
     const xp = loot.reduce((n, l) => n + (l.kind === 'xp' ? l.amount : 0), 0);
     const freeze = loot.some((l) => l.kind === 'freeze');
     const doubler = loot.reduce((n, l) => n + (l.kind === 'doubler' ? l.wins : 0), 0);
-    const gifts = loot.flatMap((l) => (l.kind === 'game' ? [`gift:${l.game.id}`] : l.kind === 'avatar' ? [avatarGiftId(l.avatar.id)] : []));
+    const gifts = loot.flatMap((l) =>
+      l.kind === 'game' ? [`gift:${l.game.id}`] : l.kind === 'avatar' ? [avatarGiftId(l.avatar.id)] : l.kind === 'track' ? [trackUnlockId(l.track.id)] : [],
+    );
     set((s) => ({
       game: {
         ...s.game,

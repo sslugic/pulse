@@ -136,6 +136,25 @@ export function streak(entries: Entry[], frozen: string[] = []) {
   return n;
 }
 
+/** The longest run of consecutive logged (or frozen) days ever. */
+export function bestStreak(entries: Entry[], frozen: string[] = []) {
+  const days = new Set([...loggedDays(entries), ...frozen]);
+  let best = 0;
+  for (const key of days) {
+    const d = new Date(`${key}T12:00:00`);
+    d.setDate(d.getDate() - 1);
+    if (days.has(dayKey(d))) continue; // not the start of a run
+    let n = 0;
+    const walk = new Date(`${key}T12:00:00`);
+    while (days.has(dayKey(walk))) {
+      n++;
+      walk.setDate(walk.getDate() + 1);
+    }
+    best = Math.max(best, n);
+  }
+  return best;
+}
+
 export const fmtKg = (kg: number, units: Profile['units']) =>
   units === 'imperial' ? `${Math.round(kg * 2.20462)} lb` : `${Math.round(kg * 10) / 10} kg`;
 

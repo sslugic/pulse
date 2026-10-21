@@ -8,7 +8,8 @@ import { Card, Chip, SectionTitle, T, tap } from '@/components/ui';
 import { Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { locale, t } from '@/lib/i18n';
-import { DEFAULT_TRACK, isTrackUnlocked, TRACKS, type MusicTrack, type TrackId } from '@/lib/music';
+import { DEFAULT_TRACK, isTrackUnlocked, TRACKS, unlockHint, type MusicTrack, type TrackId } from '@/lib/music';
+import { bestStreak } from '@/lib/nutrition';
 import { questXp } from '@/lib/quests';
 import { crewRank, RANKS } from '@/lib/rank';
 import { spendableXp } from '@/lib/referrals';
@@ -25,6 +26,7 @@ export default function MusicScreen() {
   const entries = useStore((s) => s.entries);
   const game = useStore((s) => s.game);
   const level = useMemo(() => crewRank(entries, questXp(game.claims), game.frozenDays).level, [entries, game.claims, game.frozenDays]);
+  const best = useMemo(() => bestStreak(entries, game.frozenDays), [entries, game.frozenDays]);
   const current = (settings.musicTrack as TrackId | undefined) ?? DEFAULT_TRACK;
   const musicOn = settings.music === true;
   const volume = settings.musicVolume ?? 0.5;
@@ -113,7 +115,7 @@ export default function MusicScreen() {
           {t('music.tracks')}
         </SectionTitle>
         {TRACKS.map((track) => {
-          const unlocked = isTrackUnlocked(track, level, game.unlocked);
+          const unlocked = isTrackUnlocked(track, level, game.unlocked, best);
           const playing = musicOn && current === track.id && !previewing;
           const isPreview = previewing === track.id;
           return (
@@ -152,10 +154,10 @@ export default function MusicScreen() {
                   <View style={[styles.row, { flex: 1 }]}>
                     <Icon name="lock" size={13} color={C.textMute} />
                     <T size={12} color={C.textMute} style={{ flex: 1 }}>
-                      {t('music.unlocksAt', { rank: RANKS[track.level - 1].name })}
+                      {unlockHint(track, (l) => RANKS[l - 1].name)}
                     </T>
                   </View>
-                  <Chip label={t('music.unlockFor', { xp: track.xp.toLocaleString(locale) })} icon="bolt" onPress={() => unlock(track)} />
+                  {track.xp > 0 && <Chip label={t('music.unlockFor', { xp: track.xp.toLocaleString(locale) })} icon="bolt" onPress={() => unlock(track)} />}
                 </View>
               )}
             </Card>
