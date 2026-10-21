@@ -4,7 +4,7 @@ import { t } from './i18n';
 // the player reaches a Street Crew rank, or earlier by spending XP. Spending XP never lowers the
 // rank: it comes out of the same "spendable XP" as trading XP for credits.
 
-export type TrackId = 'brawl' | 'arcade' | 'neon' | 'funk' | 'chill' | 'boss';
+export type TrackId = 'drive' | 'noir' | 'chrome' | 'montage' | 'grid' | 'lap';
 
 export interface MusicTrack {
   id: TrackId;
@@ -18,24 +18,27 @@ export interface MusicTrack {
 }
 
 export const TRACKS: MusicTrack[] = [
-  { id: 'brawl', name: t('music.brawl'), vibe: t('music.brawlVibe'), emoji: '🎺', level: 1, xp: 0 },
-  { id: 'arcade', name: t('music.arcade'), vibe: t('music.arcadeVibe'), emoji: '👾', level: 1, xp: 0 },
-  { id: 'neon', name: t('music.neon'), vibe: t('music.neonVibe'), emoji: '🌆', level: 3, xp: 1500 },
-  { id: 'funk', name: t('music.funk'), vibe: t('music.funkVibe'), emoji: '🚇', level: 5, xp: 3000 },
-  { id: 'chill', name: t('music.chill'), vibe: t('music.chillVibe'), emoji: '☕', level: 7, xp: 4000 },
-  { id: 'boss', name: t('music.boss'), vibe: t('music.bossVibe'), emoji: '👊', level: 9, xp: 6000 },
+  { id: 'drive', name: t('music.drive'), vibe: t('music.driveVibe'), emoji: '🌆', level: 1, xp: 0 },
+  { id: 'noir', name: t('music.noir'), vibe: t('music.noirVibe'), emoji: '🌃', level: 1, xp: 0 },
+  { id: 'chrome', name: t('music.chrome'), vibe: t('music.chromeVibe'), emoji: '🪩', level: 3, xp: 1500 },
+  { id: 'montage', name: t('music.montage'), vibe: t('music.montageVibe'), emoji: '🥊', level: 5, xp: 3000 },
+  { id: 'grid', name: t('music.grid'), vibe: t('music.gridVibe'), emoji: '🌙', level: 7, xp: 4000 },
+  { id: 'lap', name: t('music.lap'), vibe: t('music.lapVibe'), emoji: '🏁', level: 9, xp: 6000 },
 ];
 
-export const DEFAULT_TRACK: TrackId = 'brawl';
+export const DEFAULT_TRACK: TrackId = 'drive';
 
 export const TRACK_FILES: Record<TrackId, number> = {
-  brawl: require('@/assets/audio/music-brawl.wav'),
-  arcade: require('@/assets/audio/music-arcade.wav'),
-  neon: require('@/assets/audio/music-neon.wav'),
-  funk: require('@/assets/audio/music-funk.wav'),
-  chill: require('@/assets/audio/music-chill.wav'),
-  boss: require('@/assets/audio/music-boss.wav'),
+  drive: require('@/assets/audio/music-drive.wav'),
+  noir: require('@/assets/audio/music-noir.wav'),
+  chrome: require('@/assets/audio/music-chrome.wav'),
+  montage: require('@/assets/audio/music-montage.wav'),
+  grid: require('@/assets/audio/music-grid.wav'),
+  lap: require('@/assets/audio/music-lap.wav'),
 };
+
+/** The first jukebox's ids, mapped to the 80s tracks that took their place (same unlock rank). */
+export const OLD_TRACKS: Record<string, TrackId> = { brawl: 'drive', arcade: 'noir', neon: 'chrome', funk: 'montage', chill: 'grid', boss: 'lap' };
 
 export const trackById = (id: string | undefined) => TRACKS.find((x) => x.id === id) ?? TRACKS[0];
 

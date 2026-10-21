@@ -115,7 +115,7 @@ export interface Settings {
   music?: boolean;
   /** Reward and chest sounds (default on). */
   sfx?: boolean;
-  /** Jukebox track id (default 'brawl'). */
+  /** Jukebox track id (default 'drive'). */
   musicTrack?: string;
   /** Music volume, 0-1 (default 0.5). */
   musicVolume?: number;
