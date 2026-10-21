@@ -66,6 +66,13 @@ export async function buy(offer: CreditOffer): Promise<boolean> {
   }
 }
 
+/** A purchase error with RevenueCat's code and the underlying store reason, so a failure can be traced. */
+export function describePurchaseError(e: unknown): string {
+  const err = e as { message?: string; readableErrorCode?: string; underlyingErrorMessage?: string; userInfo?: { readableErrorCode?: string } };
+  const code = err.userInfo?.readableErrorCode ?? err.readableErrorCode;
+  return [err.message, err.underlyingErrorMessage, code && `(${code})`].filter(Boolean).join('\n');
+}
+
 /** Restores the subscription on a new device or after reinstalling (an App Store requirement). */
 export async function restore() {
   if (!ensureConfigured()) return;
