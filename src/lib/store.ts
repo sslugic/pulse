@@ -21,7 +21,7 @@ import { t } from './i18n';
 import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
 import { avatarById, avatarUnlockId, avatarGiftId, isAvatarUnlocked, type AvatarId } from './avatars';
-import { trackById, trackUnlockId, type TrackId } from './music';
+import { OLD_TRACKS, trackById, trackUnlockId, type TrackId } from './music';
 import { configureSound, playSfx } from './sound';
 import { speak, speakStream, stopSpeaking } from './voice';
 
@@ -176,7 +176,7 @@ export async function hydrate() {
         autoPlans: data.autoPlans,
         music: data.music,
         sfx: data.sfx,
-        musicTrack: data.musicTrack,
+        musicTrack: OLD_TRACKS[data.musicTrack] ?? data.musicTrack,
         musicVolume: data.musicVolume,
       },
       // Plans from before per-day dates are dropped.
@@ -186,7 +186,8 @@ export async function hydrate() {
       photos: data.photos ?? [],
       game: {
         claims: data.game?.claims ?? [],
-        unlocked: data.game?.unlocked ?? [],
+        // Tracks bought with XP in the first jukebox carry over to the 80s tracks that replaced them.
+        unlocked: ((data.game?.unlocked ?? []) as string[]).map((u) => (u.startsWith('music:') && OLD_TRACKS[u.slice(6)] ? `music:${OLD_TRACKS[u.slice(6)]}` : u)),
         wall: data.game?.wall,
         freezes: data.game?.freezes ?? 0,
         frozenDays: data.game?.frozenDays ?? [],
@@ -194,6 +195,8 @@ export async function hydrate() {
         doubler: data.game?.doubler ?? 0,
         bests: data.game?.bests ?? {},
         playedDay: data.game?.playedDay,
+        // XP already spent on tracks and avatars; without it a restart would refund them.
+        xpSpent: data.game?.xpSpent,
       },
     };
   } catch {
