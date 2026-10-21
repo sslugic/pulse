@@ -46,7 +46,7 @@ const MAX_RECORDING_S = 90;
 export default function Coach() {
   const persona = personaById(useStore((s) => s.profile.persona));
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ mode?: string; t?: string }>();
+  const params = useLocalSearchParams<{ mode?: string; t?: string; q?: string }>();
   const messages = useStore((s) => s.messages);
   const entries = useStore((s) => s.entries);
   const thinking = useStore((s) => s.thinking);
@@ -80,13 +80,15 @@ export default function Coach() {
     return out;
   }, [entries]);
 
-  // Deep-link actions from the Today screen's quick tiles.
+  // Deep-link actions from the Today screen's quick tiles and from Siri, the Action Button or Back Tap
+  // (pulse://coach?mode=voice&t=…, or pulse://coach?q=I+had+coffee&t=… to send what was said).
   useEffect(() => {
     if (!params.t) return;
-    if (params.mode === 'voice') startRecording();
+    if (params.q) sendText(params.q);
+    else if (params.mode === 'voice') startRecording();
     else if (params.mode === 'camera') sendPhoto('camera');
     else if (params.mode === 'type') setTimeout(() => inputRef.current?.focus(), 350);
-    router.setParams({ mode: undefined, t: undefined });
+    router.setParams({ mode: undefined, t: undefined, q: undefined });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.t]);
 

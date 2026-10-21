@@ -5,10 +5,12 @@ import { t } from './i18n';
 import { dayKey, streak } from './nutrition';
 import type { Entry } from './types';
 
-// One local reminder at a time: the evening of the next day that hasn't been logged yet.
-// It's rescheduled whenever something is logged or the app opens, so a logged day never nags.
+// Evening reminders for the next week, skipping today once it's logged. They're rescheduled whenever
+// something is logged or the app opens, so a logged day never nags, and a week away still gets nudged.
 
 const ID = 'pulse-streak-reminder';
+const DAYS = 7;
+const idFor = (i: number) => `${ID}-${i}`;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldPlaySound: false, shouldSetBadge: false, shouldShowBanner: true, shouldShowList: true }),
@@ -22,10 +24,11 @@ export async function enableReminders() {
 
 export async function cancelReminders() {
   if (Platform.OS === 'web') return;
-  await Notifications.cancelScheduledNotificationAsync(ID).catch(() => {});
+  // The bare ID is from builds that scheduled a single reminder.
+  await Promise.all([ID, ...Array.from({ length: DAYS }, (_, i) => idFor(i))].map((id) => Notifications.cancelScheduledNotificationAsync(id).catch(() => {})));
 }
 
-/** Schedules the next evening reminder at `hour`:00, skipping today if it's already logged or past. */
+/** Schedules the evening reminders at `hour`:00 for the next week, skipping today if it's already logged or past. */
 export async function scheduleReminder(entries: Entry[], hour: number, frozen: string[] = []) {
   if (Platform.OS === 'web') return;
   const { status } = await Notifications.getPermissionsAsync();
@@ -33,19 +36,24 @@ export async function scheduleReminder(entries: Entry[], hour: number, frozen: s
   await cancelReminders();
 
   const now = new Date();
-  const when = new Date(now);
-  when.setHours(hour, 0, 0, 0);
+  const first = new Date(now);
+  first.setHours(hour, 0, 0, 0);
   const loggedToday = entries.some((e) => !e.passive && dayKey(e.createdAt) === dayKey(now));
-  if (loggedToday || when <= now) when.setDate(when.getDate() + 1);
+  if (loggedToday || first <= now) first.setDate(first.getDate() + 1);
 
-  // The streak they'd be protecting on that evening.
+  // The streak they'd be protecting on the first evening; after a missed day it's gone, so later ones invite them back.
   const run = streak(entries, frozen);
-  const title = run > 0 ? t('crew.reminderStreakTitle', { count: run }) : t('crew.reminderMissTitle');
-  const body = run > 0 ? t('crew.reminderStreakBody') : t('crew.reminderMissBody');
-
-  await Notifications.scheduleNotificationAsync({
-    identifier: ID,
-    content: { title, body },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when },
-  });
+  for (let i = 0; i < DAYS; i++) {
+    const when = new Date(first);
+    when.setDate(first.getDate() + i);
+    const keep = run > 0 && i === 0;
+    await Notifications.scheduleNotificationAsync({
+      identifier: idFor(i),
+      content: {
+        title: keep ? t('crew.reminderStreakTitle', { count: run }) : t('crew.reminderMissTitle'),
+        body: keep ? t('crew.reminderStreakBody') : t('crew.reminderMissBody'),
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: when },
+    });
+  }
 }
