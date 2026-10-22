@@ -251,12 +251,28 @@ function fillExercise<T extends Partial<Entry>>(e: T, reply: string, onlyWorkout
   if (e.kind !== 'exercise' || (e.caloriesBurned ?? 0) > 0) return e;
   const fromNutrition = e.nutrition?.calories;
   const m = (e.note ?? '').match(BURN_IN_TEXT) ?? (onlyWorkout ? reply.match(BURN_IN_TEXT) : null);
-  const fromText = m ? Number(m[1] ?? m[2]) : NaN;
+  const fromText = m ? Number(m[1] ?? m[2]) : burnForDuration(reply, e.durationMin);
   const minutes = e.durationMin ?? 0;
   const estimate = minutes > 0 ? (MET[e.intensity ?? 'moderate'] * weightKg * minutes) / 60 : 0;
   const kcal = fromNutrition && fromNutrition > 0 ? fromNutrition : fromText > 0 ? fromText : estimate;
   if (!(kcal > 0)) console.warn('[coach] exercise logged without calories', e.title);
   return kcal > 0 ? { ...e, caloriesBurned: Math.round(kcal) } : e;
+}
+
+/**
+ * With several workouts in one reply ("10 minutes on the elliptical for 94 calories and 25 minutes of
+ * lifting for 212"), finds the calories said in the same clause as this workout's duration. Totals are skipped.
+ */
+function burnForDuration(reply: string, minutes?: number) {
+  if (!minutes) return NaN;
+  const clauses = reply.split(/[.;,]\s|\band\b/i);
+  const dur = new RegExp(`\\b${Math.round(minutes)}\\s*-?\\s*min`, 'i');
+  const hits = clauses.flatMap((c) => {
+    if (!dur.test(c) || /total/i.test(c)) return [];
+    const k = c.match(/(\d{2,4})\s*(?:k?cal|calories)/i);
+    return k ? [Number(k[1])] : [];
+  });
+  return hits.length === 1 ? hits[0] : NaN;
 }
 
 function fillJournal<T extends Partial<Entry>>(e: T): T {

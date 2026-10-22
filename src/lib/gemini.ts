@@ -160,7 +160,7 @@ const ENTRY_SCHEMA = {
         required: ['name', 'amount', 'calories'],
       },
     },
-    caloriesBurned: { type: 'NUMBER' },
+    caloriesBurned: { type: 'NUMBER', description: 'exercise: REQUIRED on every exercise entry. kcal burned, exactly the number you give for it in the reply' },
     durationMin: { type: 'NUMBER' },
     intensity: { type: 'STRING', enum: ['low', 'moderate', 'high'] },
     waterMl: { type: 'NUMBER' },
