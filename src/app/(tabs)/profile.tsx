@@ -12,7 +12,6 @@ import { Card, Chip, SectionTitle, T } from '@/components/ui';
 import { Backdrop, Comic, MetalPanel } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import type { AvatarId } from '@/lib/avatars';
-import { COACH_VOICES } from '@/lib/gemini';
 import { locale, t } from '@/lib/i18n';
 import { goalLabel, macroTargets, paceLabel } from '@/lib/nutrition';
 import { NOTIFY_KINDS } from '@/lib/reminders';
@@ -152,26 +151,6 @@ export default function ProfileScreen() {
           )}
           <T size={12} color={C.textMute}>
             {t('notify.note')}
-          </T>
-        </Card>
-
-        <SectionTitle>{t('crew.sectionVoice')}</SectionTitle>
-        <Card style={{ gap: 12 }}>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {[...COACH_VOICES, { id: 'device', label: t('crew.voiceOffline') }].map((v) => (
-              <Chip
-                key={v.id}
-                label={v.id === 'device' ? v.label : `${v.id} · ${t(`labels.voice_${v.id}`)}`}
-                active={settings.coachVoice === v.id}
-                onPress={() => {
-                  actions.setCoachVoice(v.id);
-                  actions.speakMessage('voice-preview', t('crew.voicePreview'));
-                }}
-              />
-            ))}
-          </View>
-          <T size={12} color={C.textMute}>
-            {t('crew.voiceNote')}
           </T>
         </Card>
 

@@ -643,14 +643,7 @@ Write: headline (max 8 words), body (2-3 sentences linking THEIR stress/sleep/mo
 const TTS_MODELS = ['gemini-3.8-flash-lite-tts', 'gemini-3.8-flash-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
 let ttsModel = 0;
 
-/** Gemini prebuilt voices offered for the Coach. */
-export const COACH_VOICES = [
-  { id: 'Puck', label: 'Upbeat' },
-  { id: 'Kore', label: 'Firm' },
-  { id: 'Fenrir', label: 'Hype' },
-  { id: 'Aoede', label: 'Breezy' },
-  { id: 'Charon', label: 'Calm' },
-] as const;
+/** The Coach's voice before a persona is picked (each persona has its own, see lib/personas.ts). */
 export const DEFAULT_VOICE = 'Puck';
 
 /** Natural speech for a Coach reply. Usually 16-bit 24 kHz mono PCM; mimeType says which. */

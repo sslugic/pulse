@@ -11,11 +11,6 @@ const en = {
   pace_gentle: 'Gentle',
   pace_standard: 'Standard',
   pace_aggressive: 'Aggressive',
-  voice_Puck: 'Upbeat',
-  voice_Kore: 'Firm',
-  voice_Fenrir: 'Hype',
-  voice_Aoede: 'Breezy',
-  voice_Charon: 'Calm',
 } as const;
 
 const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<keyof typeof en, string>>> = {
@@ -32,11 +27,6 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     pace_gentle: 'Suave',
     pace_standard: 'Normal',
     pace_aggressive: 'Intenso',
-    voice_Puck: 'Animado',
-    voice_Kore: 'Firme',
-    voice_Fenrir: 'Eufórico',
-    voice_Aoede: 'Relajado',
-    voice_Charon: 'Sereno',
   },
   de: {
     goal_lose: 'Fett verlieren',
@@ -50,11 +40,6 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     pace_gentle: 'Sanft',
     pace_standard: 'Normal',
     pace_aggressive: 'Intensiv',
-    voice_Puck: 'Fröhlich',
-    voice_Kore: 'Bestimmt',
-    voice_Fenrir: 'Hype',
-    voice_Aoede: 'Locker',
-    voice_Charon: 'Ruhig',
   },
   fr: {
     goal_lose: 'Perdre du gras',
@@ -68,11 +53,6 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     pace_gentle: 'Doux',
     pace_standard: 'Normal',
     pace_aggressive: 'Intense',
-    voice_Puck: 'Enjoué',
-    voice_Kore: 'Ferme',
-    voice_Fenrir: 'Survolté',
-    voice_Aoede: 'Détendu',
-    voice_Charon: 'Calme',
   },
   it: {
     goal_lose: 'Perdere grasso',
@@ -86,11 +66,6 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     pace_gentle: 'Leggero',
     pace_standard: 'Normale',
     pace_aggressive: 'Intenso',
-    voice_Puck: 'Allegro',
-    voice_Kore: 'Deciso',
-    voice_Fenrir: 'Carico',
-    voice_Aoede: 'Rilassato',
-    voice_Charon: 'Calmo',
   },
   pt: {
     goal_lose: 'Perder gordura',
@@ -104,11 +79,6 @@ const strings: Record<'en' | 'es' | 'de' | 'fr' | 'it' | 'pt', Partial<Record<ke
     pace_gentle: 'Leve',
     pace_standard: 'Normal',
     pace_aggressive: 'Intenso',
-    voice_Puck: 'Animado',
-    voice_Kore: 'Firme',
-    voice_Fenrir: 'Empolgado',
-    voice_Aoede: 'Tranquilo',
-    voice_Charon: 'Calmo',
   },
 };
 export default strings;
