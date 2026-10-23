@@ -170,7 +170,8 @@ export async function hydrate() {
         apiKey: DEV_GEMINI_KEY,
         model: data.model || DEFAULT_MODEL,
         voiceReplies: data.voiceReplies ?? true,
-        coachVoice: data.coachVoice || DEFAULT_VOICE,
+        // The voice is the coach's own (the separate voice picker is gone, so an old pick is replaced).
+        coachVoice: personaById(migrateProfile(data.profile).persona).voice ?? DEFAULT_VOICE,
         reminderHour: data.reminderHour,
         notifyOff: data.notifyOff,
         health: data.health,
@@ -507,7 +508,7 @@ export const actions = {
     set((s) => ({ settings: { ...s.settings, voiceReplies } }));
     if (!voiceReplies) stopSpeaking();
   },
-  /** Switches coach personality and its matching voice (unless the offline voice is chosen). Buys it with tokens if needed. */
+  /** Switches coach personality and its voice. Buys it with tokens if needed. */
   choosePersona(id: PersonaId) {
     const p = personaById(id);
     const { game } = state;
@@ -517,7 +518,7 @@ export const actions = {
       celebrate();
     }
     actions.updateProfile({ persona: id });
-    if (state.settings.coachVoice !== 'device') actions.setCoachVoice(p.voice);
+    actions.setCoachVoice(p.voice);
     actions.speakMessage('voice-preview', p.sample);
     return true;
   },
@@ -531,7 +532,7 @@ export const actions = {
       },
     }));
     actions.updateProfile({ persona: id });
-    if (state.settings.coachVoice !== 'device') actions.setCoachVoice(p.voice);
+    actions.setCoachVoice(p.voice);
     actions.speakMessage('voice-preview', p.sample);
   },
   /** Turns notifications on with the evening check-in at `hour`, or all off with undefined. Asks for permission first. */
