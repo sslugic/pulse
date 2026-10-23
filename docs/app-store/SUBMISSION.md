@@ -5,7 +5,7 @@ with the answers that match what the app actually does.
 
 ## Already done
 
-- ✅ Privacy, Terms and Support pages: https://sslugic.github.io/pulse-site/ (repo `sslugic/pulse-site`)
+- ✅ Privacy, Terms and Support pages: https://pulseretro.fit/ (repo `sslugic/pulse-site`)
 - ✅ App Information: subtitle "AI Coach, Calories & Workouts"
 - ✅ Version 1.0 page: promotional text, description, keywords, support and marketing URLs, copyright,
   review notes, "Sign-in required" unchecked
@@ -24,7 +24,7 @@ with the answers that match what the app actually does.
   - Violence, sexual content, profanity, alcohol/drugs, horror: **None**
 
 ### 2. App Privacy → Privacy Policy
-- ☐ **Privacy Policy URL:** `https://sslugic.github.io/pulse-site/privacy.html` (Apple errored when Claude saved it, so check it's there).
+- ☐ **Privacy Policy URL:** `https://pulseretro.fit/privacy.html` (Apple errored when Claude saved it, so check it's there).
 - ☐ **Get Started → Data collection:** "Yes, we collect data". Mark each type below as **Linked to the user**, **Not used for tracking**, purpose **App Functionality** (except where noted):
   - **Contact Info → Email Address** (only if the user shares it via Sign in with Apple)
   - **Health & Fitness → Health** and **Fitness** (logs; Apple Health data that is read)

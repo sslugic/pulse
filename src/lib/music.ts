@@ -86,7 +86,7 @@ export const TRACK_FILES: Partial<Record<TrackId, number>> = {
 };
 
 /** Where downloadable tracks live (the Pulse website on GitHub Pages). */
-export const MUSIC_BASE_URL = 'https://sslugic.github.io/pulse-site/music';
+export const MUSIC_BASE_URL = 'https://pulseretro.fit/music';
 
 /** The first jukebox's ids, mapped to the 80s tracks that took their place (same unlock rank). */
 export const OLD_TRACKS: Record<string, TrackId> = { brawl: 'drive', arcade: 'noir', neon: 'chrome', funk: 'montage', chill: 'grid', boss: 'lap' };

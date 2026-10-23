@@ -102,7 +102,7 @@ Already built in the app:
 
 You still need to:
 
-- [x] **Privacy Policy, Terms and Support** pages: https://sslugic.github.io/pulse-site/ (repo `sslugic/pulse-site`),
+- [x] **Privacy Policy, Terms and Support** pages: https://pulseretro.fit/ (repo `sslugic/pulse-site`),
       wired in as the defaults in `src/lib/legal.ts`. Use the same URLs in App Store Connect.
 - [ ] Fill in **App Privacy** ("nutrition labels") in App Store Connect. Data Pulse collects
       when signed in: Health & Fitness (logs, HealthKit), Identifiers (user id), Purchases,

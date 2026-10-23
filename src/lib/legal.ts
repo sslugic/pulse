@@ -3,9 +3,9 @@
 import { t } from './i18n';
 
 export const LEGAL = {
-  privacy: process.env.EXPO_PUBLIC_PRIVACY_URL ?? 'https://sslugic.github.io/pulse-site/privacy.html',
-  terms: process.env.EXPO_PUBLIC_TERMS_URL ?? 'https://sslugic.github.io/pulse-site/terms.html',
-  support: process.env.EXPO_PUBLIC_SUPPORT_URL ?? 'https://sslugic.github.io/pulse-site/',
+  privacy: process.env.EXPO_PUBLIC_PRIVACY_URL ?? 'https://pulseretro.fit/privacy.html',
+  terms: process.env.EXPO_PUBLIC_TERMS_URL ?? 'https://pulseretro.fit/terms.html',
+  support: process.env.EXPO_PUBLIC_SUPPORT_URL ?? 'https://pulseretro.fit/',
 };
 
 /** Shown with Coach advice and in onboarding (App Store guideline 1.4.1 for health apps). */
