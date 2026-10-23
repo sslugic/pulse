@@ -54,6 +54,19 @@ export function cloudAI() {
   return supabase && session ? { url: `${URL}/functions/v1/ai`, token: session.access_token } : null;
 }
 
+/**
+ * Like cloudAI, but refreshes a token that has expired or is about to. Auto-refresh stops while the
+ * app is in the background, so the first request after coming back could otherwise go out stale.
+ */
+export async function freshCloudAI() {
+  if (supabase && session && (session.expires_at ?? 0) * 1000 - Date.now() < 60_000) {
+    // Offline, this fails and the request goes out with the old token, reporting the real problem.
+    const { data } = await supabase.auth.refreshSession().catch(() => ({ data: { session: null } }));
+    if (data.session) session = data.session;
+  }
+  return cloudAI();
+}
+
 export async function appleSignInAvailable() {
   return Platform.OS === 'ios' && cloudConfigured && (await AppleAuthentication.isAvailableAsync());
 }

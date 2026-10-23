@@ -1,7 +1,8 @@
 // React Native's fetch can't read a response as it arrives; expo/fetch can.
 import { fetch as streamingFetch } from 'expo/fetch';
+import { AppState } from 'react-native';
 
-import { cloudAI } from './cloud';
+import { cloudAI, freshCloudAI } from './cloud';
 import { language, LANGUAGE_NAMES, t } from './i18n';
 import type { ChatMessage, Entry, Goal, Nutrition, Pace, Profile, Targets } from './types';
 import { personaById } from './personas';
@@ -38,8 +39,8 @@ export class AiError extends Error {
   constructor(
     message: string,
     readonly retryable = true,
-    /** 'credits' when a signed-in user ran out of AI credits. */
-    readonly code?: 'credits',
+    /** 'credits' when a signed-in user ran out of AI credits; 'network' when the connection failed. */
+    readonly code?: 'credits' | 'network',
   ) {
     super(message);
   }
@@ -88,7 +89,7 @@ async function aiFetch(
   opts: { apiKey: string; model: string; method: 'generateContent' | 'streamGenerateContent'; body: string; feature: Feature; id: string; signal?: AbortSignal },
   fetchImpl: typeof fetch = fetch,
 ): Promise<Response> {
-  const cloud = cloudAI();
+  const cloud = await freshCloudAI();
   if (cloud) {
     const res = await fetchImpl(cloud.url, {
       method: 'POST',
@@ -311,31 +312,62 @@ function requestError(status: number, json: { error?: { message?: string } }, mo
 }
 
 function networkError(err: unknown) {
-  if ((err as Error).name === 'AbortError') return new AiError(t('errors.tooSlow'));
   if (err instanceof AiError) return err;
-  return new AiError(t('errors.network'));
+  return new AiError(t('errors.network'), true, 'network');
 }
 
-/** Runs a request with a hard timeout and one retry on transient failures. */
-async function withRetry(attempt: (signal: AbortSignal) => Promise<string>, timeoutMs: number, canRetry = () => true) {
+/** Resolves once the app is in the foreground: iOS cuts connections while it's suspended. */
+function whenActive() {
+  if (AppState.currentState === 'active') return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      sub.remove();
+      resolve();
+    });
+  });
+}
+
+/**
+ * Runs a request with a timeout and retries transient failures: a dropped connection up to twice,
+ * anything else once, each after the app is back in the foreground. The timeout counts from the
+ * last sign of life, so a long answer that keeps streaming isn't cut off.
+ */
+async function withRetry(
+  attempt: (signal: AbortSignal, alive: () => void) => Promise<string>,
+  timeoutMs: number,
+  canRetry = () => true,
+) {
   const run = async () => {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    let timedOut = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const alive = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timedOut = true;
+        ctrl.abort();
+      }, timeoutMs);
+    };
+    alive();
     try {
-      return await attempt(ctrl.signal);
+      return await attempt(ctrl.signal, alive);
     } catch (err) {
-      throw networkError(err);
+      // expo/fetch reports an abort before the answer starts as a plain fetch error, not an AbortError.
+      throw timedOut ? new AiError(t('errors.tooSlow')) : networkError(err);
     } finally {
       clearTimeout(timer);
     }
   };
-  try {
-    return await run();
-  } catch (err) {
-    const e = err as AiError;
-    if (!e.retryable || !canRetry()) throw e;
-    await new Promise((r) => setTimeout(r, e.message === 'retry-without-thinking' ? 0 : 1200));
-    return run();
+  for (let tries = 0; ; tries++) {
+    try {
+      return await run();
+    } catch (err) {
+      const e = err as AiError;
+      if (!e.retryable || !canRetry() || tries >= (e.code === 'network' ? 2 : 1)) throw e;
+      await whenActive();
+      await new Promise((r) => setTimeout(r, e.message === 'retry-without-thinking' ? 0 : 1000 * 2 ** tries));
+    }
   }
 }
 
@@ -361,11 +393,17 @@ function generateStream(
   timeoutMs: number,
   onText: (text: string) => void,
   feature: Feature,
+  /** Called before an answer that broke off midway is asked for again; without it, it isn't. */
+  onRestart?: () => void,
 ): Promise<string> {
   let started = false;
   const id = requestId();
   return withRetry(
-    async (signal) => {
+    async (signal, alive) => {
+      if (started) {
+        started = false;
+        onRestart?.();
+      }
       const res = await aiFetch({ apiKey, model, method: 'streamGenerateContent', body: requestBody(body, model, feature), feature, id, signal }, streamingFetch as unknown as typeof fetch);
       if (!res.ok) throw requestError(res.status, await res.json().catch(() => ({})), model);
       const reader = res.body?.getReader();
@@ -376,6 +414,7 @@ function generateStream(
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
+        alive();
         buffer += decoder.decode(value, { stream: true });
         // Server-sent events: one "data: {json}" line per chunk of the answer.
         for (let nl = buffer.indexOf('\n'); nl >= 0; nl = buffer.indexOf('\n')) {
@@ -401,8 +440,8 @@ function generateStream(
       return text;
     },
     timeoutMs,
-    // Once text has reached the screen, a retry would show the answer twice.
-    () => !started,
+    // Once text has reached the screen, only retry when the caller can start the answer over.
+    () => !started || !!onRestart,
   );
 }
 
@@ -446,8 +485,10 @@ export async function askCoach(opts: {
   audio?: Media;
   /** Called with the reply so far while it streams in. */
   onReply?: (reply: string, done: boolean) => void;
+  /** Called when the connection dropped midway and the reply starts streaming again from scratch. */
+  onRestart?: () => void;
 }): Promise<CoachResult> {
-  const { apiKey, model, profile, entries, history, text, image, audio, onReply } = opts;
+  const { apiKey, model, profile, entries, history, text, image, audio, onReply, onRestart } = opts;
 
   const contents = history
     .filter((m) => !m.pending && !m.error && m.text)
@@ -480,7 +521,11 @@ export async function askCoach(opts: {
         lastReply = r.text;
         replyDone = r.done;
         onReply(r.text, r.done);
-      }, feature)
+      }, feature, () => {
+        lastReply = '';
+        replyDone = false;
+        onRestart?.();
+      })
     : await generate(apiKey, model, body, timeoutMs, feature);
   try {
     const parsed = JSON.parse(raw) as CoachResult;
