@@ -1055,7 +1055,7 @@ export const actions = {
     set({ messages: [...s.messages, userMsg, pending], thinking: true });
     const { apiKey, coachVoice, voiceReplies } = s.settings;
     // Start talking as soon as the first sentence of the reply streams in.
-    const voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice }) : null;
+    let voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice }) : null;
     if (!voice) stopSpeaking();
 
     try {
@@ -1072,6 +1072,12 @@ export const actions = {
           // Still pending (kept out of history and storage) until the whole answer is in.
           set((st) => ({ messages: st.messages.map((m) => (m.id === pending.id ? { ...m, text: reply } : m)) }));
           voice?.update(reply);
+        },
+        // The connection dropped midway: clear the half answer and start speaking the new one afresh.
+        onRestart: () => {
+          set((st) => ({ messages: st.messages.map((m) => (m.id === pending.id ? { ...m, text: '' } : m)) }));
+          voice?.cancel();
+          voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice }) : null;
         },
       });
       // Remember when replaced entries happened before they're removed, so corrections keep their date.
