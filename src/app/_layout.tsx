@@ -6,7 +6,7 @@ import * as Notifications from 'expo-notifications';
 import { DarkTheme, router, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { BootScreen } from '@/components/boot-screen';
 import { RewardToast } from '@/components/reward-toast';
@@ -46,17 +46,38 @@ export default function RootLayout() {
     const timer = setTimeout(() => actions.refreshReminder(), 1500);
     return () => clearTimeout(timer);
   }, [ready, game.chests, game.claims, todayKey]);
-  // A tapped nudge notification opens Squad.
+  // A tapped notification opens the place it's about: a reminder carries its screen, a Squad nudge
+  // opens Squad. One that launched the app waits until the screens are up and onboarding is done.
+  const tapped = useRef<string | null>(null);
+  const [tapCount, setTapCount] = useState(0);
+  const setTapped = (url: string) => {
+    tapped.current = url;
+    setTapCount((n) => n + 1);
+  };
   useEffect(() => {
     const open = (r: Notifications.NotificationResponse | null) => {
-      if (r?.notification.request.content.data?.kind !== 'nudge') return;
-      refreshSquad();
-      router.navigate('/(tabs)/squad');
+      if (!r || r.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
+      const data = r.notification.request.content.data;
+      if (data?.kind === 'nudge') {
+        refreshSquad();
+        setTapped('/(tabs)/squad');
+      } else if (typeof data?.url === 'string') {
+        setTapped(data.url);
+      }
+      // Handled once: otherwise the same tap would be replayed on the next launch.
+      Notifications.clearLastNotificationResponse();
     };
-    Notifications.getLastNotificationResponseAsync().then(open).catch(() => {});
+    open(Notifications.getLastNotificationResponse());
     const sub = Notifications.addNotificationResponseReceivedListener(open);
     return () => sub.remove();
   }, []);
+  useEffect(() => {
+    const url = tapped.current;
+    if (!url || !ready || !onboarded) return;
+    tapped.current = null;
+    // Next tick, so a screen that just mounted is in the navigator first.
+    setTimeout(() => router.navigate(url as never), 0);
+  }, [tapCount, ready, onboarded]);
   const [fontsLoaded, fontError] = useFonts({ Bangers_400Regular, PermanentMarker_400Regular, RussoOne_400Regular });
 
   // Swap the static native splash for the animated boot screen as soon as fonts are in.
