@@ -59,6 +59,16 @@ interface Slot {
   content: (s: DayFacts, isToday: boolean) => { title: string; body: string };
 }
 
+/** Where tapping each kind of reminder takes you: the place to do what it suggests. */
+const OPENS: Record<Slot['kind'], string> = {
+  meals: '/(tabs)/coach',
+  water: '/(tabs)', // the water chips sit at the top of HQ
+  move: '/(tabs)/coach',
+  rewards: '/(tabs)/arcade',
+  mood: '/wellbeing',
+  evening: '/(tabs)/coach',
+};
+
 interface DayFacts {
   meals: number[]; // minutes after midnight of each meal logged today
   waterMl: number;
@@ -132,7 +142,7 @@ export async function scheduleReminder(s: ReminderState) {
     d.setHours(Math.floor(minute / 60), minute % 60, 0, 0);
     return d;
   };
-  const plan: { id: string; when: Date; title: string; body: string }[] = [];
+  const plan: { id: string; when: Date; title: string; body: string; url: string }[] = [];
 
   for (let day = 0; day < DAYTIME_DAYS; day++) {
     SLOTS.forEach((slot, i) => {
@@ -140,7 +150,7 @@ export async function scheduleReminder(s: ReminderState) {
       const when = at(day, slot.at);
       if (when <= now) return;
       if (day === 0 && slot.doneToday(f)) return;
-      plan.push({ id: `${PREFIX}${slot.kind}-${i}-${day}`, when, ...slot.content(f, day === 0) });
+      plan.push({ id: `${PREFIX}${slot.kind}-${i}-${day}`, when, url: OPENS[slot.kind], ...slot.content(f, day === 0) });
     });
   }
 
@@ -163,13 +173,13 @@ export async function scheduleReminder(s: ReminderState) {
       title = t('crew.reminderMissTitle');
       body = t('crew.reminderMissBody');
     }
-    plan.push({ id: `${PREFIX}evening-${day}`, when, title, body });
+    plan.push({ id: `${PREFIX}evening-${day}`, when, title, body, url: OPENS.evening });
   }
 
   for (const n of plan) {
     await Notifications.scheduleNotificationAsync({
       identifier: n.id,
-      content: { title: n.title, body: n.body },
+      content: { title: n.title, body: n.body, data: { url: n.url } },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: n.when },
     });
   }
