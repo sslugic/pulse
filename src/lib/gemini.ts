@@ -2,6 +2,8 @@
 import { fetch as streamingFetch } from 'expo/fetch';
 import { AppState } from 'react-native';
 
+import { withBackgroundTime } from '../../modules/pulse-background-time';
+
 import { cloudAI, freshCloudAI } from './cloud';
 import { language, LANGUAGE_NAMES, t } from './i18n';
 import type { ChatMessage, Entry, Goal, Nutrition, Pace, Profile, Targets } from './types';
@@ -331,7 +333,9 @@ function whenActive() {
 /**
  * Runs a request with a timeout and retries transient failures: a dropped connection up to twice,
  * anything else once, each after the app is back in the foreground. The timeout counts from the
- * last sign of life, so a long answer that keeps streaming isn't cut off.
+ * last sign of life and stands still while the app is in the background, so neither a long answer
+ * that keeps streaming nor a locked screen counts as "too slow". iOS is asked for extra time to
+ * finish a request when the app leaves the foreground.
  */
 async function withRetry(
   attempt: (signal: AbortSignal, alive: () => void) => Promise<string>,
@@ -341,22 +345,31 @@ async function withRetry(
   const run = async () => {
     const ctrl = new AbortController();
     let timedOut = false;
+    let leftApp = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const alive = () => {
       clearTimeout(timer);
+      if (AppState.currentState !== 'active') return;
       timer = setTimeout(() => {
         timedOut = true;
         ctrl.abort();
       }, timeoutMs);
     };
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') leftApp = true;
+      alive();
+    });
     alive();
     try {
-      return await attempt(ctrl.signal, alive);
+      return await withBackgroundTime(() => attempt(ctrl.signal, alive));
     } catch (err) {
+      // iOS cuts connections once the app is suspended: that's a dropped connection, not a slow AI.
+      if (leftApp && !(err instanceof AiError)) throw networkError(err);
       // expo/fetch reports an abort before the answer starts as a plain fetch error, not an AbortError.
       throw timedOut ? new AiError(t('errors.tooSlow')) : networkError(err);
     } finally {
       clearTimeout(timer);
+      sub.remove();
     }
   };
   for (let tries = 0; ; tries++) {
