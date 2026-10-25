@@ -4,15 +4,15 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { C } from '@/constants/theme';
 import { t } from '@/lib/i18n';
-import { addFriend, joinCrew, refreshSquad, useSquad } from '@/lib/social';
+import { addFriend, holdInvite, joinCrew, refreshSquad, useSquad } from '@/lib/social';
 import { useStore } from '@/lib/store';
 
 import { T } from './ui';
 import { ArcadeButton, Backdrop, Comic } from './underground';
 
-// Where an invite link lands (pulse://add/CODE for a friend, pulse://join/CODE for a crew). Signed in
-// with a Squad card, it adds the friend or joins the crew right away; otherwise it explains what to
-// do first and keeps the code for the Squad tab's "Enter code" box.
+// Where an invite link lands: pulse://add/CODE or pulse://join/CODE, or the same invite opened from
+// pulseretro.fit/invite.html (see +native-intent). Signed in with a Squad card, it adds the friend or
+// joins the crew right away; otherwise it keeps the invite and applies it as soon as there's a card.
 
 export function InviteLanding({ kind, code }: { kind: 'friend' | 'crew'; code: string }) {
   const userId = useStore((s) => s.account.userId);
@@ -21,6 +21,10 @@ export function InviteLanding({ kind, code }: { kind: 'friend' | 'crew'; code: s
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   // Not signed in, or no Squad card yet: say what to do first.
   const setup = !userId ? t('squad.inviteSignInFirst', { code }) : loaded && !me ? t('squad.inviteJoinFirst', { code }) : null;
+
+  useEffect(() => {
+    if (setup) holdInvite({ kind, code });
+  }, [setup, kind, code]);
 
   useEffect(() => {
     if (!userId) return;

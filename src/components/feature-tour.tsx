@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { C } from '@/constants/theme';
 import { t } from '@/lib/i18n';
+import { earnStarter } from '@/lib/starter-rewards';
 import { actions, useStore } from '@/lib/store';
 
 import { Icon, type IconName } from './icon';
@@ -64,6 +65,7 @@ export function FeatureTour() {
   const next = () => {
     tap();
     actions.setTourStep(last ? null : step + 1);
+    if (last) earnStarter('tour').catch(() => {});
   };
 
   return (

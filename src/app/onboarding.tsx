@@ -17,6 +17,7 @@ import { locale, t } from '@/lib/i18n';
 import { HEALTH_DISCLAIMER } from '@/lib/legal';
 import { goalBlurb, macroTargets, paceLabel } from '@/lib/nutrition';
 import { PERSONAS, personaById } from '@/lib/personas';
+import { earnStarter } from '@/lib/starter-rewards';
 import { actions, getState, useStore } from '@/lib/store';
 import type { Pace, Profile } from '@/lib/types';
 
@@ -44,6 +45,13 @@ export default function Onboarding() {
   const [index, setIndex] = useState(0);
   const step = steps[index];
   const [p, setP] = useState<Profile>(getState().profile);
+  // A backup restored by signing in (or the name from Apple) fills in the answers still to come.
+  const stored = useStore((st) => st.profile);
+  const [seen, setSeen] = useState(stored);
+  if (stored !== seen) {
+    setSeen(stored);
+    setP((x) => ({ ...x, ...stored }));
+  }
   const signedIn = useStore((st) => !!st.account.userId);
   const healthOn = useStore((st) => !!st.settings.health?.on);
   const reminderHour = useStore((st) => st.settings.reminderHour);
@@ -60,6 +68,7 @@ export default function Onboarding() {
     // The coach is chosen straight into the store by the picker, so it isn't overwritten here.
     const { persona: _persona, ...rest } = p;
     actions.completeOnboarding(rest, { tour });
+    earnStarter('profile').catch(() => {});
   };
 
   const targets = macroTargets(p);

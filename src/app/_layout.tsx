@@ -46,8 +46,8 @@ export default function RootLayout() {
     const timer = setTimeout(() => actions.refreshReminder(), 1500);
     return () => clearTimeout(timer);
   }, [ready, game.chests, game.claims, todayKey]);
-  // A tapped notification opens the place it's about: a reminder carries its screen, a Squad nudge
-  // opens Squad. One that launched the app waits until the screens are up and onboarding is done.
+  // A tapped notification opens the place it's about: a reminder carries its screen, a Squad nudge or
+  // join opens Squad. One that launched the app waits until the screens are up and onboarding is done.
   const tapped = useRef<string | null>(null);
   const [tapCount, setTapCount] = useState(0);
   const setTapped = (url: string) => {
@@ -58,7 +58,7 @@ export default function RootLayout() {
     const open = (r: Notifications.NotificationResponse | null) => {
       if (!r || r.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) return;
       const data = r.notification.request.content.data;
-      if (data?.kind === 'nudge') {
+      if (data?.kind === 'nudge' || data?.kind === 'squad') {
         refreshSquad();
         setTapped('/(tabs)/squad');
       } else if (typeof data?.url === 'string') {

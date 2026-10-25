@@ -1,7 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { useSyncExternalStore } from 'react';
-import { AppState, Platform } from 'react-native';
+import { Alert, AppState, Platform } from 'react-native';
 
 import type { IconName } from '@/components/icon';
 import { C } from '@/constants/theme';
@@ -179,7 +180,12 @@ const toPlayer = (p: ProfileRow): Player => ({ userId: p.user_id, name: p.name, 
 let inflight: Promise<void> | null = null;
 export function refreshSquad(): Promise<void> {
   if (inflight) return inflight;
-  inflight = load().finally(() => (inflight = null));
+  inflight = load()
+    .finally(() => (inflight = null))
+    // An invite opened before signing in or joining Squad goes through once there's a Squad card.
+    .then(() => {
+      if (squad.me) applyPendingInvite();
+    });
   return inflight;
 }
 
@@ -304,6 +310,40 @@ export async function joinSquad(name: string, color: SquadColor) {
   await refreshSquad();
 }
 
+// ---------- Invite links ----------
+
+const PENDING_KEY = 'pulse-pending-invite';
+type PendingInvite = { kind: 'friend' | 'crew'; code: string };
+
+/** Keeps an invite that can't be used yet (not signed in, or no Squad card), so it's applied later. */
+export function holdInvite(invite: PendingInvite) {
+  AsyncStorage.setItem(PENDING_KEY, JSON.stringify(invite)).catch(() => {});
+}
+
+let applying = false;
+/** Uses a held invite once there's a Squad card, and says what happened. */
+async function applyPendingInvite() {
+  if (applying) return;
+  applying = true;
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_KEY).catch(() => null);
+    if (!raw) return;
+    await AsyncStorage.removeItem(PENDING_KEY);
+    const invite = JSON.parse(raw) as PendingInvite;
+    const text = invite.kind === 'friend' ? t('squad.friendAddedBody', { name: await addFriend(invite.code) }) : t('squad.crewJoinedBody', { name: (await joinCrew(invite.code)).name });
+    Alert.alert(t('squad.inviteDoneTitle'), text);
+  } catch (e) {
+    Alert.alert(t('squad.inviteFailedTitle'), (e as Error).message);
+  } finally {
+    applying = false;
+  }
+}
+
+/** Tells the friend (or the crew) that someone just joined, by push. Best effort. */
+function announceJoin(body: { kind: 'friend'; to: string } | { kind: 'crew'; crew: string }) {
+  supabase?.functions.invoke('squad-joined', { body }).catch(() => {});
+}
+
 export async function updateCard(name: string, color: SquadColor) {
   await rpc('save_social_profile', { p_name: name, p_color: color });
   await refreshSquad();
@@ -347,6 +387,7 @@ export const APP_STORE_URL = 'https://apps.apple.com/app/id6824666479';
 
 export async function addFriend(code: string) {
   const p = await rpc<ProfileRow>('add_friend', { p_code: code });
+  announceJoin({ kind: 'friend', to: p.user_id });
   await refreshSquad();
   return p.name;
 }
@@ -404,6 +445,7 @@ export async function createCrew(name: string) {
 
 export async function joinCrew(code: string) {
   const c = await rpc<{ id: string; name: string }>('join_crew', { p_code: code, p_today: todayKey() });
+  announceJoin({ kind: 'crew', crew: c.id });
   await syncStats().catch(() => {});
   await refreshSquad();
   return c;
