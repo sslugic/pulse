@@ -23,6 +23,7 @@ import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
 import { avatarById, avatarUnlockId, avatarGiftId, isAvatarUnlocked, type AvatarId } from './avatars';
 import { OLD_TRACKS, trackById, trackUnlockId, type TrackId } from './music';
+import { wallUnlockId, type WallId } from './walls';
 import { configureSound, playSfx } from './sound';
 import { speak, speakStream, stopSpeaking } from './voice';
 
@@ -762,7 +763,7 @@ export const actions = {
     const freeze = loot.some((l) => l.kind === 'freeze');
     const doubler = loot.reduce((n, l) => n + (l.kind === 'doubler' ? l.wins : 0), 0);
     const gifts = loot.flatMap((l) =>
-      l.kind === 'game' ? [`gift:${l.game.id}`] : l.kind === 'avatar' ? [avatarGiftId(l.avatar.id)] : l.kind === 'track' ? [trackUnlockId(l.track.id)] : l.kind === 'icon' ? [appIconUnlockId(l.icon.id)] : [],
+      l.kind === 'game' ? [`gift:${l.game.id}`] : l.kind === 'avatar' ? [avatarGiftId(l.avatar.id)] : l.kind === 'track' ? [trackUnlockId(l.track.id)] : l.kind === 'icon' ? [appIconUnlockId(l.icon.id)] : l.kind === 'wall' ? [wallUnlockId(l.wall.id)] : [],
     );
     set((s) => ({
       game: {
@@ -1012,8 +1013,9 @@ export const actions = {
     }
   },
   /** Picks a rank wall as the app background; undefined goes back to following the current rank. */
-  setWall(level: number | undefined) {
-    set((s) => ({ game: { ...s.game, wall: level } }));
+  /** Picks the app's wall; undefined follows the current rank. */
+  setWall(id: WallId | undefined) {
+    set((s) => ({ game: { ...s.game, wall: id } }));
   },
   clearReward(id: string) {
     if (state.reward?.id === id) set({ reward: null });

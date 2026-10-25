@@ -4,7 +4,7 @@ import type { Entry } from './types';
 
 // Arcade-style progression: logging earns XP, streaks multiply it, quests add on top.
 // 15 ranks on a gentle curve: a few days to the first, roughly a year of steady logging
-// (about 100 XP a day) to the last. `scene` is the backdrop wall each rank unlocks.
+// (about 100 XP a day) to the last. Each rank also brings a wall (see walls.ts); `scene` is unused now.
 export const RANKS = [
   { name: t('ranks.rankRookie'), xp: 0, scene: 0, blurb: t('ranks.rankRookieBlurb') },
   { name: t('ranks.rankTagger'), xp: 150, scene: 1, blurb: t('ranks.rankTaggerBlurb') },

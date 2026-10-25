@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconBadge } from '@/components/icon';
 import { AccountCard } from '@/components/account-card';
 import { AppIconPicker } from '@/components/app-icon-picker';
+import { WallPicker } from '@/components/wall-picker';
 import { PersonaPicker } from '@/components/persona-picker';
 import { TagAvatar } from '@/components/tag-avatar';
 import { Field, inputStyle, ProfileFields } from '@/components/profile-form';
@@ -166,6 +167,7 @@ export default function ProfileScreen() {
           </T>
         </Card>
 
+        <WallPicker />
         <AppIconPicker />
 
         <Pressable onPress={() => actions.startTour()} style={styles.tourLink} accessibilityRole="button">

@@ -136,7 +136,8 @@ export interface GameState {
   /** Arcade games bought with tokens. */
   unlocked: string[];
   /** Rank wall the player picked (1-based level); unset follows their current rank. */
-  wall?: number;
+  /** Picked backdrop: a wall id (older saves hold a rank number). */
+  wall?: string | number;
   /** Streak freezes owned (max 2). */
   freezes?: number;
   /** Days a freeze covered, so the streak survives them. */

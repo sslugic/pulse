@@ -8,6 +8,7 @@ import { FeatureTour } from '@/components/feature-tour';
 import { QuickFab } from '@/components/quick-fab';
 import { RewardsPopup } from '@/components/rewards-popup';
 import { StreetTabBar } from '@/components/street-tab-bar';
+import { WallUnlockPopup } from '@/components/wall-unlock-popup';
 import { C } from '@/constants/theme';
 import { checkFirstDay, payStarter } from '@/lib/starter-rewards';
 import { useStore } from '@/lib/store';
@@ -52,6 +53,7 @@ export default function TabsLayout() {
       <RewardsPopup />
       <FeatureTour />
       <CreditsAnnouncement />
+      <WallUnlockPopup />
     </View>
   );
 }
