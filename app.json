@@ -19,7 +19,11 @@
       "appleTeamId": "8SX4DK48U6",
       "buildNumber": "8",
       "usesAppleSignIn": true,
-      "supportsTablet": false
+      "supportsTablet": false,
+      "associatedDomains": [
+        "applinks:pulseretro.fit",
+        "applinks:www.pulseretro.fit"
+      ]
     },
     "android": {
       "adaptiveIcon": {

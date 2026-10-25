@@ -989,7 +989,10 @@ export const actions = {
   restoreBackup(data: unknown) {
     const d = data as Record<string, unknown>;
     if (!d || !Array.isArray(d.entries)) return;
-    AsyncStorage.setItem(DATA_KEY, JSON.stringify(d))
+    // Signing in during the welcome wizard restores the log and profile but keeps the wizard (and
+    // the app tour after it) going, so a returning player on a new phone still gets the guide.
+    const restored = state.onboarded ? d : { ...d, onboarded: false };
+    AsyncStorage.setItem(DATA_KEY, JSON.stringify(restored))
       .then(() => hydrate())
       .catch(() => {});
   },

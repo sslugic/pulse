@@ -3,15 +3,25 @@ import { Tabs } from 'expo-router/tabs';
 import { useEffect } from 'react';
 import { AppState, View } from 'react-native';
 
+import { CreditsAnnouncement } from '@/components/credits-announcement';
 import { FeatureTour } from '@/components/feature-tour';
 import { QuickFab } from '@/components/quick-fab';
 import { RewardsPopup } from '@/components/rewards-popup';
 import { StreetTabBar } from '@/components/street-tab-bar';
 import { C } from '@/constants/theme';
+import { checkFirstDay, payStarter } from '@/lib/starter-rewards';
+import { useStore } from '@/lib/store';
 
 import { onShortcutLink, takePendingLink } from '../../../modules/pulse-intents';
 
 export default function TabsLayout() {
+  // Starter credits: pay anything earned before signing in, and watch the log for the first full day.
+  const entries = useStore((s) => s.entries);
+  useEffect(() => {
+    payStarter().catch(() => {});
+  }, []);
+  useEffect(() => checkFirstDay(), [entries]);
+
   // Siri, Shortcuts, the Action Button and Back Tap open the Coach (see plugins/app-intents). Handled
   // here, once the tabs exist, so a cold launch from Siri has somewhere to navigate to.
   useEffect(() => {
@@ -41,6 +51,7 @@ export default function TabsLayout() {
       <QuickFab />
       <RewardsPopup />
       <FeatureTour />
+      <CreditsAnnouncement />
     </View>
   );
 }
