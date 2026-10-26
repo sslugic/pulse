@@ -136,12 +136,6 @@ export function streak(entries: Entry[], frozen: string[] = []) {
   return n;
 }
 
-/** A full day: at least three things logged, one of them a meal. */
-export function isFullDay(entries: Entry[], day: string) {
-  const todays = entries.filter((e) => !e.passive && dayKey(e.createdAt) === day);
-  return todays.length >= 3 && todays.some((e) => e.kind === 'meal');
-}
-
 /** The longest run of consecutive logged (or frozen) days ever. */
 export function bestStreak(entries: Entry[], frozen: string[] = []) {
   const days = new Set([...loggedDays(entries), ...frozen]);

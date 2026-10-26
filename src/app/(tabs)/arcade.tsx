@@ -2,7 +2,6 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
 
 import { BreatheGame, BubbleGame, FidgetGame, GameShell, MemoryGame, ShredderGame, SprayGame } from '@/components/arcade-games';
 import { ChallengeShell, Stars } from '@/components/brain-games';
@@ -15,11 +14,9 @@ import { C, Gradients, MaxContentWidth, Space } from '@/constants/theme';
 import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, GAMES, MAX_FREEZES, SHOP, gameById, isUnlocked, type BrainId, type ChestTier, type ChillId, type GameDef, type GameId } from '@/lib/arcade';
 import { CHEST_LOOK, PAID_WINS_PER_DAY, WIN_TOKENS, dailyChestId, stars, winsToday, type Chest } from '@/lib/brain';
 import { locale, t } from '@/lib/i18n';
-import { PUZZLE_PIECES, puzzleImage } from '@/lib/puzzle';
 import { tokenBalance } from '@/lib/quests';
 import { actions, getState, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
-import { rankWall } from '@/lib/walls';
 import { dayWellbeing, LEVEL_COLOR, LEVEL_LABEL } from '@/lib/wellbeing';
 
 const TIER_LABEL: Record<ChestTier, string> = { wood: t('arcade.tierWood'), silver: t('arcade.tierSilver'), gold: t('arcade.tierGold') };
@@ -87,36 +84,6 @@ export default function ArcadeScreen() {
           dailyTaken={game.claims.some((c) => c.questId === dailyChestId(todayKey))}
           onOpen={setOpening}
         />
-
-        <View style={styles.featureRow}>
-          <Pressable onPress={() => router.push('/gang-wars')} style={[styles.feature, { borderColor: C.pink }]} accessibilityRole="button" accessibilityLabel={t('gang.cardTitle')}>
-            <Image source={rankWall(7).art} style={StyleSheet.absoluteFill} contentFit="cover" />
-            <View style={styles.featureShade} />
-            <Comic size={24} color={C.pink}>
-              {t('gang.cardTitle')}
-            </Comic>
-            <T size={11} color={C.text} numberOfLines={4} style={{ lineHeight: 15 }}>
-              {t('gang.cardBody')}
-            </T>
-            <T size={11} rounded color={C.lime}>
-              {game.gang?.best ? t('gang.cardBest', { time: `${Math.floor(game.gang.best / 60)}:${String(game.gang.best % 60).padStart(2, '0')}` }) : t('gang.play')}
-            </T>
-          </Pressable>
-          <Pressable onPress={() => router.push('/puzzle')} style={[styles.feature, { borderColor: C.cyan }]} accessibilityRole="button" accessibilityLabel={t('puzzle.cardTitle')}>
-            <Image source={puzzleImage(game.puzzle?.n ?? 0).art} style={[StyleSheet.absoluteFill, { opacity: 0.25 + 0.75 * ((game.puzzle?.placed.length ?? 0) / PUZZLE_PIECES) }]} contentFit="cover" />
-            <View style={styles.featureShade} />
-            <Comic size={24} color={C.cyan}>
-              {t('puzzle.cardTitle')}
-            </Comic>
-            <T size={11} color={C.text} numberOfLines={3} style={{ lineHeight: 15 }}>
-              {t('puzzle.cardBody')}
-            </T>
-            <T size={11} rounded color={C.lime}>
-              {`${game.puzzle?.placed.length ?? 0}/${PUZZLE_PIECES}`}
-              {(game.puzzle?.got.length ?? 0) > 0 ? ` · ${t('puzzle.cardPieces', { count: game.puzzle!.got.length })}` : ''}
-            </T>
-          </Pressable>
-        </View>
 
         <Card style={{ gap: 6 }} accent={w.level ? LEVEL_COLOR[w.level] + 'AA' : undefined}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -477,9 +444,6 @@ function Cabinet({
 }
 
 const styles = StyleSheet.create({
-  featureRow: { flexDirection: 'row', gap: Space.sm },
-  feature: { flex: 1, minHeight: 170, borderRadius: 16, borderWidth: 3, overflow: 'hidden', padding: 12, gap: 4, justifyContent: 'flex-end', backgroundColor: '#14101F' },
-  featureShade: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: '#07040ECC' },
   content: { paddingHorizontal: Space.md, gap: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   play: { flex: 1, paddingHorizontal: Space.md, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: Space.sm },
