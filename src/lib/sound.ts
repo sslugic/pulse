@@ -39,12 +39,26 @@ const players: Partial<Record<Sfx, AudioPlayer>> = {};
 const ambient = () =>
   setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers', shouldPlayInBackground: false }).catch(() => {});
 
+const shouldPlay = () => (musicOn || !!preview) && active && ducks.size === 0;
+let nudges: ReturnType<typeof setTimeout>[] = [];
+
+// iOS can pause the music again just after it resumes (the Coach's voice player or the recorder
+// shutting down deactivates the audio session), so check back a couple of times and play again.
+function keepPlaying() {
+  nudges.forEach(clearTimeout);
+  nudges = [600, 1800].map((ms) =>
+    setTimeout(() => {
+      if (!music || !shouldPlay() || music.playing) return;
+      ambient().then(() => music?.play());
+    }, ms),
+  );
+}
+
 function sync() {
   if (Platform.OS === 'web') return;
-  const shouldPlay = (musicOn || !!preview) && active && ducks.size === 0;
   const want = preview ?? track;
   try {
-    if (shouldPlay) {
+    if (shouldPlay()) {
       if (!music) {
         music = createAudioPlayer(trackSource(want));
         music.loop = true;
@@ -56,7 +70,11 @@ function sync() {
       }
       music.volume = MUSIC_MAX * volume;
       ambient().then(() => music?.play());
-    } else music?.pause();
+      keepPlaying();
+    } else {
+      nudges.forEach(clearTimeout);
+      music?.pause();
+    }
   } catch (e) {
     console.warn('[sound] music failed', e);
   }

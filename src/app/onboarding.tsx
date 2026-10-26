@@ -344,7 +344,7 @@ function StarterCoach() {
             style={[styles.option, on && { borderColor: C.violet, backgroundColor: '#A267FF1F' }]}
             accessibilityRole="radio"
             accessibilityState={{ selected: on }}>
-            <T size={28}>{x.emoji}</T>
+            {x.portrait ? <Image source={x.portrait} style={styles.coachThumb} contentFit="cover" contentPosition="top" /> : <T size={28}>{x.emoji}</T>}
             <View style={{ flex: 1, gap: 2 }}>
               <Comic size={20} color={on ? C.text : C.textDim}>
                 {x.name.toUpperCase()}
@@ -410,6 +410,7 @@ function Summary({ ok, text }: { ok: boolean; text: string }) {
 }
 
 const styles = StyleSheet.create({
+  coachThumb: { width: 44, height: 58, borderRadius: 8 },
   content: { flexGrow: 1, paddingHorizontal: Space.lg, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   footer: { paddingHorizontal: Space.lg, paddingTop: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', backgroundColor: C.bg + 'E6' },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Space.lg },

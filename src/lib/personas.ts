@@ -17,6 +17,8 @@ export interface Persona {
   /** How this coach talks; added to every Coach prompt. */
   style: string;
   sample: string;
+  /** Illustrated 80s portrait (assets/images/coaches); the emoji stands in until there is one. */
+  portrait?: number;
 }
 
 export const PERSONAS: Persona[] = [
@@ -119,6 +121,20 @@ export const PERSONAS: Persona[] = [
     sample: t('crew.personaRexSample'),
   },
 ];
+
+// Portraits drawn so far, by coach. Added as the art is made (scripts/walls/examples-v3/README.md).
+const PORTRAITS: Partial<Record<PersonaId, number>> = {
+  pulse: require('@/assets/images/coaches/pulse.jpg'),
+  sarge: require('@/assets/images/coaches/sarge.jpg'),
+  hype: require('@/assets/images/coaches/hype.jpg'),
+  breeze: require('@/assets/images/coaches/breeze.jpg'),
+  sensei: require('@/assets/images/coaches/sensei.jpg'),
+  dre: require('@/assets/images/coaches/dre.jpg'),
+  sofia: require('@/assets/images/coaches/sofia.jpg'),
+  jazz: require('@/assets/images/coaches/jazz.jpg'),
+  rex: require('@/assets/images/coaches/rex.jpg'),
+};
+for (const p of PERSONAS) p.portrait = PORTRAITS[p.id];
 
 export const DEFAULT_PERSONA: PersonaId = 'pulse';
 

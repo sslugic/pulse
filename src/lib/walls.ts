@@ -39,7 +39,7 @@ const PLAN: Plan[] = [
   { id: 'rooftop', level: 6, art: require('@/assets/images/walls/rooftop.jpg') },
   { id: 'platform', level: 7, art: require('@/assets/images/walls/platform.jpg') },
   { id: 'nightTrain', level: 8, art: require('@/assets/images/walls/night-train.jpg') },
-  { id: 'yard', level: 9 },
+  { id: 'yard', level: 9, art: require('@/assets/images/walls/yard.jpg') },
   { id: 'bridge', level: 10 },
   { id: 'arcade', level: 11, art: require('@/assets/images/walls/arcade.jpg') },
   { id: 'club', level: 12 },

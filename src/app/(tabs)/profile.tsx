@@ -67,9 +67,6 @@ export default function ProfileScreen() {
         <SectionTitle>{t('crew.sectionAccount')}</SectionTitle>
         <AccountCard />
 
-        <SectionTitle>{t('crew.sectionCoach')}</SectionTitle>
-        <PersonaPicker />
-
         <SectionTitle>Apple Health</SectionTitle>
         <Card style={{ gap: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
@@ -167,6 +164,8 @@ export default function ProfileScreen() {
           </T>
         </Card>
 
+        <SectionTitle>{t('crew.sectionCoach')}</SectionTitle>
+        <PersonaPicker />
         <WallPicker />
         <AppIconPicker />
 

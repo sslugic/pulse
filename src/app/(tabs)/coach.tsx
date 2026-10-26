@@ -139,7 +139,7 @@ export default function Coach() {
         return;
       }
       duckMusic('record', true);
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true, interruptionMode: 'mixWithOthers' });
       await recorder.prepareToRecordAsync();
       recorder.record();
       tap();
@@ -152,9 +152,11 @@ export default function Coach() {
 
   async function stopRecording(send: boolean) {
     try {
-      await recorder.stop();
-      await setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true });
-      duckMusic('record', false);
+      await recorder.stop().finally(() => {
+        // The music comes back even if stopping the recorder fails.
+        duckMusic('record', false);
+        setAudioModeAsync({ allowsRecording: false, playsInSilentMode: true, interruptionMode: 'mixWithOthers' }).catch(() => {});
+      });
       tap();
       const uri = recorder.uri;
       if (!send || !uri) return;
@@ -175,7 +177,7 @@ export default function Coach() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: C.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Backdrop />
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TagAvatar size={48} band={C.violet} online={!thinking} letter={persona.name[0]} />
+        <TagAvatar size={48} band={C.violet} online={!thinking} letter={persona.name[0]} photo={persona.portrait} />
         <View style={{ flex: 1 }}>
           <Comic size={30}>{`${persona.name.toUpperCase()} ${persona.emoji}`}</Comic>
           <T size={12} rounded color={thinking ? C.lime : C.textDim}>

@@ -20,7 +20,7 @@ Darker calm area in the middle."
 | rooftop | rank 6 | rooftop.jpg | rooftop gym, skyline sunset | done |
 | platform | rank 7 | platform.jpg | subway platform, punching bag | done |
 | nightTrain | rank 8 | night-train.jpg | graffiti subway car interior | done |
-| yard | rank 9 | yard.jpg | train yard with graffiti trains, floodlights | todo |
+| yard | rank 9 | yard.jpg | train yard with graffiti trains, floodlights | done |
 | bridge | rank 10 | bridge.jpg | boxing ring under a steel bridge, barrel fire | todo |
 | arcade | rank 11 | arcade.jpg | basement neon arcade | done |
 | club | rank 12 | club.jpg | underground dance club, light-up floor, DJ booth | todo |
@@ -42,3 +42,16 @@ Darker calm area in the middle."
 | skate | gold chest | skate.jpg | night skate bowl under streetlights | todo |
 | carwash | gold chest | carwash.jpg | neon car wash at night | todo |
 | helipad | gold chest | helipad.jpg | rooftop helipad over the city at night | todo |
+
+## Coach portraits
+
+Done 2026-10-25 (896x1200 → `assets/images/coaches/<id>.jpg`, 480 px wide), wired in `PORTRAITS` in
+`src/lib/personas.ts`.
+
+## App icons (todo)
+
+The user asked for app icons in the wall style: a bold glowing letter P badge over an illustrated scene.
+Six themes (Classic, Synthwave, Neon Sign, Midnight Rain, Arcade 8-bit, Gold Legend), 1024x1024 opaque
+PNG, no other text. Get the user's approval first. Then replace `assets/app-icons/<file>.png` and
+`<file>-thumb.png` (180 px); Classic is also `assets/images/icon.png`, plus the splash and adaptive
+icons in app.json. These are native changes: run prebuild before building.
