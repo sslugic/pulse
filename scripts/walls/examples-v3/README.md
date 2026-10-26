@@ -67,5 +67,5 @@ painterly ink style, the walls' purple, lime, cyan and orange palette, simple da
   skater, punk with a mohawk, aerobics instructor, arcade kid with headphones, boxer, skateboarder, DJ,
   breakdancing robot (chest), synthwave cyborg (chest), neon ninja (chest).
 
-First batch for approval (Oct 26): 3 items (boombox, cassette, high-top sneaker) and 3 characters (b-boy,
+APPROVED by the user on 2026-10-26: make the remaining 18 in this style. First batch (Oct 26, done; PNGs in this folder as avatar-<id>.png): 3 items (boombox, cassette, high-top sneaker) and 3 characters (b-boy,
 roller-disco skater, synthwave cyborg).
