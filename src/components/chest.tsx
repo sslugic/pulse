@@ -133,6 +133,8 @@ function LootRow({ l, i }: { l: Loot; i: number }) {
       return row(<Image source={l.icon.thumb} style={{ width: 34, height: 34, borderRadius: 8 }} />, t('arcade.lootIcon', { name: l.icon.name }), t('arcade.lootIconSub'), C.yellow);
     case 'wall':
       return row(<Image source={l.wall.art} style={{ width: 26, height: 46, borderRadius: 4 }} contentFit="cover" />, t('walls.lootWall', { name: l.wall.name }), t('walls.lootWallSub'), C.violet);
+    case 'puzzle':
+      return row(<Icon name="grid" size={28} color={C.cyan} />, t('puzzle.lootPieces', { count: l.count }), t('puzzle.lootPiecesSub'), C.cyan);
   }
 }
 
@@ -157,6 +159,8 @@ function lootLine(l: Loot) {
       return t('arcade.lootIcon', { name: l.icon.name });
     case 'wall':
       return t('walls.lootWall', { name: l.wall.name });
+    case 'puzzle':
+      return t('puzzle.lootPieces', { count: l.count });
   }
 }
 

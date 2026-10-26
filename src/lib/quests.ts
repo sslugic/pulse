@@ -1,3 +1,4 @@
+import type { PuzzleState } from './puzzle';
 import type { IconName } from '@/components/icon';
 import { C } from '@/constants/theme';
 
@@ -152,6 +153,10 @@ export interface GameState {
   playedDay?: string;
   /** XP spent on unlocks (jukebox tracks). Doesn't lower the rank; it comes out of spendable XP. */
   xpSpent?: number;
+  /** The Arcade puzzle being built (src/lib/puzzle.ts). */
+  puzzle?: PuzzleState;
+  /** Gang Wars progress: best time to beat the level-1 boss, in seconds. */
+  gang?: { best?: number; wins?: number };
 }
 
 // Clamped so a later price change can never leave a negative balance.
