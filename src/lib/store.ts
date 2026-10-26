@@ -598,7 +598,8 @@ export const actions = {
   },
   speakMessage(id: string, text: string) {
     const { apiKey, coachVoice } = state.settings;
-    return speak(id, text, { apiKey, voice: coachVoice, style: personaById(state.profile.persona).speech });
+    const coach = personaById(state.profile.persona);
+    return speak(id, text, { apiKey, voice: coachVoice, style: coach.speech, language: coach.speechLanguage });
   },
   addEntry(e: Omit<Entry, 'id' | 'createdAt'> & { createdAt?: number }, opts: { skipPlanMatch?: boolean } = {}) {
     const entry: Entry = { ...e, id: uid(), createdAt: e.createdAt ?? Date.now() };
@@ -1062,8 +1063,8 @@ export const actions = {
     set({ messages: [...s.messages, userMsg, pending], thinking: true });
     const { apiKey, coachVoice, voiceReplies } = s.settings;
     // Start talking as soon as the first sentence of the reply streams in.
-    const style = personaById(s.profile.persona).speech;
-    let voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice, style }) : null;
+    const { speech: style, speechLanguage: language } = personaById(s.profile.persona);
+    let voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice, style, language }) : null;
     if (!voice) stopSpeaking();
 
     try {
@@ -1085,7 +1086,7 @@ export const actions = {
         onRestart: () => {
           set((st) => ({ messages: st.messages.map((m) => (m.id === pending.id ? { ...m, text: '' } : m)) }));
           voice?.cancel();
-          voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice, style }) : null;
+          voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice, style, language }) : null;
         },
       });
       // Remember when replaced entries happened before they're removed, so corrections keep their date.

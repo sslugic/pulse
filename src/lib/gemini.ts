@@ -728,16 +728,19 @@ const TTS_MODELS = ['gemini-3.8-flash-lite-tts', 'gemini-3.8-flash-tts', 'gemini
 let ttsModel = 0;
 /** Set once a speech model rejects style directions, so later clips skip them. */
 let styleRefused = false;
+/** Set once a speech model rejects a speech locale. */
+let languageRefused = false;
 
 /** The Coach's voice before a persona is picked (each persona has its own, see lib/personas.ts). */
 export const DEFAULT_VOICE = 'Puck';
 
 /** Natural speech for a Coach reply. Usually 16-bit 24 kHz mono PCM; mimeType says which. */
-export async function synthesizeSpeech(opts: { apiKey: string; text: string; voice: string; style?: string }): Promise<Media> {
+export async function synthesizeSpeech(opts: { apiKey: string; text: string; voice: string; style?: string; language?: string }): Promise<Media> {
   const { apiKey, text, voice } = opts;
   // A coach's accent and delivery go in as a direction (system instruction), never in the words,
   // or the model reads them out. A model that won't take one is asked again without it.
   let style = styleRefused ? undefined : opts.style;
+  let language = languageRefused ? undefined : opts.language;
   for (; ttsModel < TTS_MODELS.length; ttsModel++) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 15_000);
@@ -756,13 +759,19 @@ export async function synthesizeSpeech(opts: { apiKey: string; text: string; voi
           contents: [{ role: 'user', parts: [{ text }] }],
           generationConfig: {
             responseModalities: ['AUDIO'],
-            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+            speechConfig: { ...(language ? { languageCode: language } : {}), voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
           },
         }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg: string = json?.error?.message ?? `Speech request failed (${res.status})`;
+        if (language && res.status === 400 && /language/i.test(msg)) {
+          languageRefused = true;
+          language = undefined;
+          ttsModel--; // same model again, in its default language
+          continue;
+        }
         if (style && res.status === 400 && /system.?instruction|developer instruction/i.test(msg)) {
           styleRefused = true;
           style = undefined;
