@@ -28,7 +28,10 @@ export function TagAvatar({
   photo?: number;
 }) {
   const inner = size - 8;
-  const art = avatar ? AVATAR_ART[avatarById(avatar).id] : undefined;
+  const def = avatar ? avatarById(avatar) : undefined;
+  // Illustrated art when there is some, else the original SVG sticker.
+  const picture = photo ?? def?.art;
+  const art = def && !picture ? AVATAR_ART[def.id as keyof typeof AVATAR_ART] : undefined;
   return (
     <View style={{ width: size, height: size }}>
       <LinearGradient
@@ -56,6 +59,8 @@ export function TagAvatar({
           </Svg>
           {photo ? (
             <Image source={photo} style={{ position: 'absolute', width: inner, height: inner * 1.34, top: 0 }} contentFit="cover" contentPosition="top" />
+          ) : picture ? (
+            <Image source={picture} style={{ position: 'absolute', width: inner, height: inner }} contentFit="cover" />
           ) : art ? (
             <SvgXml xml={`<svg viewBox="0 0 100 100">${art}</svg>`} width={inner} height={inner} style={{ position: 'absolute' }} />
           ) : (

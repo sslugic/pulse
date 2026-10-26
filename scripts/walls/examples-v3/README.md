@@ -69,3 +69,9 @@ painterly ink style, the walls' purple, lime, cyan and orange palette, simple da
 
 APPROVED by the user on 2026-10-26: make the remaining 18 in this style. First batch (Oct 26, done; PNGs in this folder as avatar-<id>.png): 3 items (boombox, cassette, high-top sneaker) and 3 characters (b-boy,
 roller-disco skater, synthwave cyborg).
+
+Status 2026-10-26: 16 of 24 drawn and wired in (`assets/images/avatars/<id>.jpg`, 360 px, center 88% crop;
+`ART` in `src/lib/avatars.ts`). Still to draw: arcadeKid (headphones, arcade glow), punk (woman, pink
+mohawk), aerobics (instructor), skateboarder, boxer, dj, robot (breakdancing robot, chest), ninja (neon
+ninja, chest). Add each by saving the JPEG and adding its line to `ART`. Since Oct 26 the Figma connector
+uses slugics@gmail.com (file Fxp2YZtW9sGvbUuGZ4zVpm), which allows about 10 images a day (resets 00:00 UTC).
