@@ -53,3 +53,19 @@ Done 2026-10-25 (896x1200 → `assets/images/coaches/<id>.jpg`, 480 px wide), wi
 Done 2026-10-25: the bold P and heartbeat over a crop of an illustrated wall, drawn by
 `scripts/app-icons/illustrated.html` and rendered with `OUT=assets/app-icons scripts/render-icons.sh`
 (also writes the thumbs and `assets/images/icon.png` for Classic). Native change: prebuild before building.
+
+## Avatars (planned, examples first)
+
+The user wants avatars in the same illustrated quality: 80s items and characters. Plan: 24 avatars in
+`src/lib/avatars.ts` (keep the existing 11 ids so saved picks still work; 'tag' stays the free initial).
+Square 1024x1024, subject centered and filling the frame so it reads inside a small round frame, comic /
+painterly ink style, the walls' purple, lime, cyan and orange palette, simple dark background, no text.
+
+- Items: spray can, cassette, boombox, arcade token, high-top sneaker, microphone, subway train, gold
+  crown (chest), skull (chest), Walkman, roller skate, VHS tape.
+- Characters (diverse, respectful): b-boy breakdancer, graffiti writer in a respirator mask, roller-disco
+  skater, punk with a mohawk, aerobics instructor, arcade kid with headphones, boxer, skateboarder, DJ,
+  breakdancing robot (chest), synthwave cyborg (chest), neon ninja (chest).
+
+First batch for approval (Oct 26): 3 items (boombox, cassette, high-top sneaker) and 3 characters (b-boy,
+roller-disco skater, synthwave cyborg).
