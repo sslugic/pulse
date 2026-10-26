@@ -31,7 +31,12 @@ Deno.serve(async (req) => {
   const db = admin();
   const { data: product } = await db.from('products').select('credits, kind').eq('product_id', e.product_id).maybeSingle();
 
-  if (GRANT.has(e.type)) {
+  // Apple's sandbox renews a monthly subscription every few minutes (up to 12 times), so testing a
+  // subscription would pile up months of credits in an hour. Sandbox renewals keep the subscription
+  // row current but don't pay credits; the first purchase still does. Real renewals are unaffected.
+  const sandboxRenewal = e.environment === 'SANDBOX' && e.type === 'RENEWAL';
+
+  if (GRANT.has(e.type) && !sandboxRenewal) {
     if (!product) {
       console.error('unknown product', e.product_id);
       return json({ ok: true, skipped: 'unknown_product' });
