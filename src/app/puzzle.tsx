@@ -21,7 +21,7 @@ const RATIO = 1376 / 768; // the walls' height / width
 /** The Arcade puzzle: pick a piece from the tray, then tap the spot where it belongs. */
 export default function PuzzleScreen() {
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const puzzle = useStore((s) => s.game.puzzle) ?? EMPTY_PUZZLE;
   const day = useTodayKey();
   const [picked, setPicked] = useState<number | null>(null);
@@ -30,8 +30,9 @@ export default function PuzzleScreen() {
   const shake = useSharedValue(0);
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
 
-  const boardW = Math.min(width, MaxContentWidth) - Space.md * 2 - 6;
-  const boardH = boardW * RATIO;
+  // Sized so the board and the tray of pieces fit on one screen.
+  const boardH = Math.min((Math.min(width, MaxContentWidth) - Space.md * 2 - 6) * RATIO, height * 0.52);
+  const boardW = boardH / RATIO;
   const tileW = boardW / PUZZLE_COLS;
   const tileH = boardH / PUZZLE_ROWS;
   const image = puzzleImage(puzzle.n);
@@ -118,7 +119,7 @@ export default function PuzzleScreen() {
             <ArcadeButton label={t('puzzle.collect')} size="md" onPress={collect} />
           </Animated.View>
         ) : (
-          <>
+          <Card style={{ gap: 10 }}>
             <T size={13} color={C.textDim} style={{ lineHeight: 18 }}>
               {puzzle.got.length ? (picked == null ? t('puzzle.pickPiece') : t('puzzle.tapSpot')) : t('puzzle.noPieces')}
             </T>
@@ -137,7 +138,7 @@ export default function PuzzleScreen() {
                 ))}
               </ScrollView>
             )}
-          </>
+          </Card>
         )}
 
         <Card style={{ gap: 6 }}>

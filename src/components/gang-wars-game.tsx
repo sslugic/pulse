@@ -143,7 +143,7 @@ export default function GangWarsGame({ xp, insets, text, onEnd, onExit }: Props)
 
     // ---------- Power from XP ----------
     const power = Math.min(1, xp / 12000); // 0 to 1
-    const heroHp = Math.round(100 + 150 * power);
+    const heroHp = Math.round(140 + 160 * power);
     const heroDmg = 1 + 1.4 * power;
 
     // ---------- Sound (tiny synth) ----------
@@ -345,7 +345,7 @@ export default function GangWarsGame({ xp, insets, text, onEnd, onExit }: Props)
       target.face = from.x < target.x ? -1 : 1;
       sfx.hit();
       if (target.kind === 'boss' || target.kind === 'hero') shakeT = 0.12;
-      const knocked = knock || target.hp <= 0 || target.hits >= (target.kind === 'boss' ? 5 : 3);
+      const knocked = knock || target.hp <= 0 || target.hits >= (target.kind === 'boss' ? 5 : target.kind === 'hero' ? 4 : 3);
       if (knocked) {
         target.act = 'down';
         target.t = target.hp <= 0 ? 1.4 : 1.1;
