@@ -21,15 +21,15 @@ Darker calm area in the middle."
 | platform | rank 7 | platform.jpg | subway platform, punching bag | done |
 | nightTrain | rank 8 | night-train.jpg | graffiti subway car interior | done |
 | yard | rank 9 | yard.jpg | train yard with graffiti trains, floodlights | done |
-| bridge | rank 10 | bridge.jpg | boxing ring under a steel bridge, barrel fire | todo |
+| bridge | rank 10 | bridge.jpg | boxing ring under a steel bridge, barrel fire | done |
 | arcade | rank 11 | arcade.jpg | basement neon arcade | done |
-| club | rank 12 | club.jpg | underground dance club, light-up floor, DJ booth | todo |
-| square | rank 13 | square.jpg | Times-Square-like billboard square in the rain | todo |
+| club | rank 12 | club.jpg | underground dance club, light-up floor, DJ booth | done |
+| square | rank 13 | square.jpg | Times-Square-like billboard square in the rain | done |
 | hall | rank 14 | hall.jpg | champions' boxing hall, trophies | done |
-| tower | rank 15 | tower.jpg | penthouse gym at the top of a tower, gold and neon city below | todo |
+| tower | rank 15 | tower.jpg | penthouse gym at the top of a tower, gold and neon city below | done |
 | underground | 7-day streak | underground.jpg | the user's own subway tunnel art | done |
-| video | 14-day streak | video.jpg | 80s VHS rental store | todo |
-| boardwalk | 30-day streak | boardwalk.jpg | Coney-Island-like boardwalk at night, rides | todo |
+| video | 14-day streak | video.jpg | 80s VHS rental store | done |
+| boardwalk | 30-day streak | boardwalk.jpg | Coney-Island-like boardwalk at night, rides | done |
 | diner | 60-day streak | diner.jpg | rainy neon diner, chrome counter | todo |
 | rink | 100-day streak | rink.jpg | roller-skating rink, disco lights | todo |
 | fireworks | 180-day streak | fireworks.jpg | pier under a big bridge, fireworks | todo |

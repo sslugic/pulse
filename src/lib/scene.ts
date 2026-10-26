@@ -2,6 +2,7 @@ import type { IconName } from '@/components/icon';
 import { C } from '@/constants/theme';
 
 import type { Entry } from './types';
+import type { WallId } from './walls';
 
 // Elements a journal moment can be drawn with. The Coach picks from these names; older entries fall
 // back to keyword matching on the summary and tags.
@@ -56,6 +57,45 @@ export function sceneFor(e: Entry): SceneElement[] {
   if (found.length) return found.slice(0, 4);
   return e.sleepHours != null ? ['sleep'] : ['star'];
 }
+
+// The illustrated wall behind each kind of moment (src/lib/walls.ts). A wall whose art isn't drawn
+// yet falls back to the next choice, then to the plain sky.
+export const SCENE_WALLS: Record<SceneElement, WallId[]> = {
+  sun: ['rooftop', 'boardwalk'],
+  beach: ['boardwalk', 'rooftop'],
+  waves: ['boardwalk', 'bridge'],
+  swim: ['boardwalk', 'pool'],
+  people: ['hydrant', 'club'],
+  family: ['hydrant', 'boardwalk'],
+  beer: ['club', 'diner'],
+  drink: ['club', 'square'],
+  coffee: ['diner', 'bodega'],
+  food: ['diner', 'bodega'],
+  run: ['court', 'bridge'],
+  gym: ['alley', 'hall'],
+  walk: ['hydrant', 'court'],
+  bike: ['court', 'bridge'],
+  tree: ['rooftop', 'court'],
+  mountain: ['rooftop', 'tower'],
+  travel: ['square', 'nightTrain'],
+  car: ['highway', 'square'],
+  city: ['square', 'rooftop'],
+  home: ['hydrant', 'tower'],
+  work: ['tower', 'square'],
+  laptop: ['tower', 'video'],
+  music: ['club', 'rink'],
+  party: ['club', 'rink'],
+  movie: ['video', 'square'],
+  pet: ['hydrant', 'court'],
+  shopping: ['bodega', 'square'],
+  rain: ['square', 'hydrant'],
+  sleep: ['platform', 'hydrant'],
+  sick: ['platform', 'alley'],
+  stress: ['nightTrain', 'platform'],
+  love: ['boardwalk', 'rooftop'],
+  gift: ['arcade', 'club'],
+  star: ['hall', 'arcade'],
+};
 
 /** Sky colors for a moment, from how the day felt. */
 export function skyFor(mood?: number): readonly [string, string] {
