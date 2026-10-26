@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pulse Illustrated Icons</title>
+<style>body { margin: 0; background: #000; } svg { display: block; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+// Pulse app icons (1024 x 1024) in the illustrated wall style: a square crop of one of the walls
+// (assets/images/walls), graded and vignetted so the art stays in the back, with the bold P and the
+// heartbeat line on top. Rendered by scripts/render-icons.sh. ?s=<id> renders one icon.
+const S = 1024;
+const P = (x, y, size, fill, extra = '') =>
+  `<text x="${x}" y="${y}" text-anchor="middle" font-family="Impact, 'Helvetica Neue', Arial" font-weight="900" font-style="italic" font-size="${size}" fill="${fill}" ${extra}>P</text>`;
+const ekg = (y, x0 = 70, x1 = 954) => `M ${x0} ${y} L 300 ${y} L 360 ${y - 110} L 440 ${y + 90} L 520 ${y - 180} L 600 ${y} L ${x1} ${y}`;
+const neonPath = (d, c, w = 24) =>
+  `<path d="${d}" stroke="#000" stroke-width="${w * 2.2}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>` +
+  `<path d="${d}" stroke="${c}" stroke-width="${w * 1.9}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.6" filter="url(#soft)"/>` +
+  `<path d="${d}" stroke="${c}" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` +
+  `<path d="${d}" stroke="#fff" stroke-width="${w / 3}" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>`;
+
+// The wall behind the P: file, how far down the art to start the square crop (0..1), a color wash.
+function scene(file, top, wash, washOpacity = 0.35) {
+  const h = S * (1376 / 768);
+  return `<image href="../../assets/images/walls/${file}.jpg" x="0" y="${-top * (h - S)}" width="${S}" height="${h}" preserveAspectRatio="xMidYMid slice"/>
+    <rect width="${S}" height="${S}" fill="${wash}" opacity="${washOpacity}"/>
+    <rect width="${S}" height="${S}" fill="url(#vig)"/>`;
+}
+
+const defs = (extra = '') => `<defs>
+  <filter id="soft" filterUnits="userSpaceOnUse" x="-200" y="-200" width="1424" height="1424"><feGaussianBlur stdDeviation="14"/></filter>
+  <filter id="bloom" filterUnits="userSpaceOnUse" x="-200" y="-200" width="1424" height="1424"><feGaussianBlur stdDeviation="46"/></filter>
+  <radialGradient id="vig" cx="0.5" cy="0.45" r="0.72"><stop offset="0.45" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.78"/></radialGradient>
+  ${extra}</defs>`;
+const wrap = (extra, body) => `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${S} ${S}">${defs(extra)}${body}</svg>`;
+
+// A comic P: ink outline, a chunky drop shadow and a glow behind it.
+const comicP = (fill, glow, y = 650, size = 640) => `
+  <circle cx="512" cy="430" r="290" fill="${glow}" opacity="0.32" filter="url(#bloom)"/>
+  ${P(530, y, size, '#0b0216', 'transform="translate(18 20)"')}
+  ${P(530, y, size, fill, 'stroke="#0b0216" stroke-width="22" paint-order="stroke"')}`;
+
+function classic() {
+  return wrap(`<linearGradient id="cl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe14d"/><stop offset="1" stop-color="#ff8a1a"/></linearGradient>`,
+    `${scene('alley', 0.62, '#1a0b30', 0.45)}${comicP('url(#cl)', '#ffb43a')}${neonPath(ekg(835), '#7dff3a')}`);
+}
+
+function synthwave() {
+  return wrap(`<linearGradient id="chrome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="0.45" stop-color="#9fd8ff"/><stop offset="0.5" stop-color="#2a3a6a"/><stop offset="0.75" stop-color="#ff9ad8"/><stop offset="1" stop-color="#ffffff"/></linearGradient>`,
+    `${scene('rooftop', 0.18, '#2a0640', 0.3)}${comicP('url(#chrome)', '#ff4f8b')}${neonPath(ekg(835), '#2ee6ff')}`);
+}
+
+function neonSign() {
+  const stroke = (w, c, o = 1, f = '') => `<text x="512" y="650" text-anchor="middle" font-family="Impact, Arial" font-weight="900" font-style="italic" font-size="640" fill="none" stroke="${c}" stroke-width="${w}" opacity="${o}" ${f}>P</text>`;
+  return wrap('', `${scene('bodega', 0.42, '#06030f', 0.55)}
+    <circle cx="512" cy="430" r="300" fill="#2ee6ff" opacity="0.2" filter="url(#bloom)"/>
+    ${stroke(60, '#000', 0.6)}${stroke(46, '#2ee6ff', 0.6, 'filter="url(#soft)"')}${stroke(22, '#2ee6ff')}${stroke(7, '#e8fdff')}
+    ${neonPath(ekg(840), '#ff2e7e')}`);
+}
+
+function midnightRain() {
+  let rain = '';
+  for (let i = 0; i < 140; i++) { const x = (i * 97) % 1024, y = (i * 61) % 1024; rain += `<line x1="${x}" y1="${y}" x2="${x - 10}" y2="${y + 50}" stroke="#bfe6ff" stroke-width="2" opacity="0.3"/>`; }
+  return wrap(`<linearGradient id="mrP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#b9c8ff"/></linearGradient>`,
+    `${scene('hydrant', 0.5, '#050a24', 0.4)}${rain}${comicP('url(#mrP)', '#2ee6ff')}${neonPath(ekg(840), '#2ee6ff')}`);
+}
+
+function arcade8bit() {
+  const px = 64;
+  const shape = ['1111100', '1100110', '1100110', '1111100', '1100000', '1100000', '1100000'];
+  let p = '', shadow = '', ink = '';
+  shape.forEach((row, y) => [...row].forEach((c, x) => {
+    if (c !== '1') return;
+    ink += `<rect x="${290 + x * px - 10}" y="${170 + y * px - 10}" width="${px + 20}" height="${px + 20}" fill="#0b0216"/>`;
+    shadow += `<rect x="${290 + x * px + 18}" y="${170 + y * px + 18}" width="${px}" height="${px}" fill="#0b0216"/>`;
+    p += `<rect x="${290 + x * px}" y="${170 + y * px}" width="${px}" height="${px}" fill="${y < 3 ? '#ffe14d' : '#ff9a1a'}"/><rect x="${290 + x * px}" y="${170 + y * px}" width="${px}" height="8" fill="#fff" opacity="0.35"/>`;
+  }));
+  const steps = [[0, 0], [4, 0], [5, -2], [6, 2], [7, -4], [8, 0], [14, 0]];
+  let line = '';
+  for (let i = 0; i < steps.length - 1; i++) {
+    const [x0, y0] = steps[i], [x1, y1] = steps[i + 1];
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let k = 0; k <= n; k++) {
+      const x = Math.round(x0 + ((x1 - x0) * k) / n), y = Math.round(y0 + ((y1 - y0) * k) / n);
+      line += `<rect x="${64 + x * 64}" y="${830 + y * 32}" width="64" height="32" fill="#4dff9a"/>`;
+    }
+  }
+  let scan = '';
+  for (let y = 0; y < S; y += 8) scan += `<rect x="0" y="${y}" width="${S}" height="3" fill="#000" opacity="0.16"/>`;
+  return wrap('', `${scene('arcade', 0.35, '#10062a', 0.45)}
+    <circle cx="512" cy="420" r="320" fill="#7a5cff" opacity="0.3" filter="url(#bloom)"/>
+    ${ink}${shadow}${p}<g filter="url(#soft)" opacity="0.7">${line}</g>${line}${scan}`);
+}
+
+function goldLegend() {
+  return wrap(`<linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3b0"/><stop offset="0.3" stop-color="#f0c040"/><stop offset="0.55" stop-color="#8a5a10"/><stop offset="0.75" stop-color="#ffd860"/><stop offset="1" stop-color="#a06a10"/></linearGradient>`,
+    `${scene('hall', 0.45, '#140c02', 0.35)}${comicP('url(#gold)', '#ffcc40')}${neonPath(ekg(840), '#ffd860')}`);
+}
+
+const ICONS = { classic, synthwave, 'neon-sign': neonSign, 'midnight-rain': midnightRain, arcade: arcade8bit, 'gold-legend': goldLegend };
+const which = new URLSearchParams(location.search).get('s');
+document.getElementById('root').innerHTML = Object.entries(ICONS).filter(([k]) => !which || k === which).map(([, f]) => f()).join('');
+</script>
+</body>
+</html>

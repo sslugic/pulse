@@ -48,10 +48,8 @@ Darker calm area in the middle."
 Done 2026-10-25 (896x1200 → `assets/images/coaches/<id>.jpg`, 480 px wide), wired in `PORTRAITS` in
 `src/lib/personas.ts`.
 
-## App icons (todo)
+## App icons
 
-The user asked for app icons in the wall style: a bold glowing letter P badge over an illustrated scene.
-Six themes (Classic, Synthwave, Neon Sign, Midnight Rain, Arcade 8-bit, Gold Legend), 1024x1024 opaque
-PNG, no other text. Get the user's approval first. Then replace `assets/app-icons/<file>.png` and
-`<file>-thumb.png` (180 px); Classic is also `assets/images/icon.png`, plus the splash and adaptive
-icons in app.json. These are native changes: run prebuild before building.
+Done 2026-10-25: the bold P and heartbeat over a crop of an illustrated wall, drawn by
+`scripts/app-icons/illustrated.html` and rendered with `OUT=assets/app-icons scripts/render-icons.sh`
+(also writes the thumbs and `assets/images/icon.png` for Classic). Native change: prebuild before building.

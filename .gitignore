@@ -43,3 +43,8 @@ example
 /android
 
 .env
+
+# Full-size Figma AI sources for the walls, portraits and icons (the app uses the JPEGs)
+scripts/walls/examples-v3/*.png
+scripts/walls/examples-v3/batch2.jpg
+scripts/walls/examples-v3/urls.txt
