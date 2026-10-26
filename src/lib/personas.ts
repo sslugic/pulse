@@ -19,6 +19,8 @@ export interface Persona {
   sample: string;
   /** How the voice should sound (accent, delivery); sent to the speech model as a direction, not read out. */
   speech?: string;
+  /** Speech locale for the voice (e.g. es-US): the model then speaks every word, English included, with that language's sounds. */
+  speechLanguage?: string;
   /** Illustrated 80s portrait (assets/images/coaches); the emoji stands in until there is one. */
   portrait?: number;
 }
@@ -99,6 +101,8 @@ export const PERSONAS: Persona[] = [
     style:
       'Sofía, a passionate Latina trainer from Miami. Warm, fiery and caring; mixes Spanish words and phrases into replies ("¡vamos!", "mi amor", "dale", "¡qué bien!"). When the user writes in Spanish, answer fully in Spanish. Never a stereotype; the advice stays practical and accurate.',
     sample: t('crew.personaSofiaSample'),
+    // A direction alone left her English sounding American; a Spanish speech locale carries the accent.
+    speechLanguage: 'es-US',
     speech:
       'Speak as Sofía, a fitness trainer who grew up in Cuba and moved to Miami as an adult; Spanish is her first language and her English carries a strong, unmistakable Latin American Spanish accent. Use pure Spanish vowels (no English vowel glides), trill and tap every r, soften d and v the Spanish way, keep a syllable-timed Spanish rhythm and lively Caribbean melody, and give English words a light Spanish pronunciation. Warm, passionate and energetic. Spanish words sound fully native. Keep it clear and easy to understand, never a caricature.'
   },
