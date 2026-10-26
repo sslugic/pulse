@@ -2,9 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSyncExternalStore } from 'react';
 
 import { currentSession, onSessionChange, supabase } from './cloud';
-import { dayKey } from './nutrition';
+import { dayKey, isFullDay } from './nutrition';
 import { actions, getState } from './store';
-import type { Entry } from './types';
 
 // Starter rewards: extra credits for a new player's first steps, so the Coach lasts their first week.
 // The server pays each one once per account (supabase/migrations/20261025000000_starter_rewards.sql).
@@ -19,11 +18,6 @@ const EARNED_KEY = 'pulse:starter-earned';
 // Steps are earned on this phone; payouts are per account, so another account here still gets paid.
 const paidKey = (userId: string) => `pulse:starter-paid:${userId}`;
 
-/** A full first day: at least three things logged, one of them a meal. */
-export function isFullDay(entries: Entry[], day: string) {
-  const todays = entries.filter((e) => !e.passive && dayKey(e.createdAt) === day);
-  return todays.length >= 3 && todays.some((e) => e.kind === 'meal');
-}
 
 // ---------- Announcements ----------
 

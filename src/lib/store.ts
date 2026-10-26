@@ -11,7 +11,7 @@ import { deleteAccount, fetchBalance, fetchCosts, fetchSubscription, loadBackup,
 import { linkPurchases, unlinkPurchases } from './purchases';
 import { activeEnergyByDay, connectHealth, healthAvailable, pullHealth, ensureHealthAccess } from './health';
 import { cancelReminders, enableReminders, scheduleReminder } from './reminders';
-import { dayKey, loggedDays, macroTargets, recommendedTargets } from './nutrition';
+import { bestStreak, dayKey, isFullDay, loggedDays, macroTargets, recommendedTargets } from './nutrition';
 import { appIconUnlockId } from './app-icons';
 import { ARCADE_CLAIM, ARCADE_XP, FREEZE_PRICE, MAX_FREEZES, SHOP, gameById, isUnlocked, type BrainId, type ChestTier, type GameId } from './arcade';
 import { BEST_BONUS, CHESTS_PER_DAY, PAID_WINS_PER_DAY, WIN_TOKENS, WIN_XP, chestFor, chestsEarnedToday, dailyChestId, rollLoot, winsToday, type Loot, type RunResult } from './brain';
@@ -24,6 +24,7 @@ import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
 import { avatarById, avatarUnlockId, avatarGiftId, isAvatarUnlocked, type AvatarId } from './avatars';
 import { OLD_TRACKS, trackById, trackUnlockId, type TrackId } from './music';
 import { notifyRestored } from './overlays';
+import { EMPTY_PUZZLE, GANG_WIN_TOKENS, PIECES_DAILY, PIECES_GANG_WIN, PIECES_FULL_DAY, PIECES_STREAK, PUZZLE_DONE_TOKENS, PUZZLE_DONE_XP, PUZZLE_STREAKS, earnPieces, hasClaim, isPuzzleDone, nextPuzzle, placePiece, puzzleClaim } from './puzzle';
 import { wallUnlockId, type WallId } from './walls';
 import { configureSound, playSfx } from './sound';
 import { speak, speakStream, stopSpeaking } from './voice';
@@ -201,6 +202,8 @@ export async function hydrate() {
         playedDay: data.game?.playedDay,
         // XP already spent on tracks and avatars; without it a restart would refund them.
         xpSpent: data.game?.xpSpent,
+        puzzle: data.game?.puzzle,
+        gang: data.game?.gang,
       },
     };
   } catch {
@@ -766,6 +769,8 @@ export const actions = {
     const gifts = loot.flatMap((l) =>
       l.kind === 'game' ? [`gift:${l.game.id}`] : l.kind === 'avatar' ? [avatarGiftId(l.avatar.id)] : l.kind === 'track' ? [trackUnlockId(l.track.id)] : l.kind === 'icon' ? [appIconUnlockId(l.icon.id)] : l.kind === 'wall' ? [wallUnlockId(l.wall.id)] : [],
     );
+    const pieces = loot.reduce((n, l) => n + (l.kind === 'puzzle' ? l.count : 0), 0);
+    if (pieces) actions.addPuzzlePieces(pieces, null, null);
     set((s) => ({
       game: {
         ...s.game,
@@ -779,6 +784,80 @@ export const actions = {
     celebrate();
     playSfx('chest');
     return loot;
+  },
+  /**
+   * Adds puzzle pieces, once per `claimId` (null: always, e.g. from a chest) and says so with the
+   * reward pop-up unless `label` is null. Returns how many were added.
+   */
+  addPuzzlePieces(count: number, claimId: string | null, label: string | null = t('puzzle.pieceEarned', { count })) {
+    if (count <= 0 || (claimId && hasClaim(state.game.claims, claimId))) return 0;
+    const now = Date.now();
+    const { next } = earnPieces(state.game.puzzle ?? EMPTY_PUZZLE, count);
+    set((s) => ({
+      game: {
+        ...s.game,
+        puzzle: next,
+        claims: claimId ? [...s.game.claims, { day: dayKey(now), questId: claimId, xp: 0, tokens: 0, at: now }] : s.game.claims,
+      },
+    }));
+    if (label) pushReward(0, 0, label, true);
+    return count;
+  },
+  /** Gives the pieces the log has earned: opening the app today, a full day logged, streak milestones. */
+  collectPuzzlePieces(day: string) {
+    if (!state.onboarded) return;
+    actions.addPuzzlePieces(PIECES_DAILY, puzzleClaim.daily(day));
+    if (isFullDay(state.entries, day)) actions.addPuzzlePieces(PIECES_FULL_DAY, puzzleClaim.fullDay(day));
+    const best = bestStreak(state.entries, state.game.frozenDays);
+    for (const days of PUZZLE_STREAKS) if (best >= days) actions.addPuzzlePieces(PIECES_STREAK, puzzleClaim.streak(days));
+  },
+  /** Places a piece; false if that isn't its spot. */
+  placePuzzlePiece(piece: number, spot: number) {
+    const next = placePiece(state.game.puzzle ?? EMPTY_PUZZLE, piece, spot);
+    if (!next) return false;
+    set((s) => ({ game: { ...s.game, puzzle: next } }));
+    return true;
+  },
+  /** Pays for a finished picture (XP, tokens and a gold chest) and starts the next one. */
+  finishPuzzle() {
+    const p = state.game.puzzle ?? EMPTY_PUZZLE;
+    if (!isPuzzleDone(p) || hasClaim(state.game.claims, puzzleClaim.done(p.n))) return null;
+    const now = Date.now();
+    const id = `c${now}`;
+    set((s) => ({
+      game: {
+        ...s.game,
+        puzzle: nextPuzzle(p),
+        claims: [...s.game.claims, { day: dayKey(now), questId: puzzleClaim.done(p.n), xp: PUZZLE_DONE_XP, tokens: PUZZLE_DONE_TOKENS, at: now }],
+        chests: [...(s.game.chests ?? []), { id, tier: 'gold', from: 'puzzle', at: now }],
+      },
+    }));
+    pushReward(PUZZLE_DONE_XP, PUZZLE_DONE_TOKENS, t('puzzle.doneTitle'));
+    celebrate();
+    playSfx('fanfare');
+    return id;
+  },
+  /**
+   * Records a Gang Wars run. The first win of the day pays tokens and puzzle pieces; every run counts
+   * as playing in the Arcade (for the daily chest). Returns what the win paid.
+   */
+  finishGang(result: { won: boolean; seconds: number }, day: string) {
+    const { game } = state;
+    const gang = game.gang ?? {};
+    set((s) => ({
+      game: {
+        ...s.game,
+        playedDay: day,
+        gang: result.won ? { wins: (gang.wins ?? 0) + 1, best: Math.min(gang.best ?? Infinity, result.seconds) } : gang,
+      },
+    }));
+    if (!result.won || hasClaim(game.claims, puzzleClaim.gang(day))) return { tokens: 0, pieces: 0 };
+    const now = Date.now();
+    set((s) => ({ game: { ...s.game, claims: [...s.game.claims, { day, questId: `gang:win:${day}`, xp: 0, tokens: GANG_WIN_TOKENS, at: now }] } }));
+    actions.addPuzzlePieces(PIECES_GANG_WIN, puzzleClaim.gang(day), null);
+    pushReward(0, GANG_WIN_TOKENS, t('gang.winReward', { count: PIECES_GANG_WIN }));
+    celebrate();
+    return { tokens: GANG_WIN_TOKENS, pieces: PIECES_GANG_WIN };
   },
   /** Buys a Token Doubler: the next few Brain Gym wins pay double tokens. */
   buyDoubler() {

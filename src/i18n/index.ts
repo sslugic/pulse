@@ -31,5 +31,7 @@ import notify from './notify';
 import appIcons from './appIcons';
 import starter from './starter';
 import walls from './walls';
+import puzzle from './puzzle';
+import gang from './gang';
 
-export const STRINGS = { common, log, hq, quests, wellbeing, coach, journal, stats, recap, goals, photos, scan, arcade, ranks, season, crew, onboarding, account, credits, plans, errors, rewards, labels, squad, share, music, tour, avatars, notify, appIcons, starter, walls };
+export const STRINGS = { common, log, hq, quests, wellbeing, coach, journal, stats, recap, goals, photos, scan, arcade, ranks, season, crew, onboarding, account, credits, plans, errors, rewards, labels, squad, share, music, tour, avatars, notify, appIcons, starter, walls, puzzle, gang };

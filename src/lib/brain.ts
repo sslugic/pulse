@@ -33,7 +33,8 @@ export type Loot =
   | { kind: 'avatar'; avatar: AvatarDef }
   | { kind: 'track'; track: MusicTrack }
   | { kind: 'icon'; icon: AppIconDef }
-  | { kind: 'wall'; wall: WallDef };
+  | { kind: 'wall'; wall: WallDef }
+  | { kind: 'puzzle'; count: number };
 
 export const CHEST_LOOK: Record<ChestTier, { name: string; body: string; trim: string; glow: string }> = {
   wood: {
@@ -106,6 +107,9 @@ export function rollLoot(tier: ChestTier, game: GameState, rand: () => number = 
   // The Arcade app icon only drops from gold chests, rarer still.
   const icons = APP_ICONS.filter((x) => x.chest && !game.unlocked.includes(appIconUnlockId(x.id)));
   if (tier === 'gold' && icons.length && rand() < 0.04) loot.push({ kind: 'icon', icon: icons[Math.floor(rand() * icons.length)] });
+  // Puzzle pieces: a wood chest sometimes has one, silver always one, gold two.
+  const pieces = tier === 'gold' ? 2 : tier === 'silver' ? 1 : rand() < 0.4 ? 1 : 0;
+  if (pieces) loot.push({ kind: 'puzzle', count: pieces });
   // Five walls only drop from gold chests, about one gold chest in twenty.
   const walls = WALLS.filter((x) => x.chest && !game.unlocked.includes(wallUnlockId(x.id)));
   if (tier === 'gold' && walls.length && rand() < 0.05) loot.push({ kind: 'wall', wall: walls[Math.floor(rand() * walls.length)] });
