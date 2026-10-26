@@ -8,6 +8,7 @@ import type { ChestTier } from '@/lib/arcade';
 import { CHEST_LOOK } from '@/lib/brain';
 import { t } from '@/lib/i18n';
 import { challengeChest, claimChallenge, claimLeague, challengeClaimId, lastWeekPrize, outcome, useSquad } from '@/lib/social';
+import { overlayBusy, useOverlay } from '@/lib/overlays';
 import { playSfx } from '@/lib/sound';
 import { useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
@@ -60,6 +61,7 @@ export function RewardsPopup() {
   const latest = useRef(pending);
   const showing = useRef(false);
   const touringRef = useRef(false);
+  useOverlay('rewards', visible || queue.length > 0);
   useEffect(() => {
     touringRef.current = touring;
     latest.current = pending;
@@ -70,12 +72,12 @@ export function RewardsPopup() {
     const timer = setTimeout(
       () => {
         const now = latest.current;
-        if (!now.length || showing.current || touringRef.current) return;
+        if (!now.length || showing.current || touringRef.current || overlayBusy('rewards')) return;
         AsyncStorage.getItem(SEEN_KEY)
           .then((raw) => {
             const seen = raw ? (JSON.parse(raw) as { at: number; keys: string[] }) : { at: 0, keys: [] };
             const fresh = now.some((p) => !seen.keys.includes(p.key));
-            if (!cancelled && !showing.current && fresh && Date.now() - seen.at > COOLDOWN_MS) {
+            if (!cancelled && !showing.current && !overlayBusy('rewards') && fresh && Date.now() - seen.at > COOLDOWN_MS) {
               setVisible(true);
               playSfx('reward');
             }

@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, View } from 'react-native';
 import Svg, { Circle, SvgXml } from 'react-native-svg';
@@ -10,7 +11,22 @@ import { avatarById, type AvatarId } from '@/lib/avatars';
  * Graffiti-tag avatar inside a steel ring: the user's initial sprayed on a colour splash, or a chosen
  * subway-graffiti sticker (see lib/avatar-art) that fills the frame.
  */
-export function TagAvatar({ size = 72, band = C.orange, online = true, letter = 'P', avatar }: { size?: number; band?: string; online?: boolean; letter?: string; avatar?: AvatarId }) {
+export function TagAvatar({
+  size = 72,
+  band = C.orange,
+  online = true,
+  letter = 'P',
+  avatar,
+  photo,
+}: {
+  size?: number;
+  band?: string;
+  online?: boolean;
+  letter?: string;
+  avatar?: AvatarId;
+  /** A picture (e.g. a coach portrait) shown instead of the letter, cropped to the face. */
+  photo?: number;
+}) {
   const inner = size - 8;
   const art = avatar ? AVATAR_ART[avatarById(avatar).id] : undefined;
   return (
@@ -38,7 +54,9 @@ export function TagAvatar({ size = 72, band = C.orange, online = true, letter = 
             <Circle cx={18} cy={78} r={5} fill={band} opacity={0.8} />
             <Circle cx={88} cy={70} r={3} fill={band} opacity={0.7} />
           </Svg>
-          {art ? (
+          {photo ? (
+            <Image source={photo} style={{ position: 'absolute', width: inner, height: inner * 1.34, top: 0 }} contentFit="cover" contentPosition="top" />
+          ) : art ? (
             <SvgXml xml={`<svg viewBox="0 0 100 100">${art}</svg>`} width={inner} height={inner} style={{ position: 'absolute' }} />
           ) : (
             <Text

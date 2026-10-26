@@ -36,7 +36,7 @@ export function ShareCardHost() {
   useEffect(() => {
     if (!card) return;
     let cancelled = false;
-    // Two frames so fonts, gradients and SVG art have drawn before the capture.
+    // Long enough for fonts, gradients, SVG art and a rank card's wall image to draw before the capture.
     const id = setTimeout(async () => {
       try {
         // view-shot's types predate RN's element refs; the runtime accepts the host view.
@@ -47,7 +47,7 @@ export function ShareCardHost() {
       } finally {
         if (!cancelled) setCard(null);
       }
-    }, 120);
+    }, card.kind === 'rank' ? 400 : 120);
     return () => {
       cancelled = true;
       clearTimeout(id);

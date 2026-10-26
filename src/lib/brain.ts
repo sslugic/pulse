@@ -3,6 +3,7 @@ import { GAMES, MAX_FREEZES, isUnlocked, type BrainId, type ChestTier, type Game
 import { AVATARS, avatarGiftId, isRewardAvatar, type AvatarDef } from './avatars';
 import { t } from './i18n';
 import { TRACKS, trackUnlockId, type MusicTrack } from './music';
+import { WALLS, wallUnlockId, type WallDef } from './walls';
 import type { Claim, GameState } from './quests';
 
 // Brain Gym rewards: wins pay tokens and XP and drop a chest, a little like opening chests in Duolingo.
@@ -31,7 +32,8 @@ export type Loot =
   | { kind: 'game'; game: GameDef }
   | { kind: 'avatar'; avatar: AvatarDef }
   | { kind: 'track'; track: MusicTrack }
-  | { kind: 'icon'; icon: AppIconDef };
+  | { kind: 'icon'; icon: AppIconDef }
+  | { kind: 'wall'; wall: WallDef };
 
 export const CHEST_LOOK: Record<ChestTier, { name: string; body: string; trim: string; glow: string }> = {
   wood: {
@@ -104,6 +106,9 @@ export function rollLoot(tier: ChestTier, game: GameState, rand: () => number = 
   // The Arcade app icon only drops from gold chests, rarer still.
   const icons = APP_ICONS.filter((x) => x.chest && !game.unlocked.includes(appIconUnlockId(x.id)));
   if (tier === 'gold' && icons.length && rand() < 0.04) loot.push({ kind: 'icon', icon: icons[Math.floor(rand() * icons.length)] });
+  // Five walls only drop from gold chests, about one gold chest in twenty.
+  const walls = WALLS.filter((x) => x.chest && !game.unlocked.includes(wallUnlockId(x.id)));
+  if (tier === 'gold' && walls.length && rand() < 0.05) loot.push({ kind: 'wall', wall: walls[Math.floor(rand() * walls.length)] });
   return loot;
 }
 

@@ -9,6 +9,7 @@ import type { ChestTier } from '@/lib/arcade';
 import { CHEST_LOOK, type Loot } from '@/lib/brain';
 import { tap } from '@/lib/haptics';
 import { t } from '@/lib/i18n';
+import { useOverlay } from '@/lib/overlays';
 import { shareCard } from '@/lib/share-card';
 import { actions, getState } from '@/lib/store';
 
@@ -130,6 +131,8 @@ function LootRow({ l, i }: { l: Loot; i: number }) {
       return row(<T size={28}>{l.track.emoji}</T>, t('arcade.lootTrack', { name: l.track.name }), t('arcade.lootTrackSub'), C.violet);
     case 'icon':
       return row(<Image source={l.icon.thumb} style={{ width: 34, height: 34, borderRadius: 8 }} />, t('arcade.lootIcon', { name: l.icon.name }), t('arcade.lootIconSub'), C.yellow);
+    case 'wall':
+      return row(<Image source={l.wall.art} style={{ width: 26, height: 46, borderRadius: 4 }} contentFit="cover" />, t('walls.lootWall', { name: l.wall.name }), t('walls.lootWallSub'), C.violet);
   }
 }
 
@@ -152,6 +155,8 @@ function lootLine(l: Loot) {
       return t('arcade.lootTrack', { name: l.track.name });
     case 'icon':
       return t('arcade.lootIcon', { name: l.icon.name });
+    case 'wall':
+      return t('walls.lootWall', { name: l.wall.name });
   }
 }
 
@@ -167,6 +172,7 @@ export function ChestOpener({ chest, day, onClose }: { chest: { id: string; tier
 function ChestModal({ chest, day, onClose }: { chest: { id: string; tier: ChestTier }; day: string; onClose: () => void }) {
   const [loot, setLoot] = useState<Loot[] | null>(null);
   const shake = useSharedValue(0);
+  useOverlay('chest', true);
 
   const shakeStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${shake.value}deg` }],

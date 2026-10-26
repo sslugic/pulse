@@ -540,18 +540,44 @@ export async function askCoach(opts: {
         onRestart?.();
       })
     : await generate(apiKey, model, body, timeoutMs, feature);
-  try {
-    const parsed = JSON.parse(raw) as CoachResult;
-    const g = parsed.goalUpdate;
-    return {
-      reply: parsed.reply ?? '',
-      entries: parsed.entries ?? [],
-      removeEntryIds: parsed.removeEntryIds ?? [],
-      goalUpdate: g && GOALS.includes(g.goal) && PACES.includes(g.pace) ? g : undefined,
-    };
-  } catch {
-    return { reply: raw, entries: [], removeEntryIds: [] };
+  const parsed = parseJsonAnswer<CoachResult>(raw);
+  if (!parsed) {
+    // Never show raw JSON: keep whatever reply text made it through, or say it got cut off.
+    const partial = partialReply(raw)?.text.trim();
+    const looksJson = /^\s*(```|[{[])/.test(raw);
+    return { reply: partial || (looksJson ? t('errors.cutOff') : raw.trim()), entries: [], removeEntryIds: [] };
   }
+  const g = parsed.goalUpdate;
+  return {
+    reply: typeof parsed.reply === 'string' ? parsed.reply : '',
+    entries: Array.isArray(parsed.entries) ? parsed.entries : [],
+    removeEntryIds: Array.isArray(parsed.removeEntryIds) ? parsed.removeEntryIds : [],
+    goalUpdate: g && GOALS.includes(g.goal) && PACES.includes(g.pace) ? g : undefined,
+  };
+}
+
+/** A JSON answer as an object; a reply that isn't one is reported as cut off. */
+function jsonOf(raw: string): any {
+  const value = parseJsonAnswer<Record<string, unknown>>(raw);
+  if (!value) throw new AiError(t('errors.cutOff'));
+  return value;
+}
+
+/** Parses a JSON answer, also when it comes wrapped in a code fence or with stray text around it. */
+export function parseJsonAnswer<T>(raw: string): T | undefined {
+  const tries = [raw, raw.replace(/^\s*```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '')];
+  const first = raw.indexOf('{');
+  const last = raw.lastIndexOf('}');
+  if (first >= 0 && last > first) tries.push(raw.slice(first, last + 1));
+  for (const text of tries) {
+    try {
+      const value = JSON.parse(text);
+      if (value && typeof value === 'object' && !Array.isArray(value)) return value as T;
+    } catch {
+      // try the next shape
+    }
+  }
+  return undefined;
 }
 
 export interface PlanResult {
@@ -606,7 +632,7 @@ summary: 2 short sentences in plain language explaining the plan and the single 
     30_000,
     'goal_plan',
   );
-  const j = JSON.parse(raw);
+  const j = jsonOf(raw);
   const r = (n: number, to: number) => Math.round(Number(n) / to) * to;
   return {
     goal: GOALS.includes(j.goal) ? j.goal : 'maintain',
@@ -648,7 +674,7 @@ export async function dailyInsight(opts: { apiKey: string; model: string; profil
     'insight',
   );
   try {
-    return String(JSON.parse(raw).insight ?? '').trim();
+    return String(jsonOf(raw).insight ?? '').trim();
   } catch {
     return '';
   }
@@ -692,7 +718,7 @@ Write: headline (max 8 words), body (2-3 sentences linking THEIR stress/sleep/mo
     30_000,
     'wellbeing',
   );
-  const j = JSON.parse(raw);
+  const j = jsonOf(raw);
   return { headline: String(j.headline ?? ''), body: String(j.body ?? ''), tips: (j.tips ?? []).slice(0, 3).map(String) };
 }
 
@@ -782,7 +808,7 @@ Write: title (3-6 words, ALL CAPS, comic headline), training, fuel, mind (one pu
     30_000,
     'recap',
   );
-  const j = JSON.parse(raw);
+  const j = jsonOf(raw);
   return { title: String(j.title ?? ''), training: String(j.training ?? ''), fuel: String(j.fuel ?? ''), mind: String(j.mind ?? ''), verdict: String(j.verdict ?? '') };
 }
 
@@ -876,7 +902,7 @@ Use ${profile.units} units for ingredient amounts.${prefs.trim() ? `\nUSER PREFE
     60_000,
     span === 'today' ? 'meal_plan' : 'meal_plan_3d',
   );
-  const j = JSON.parse(raw) as MealPlan;
+  const j = jsonOf(raw) as MealPlan;
   return { summary: j.summary ?? '', days: j.days ?? [], grocery: j.grocery ?? [] };
 }
 
@@ -901,7 +927,7 @@ export async function estimateMeal(opts: { apiKey: string; model: string; descri
     20_000,
     'estimate',
   );
-  const j = JSON.parse(raw);
+  const j = jsonOf(raw);
   const n = (v: unknown) => (typeof v === 'number' && isFinite(v) && v >= 0 ? Math.round(v * 10) / 10 : 0);
   return { calories: n(j.calories), protein: n(j.protein), carbs: n(j.carbs), fat: n(j.fat), fiber: n(j.fiber), sugar: n(j.sugar) };
 }
@@ -990,6 +1016,6 @@ summary: one or two sentences in character on how this plan serves the goal. Use
     60_000,
     days <= 1 ? 'workout_plan' : days <= 3 ? 'workout_plan_3d' : 'workout_plan_7d',
   );
-  const j = JSON.parse(raw);
+  const j = jsonOf(raw);
   return { summary: String(j.summary ?? ''), days: (j.days ?? []).slice(0, days) };
 }

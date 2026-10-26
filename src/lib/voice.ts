@@ -266,7 +266,7 @@ export function speakStream(id: string, opts: { apiKey: string; voice: string })
 
   (async () => {
     // Talk back even with the ringer switch off, like a voice note would.
-    await setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+    await setAudioModeAsync({ playsInSilentMode: true, interruptionMode: 'mixWithOthers' }).catch(() => {});
     let device = !natural;
     for (let i = 0; ; i++) {
       while (i >= parts.length && !ended) {

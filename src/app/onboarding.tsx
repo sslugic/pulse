@@ -50,7 +50,9 @@ export default function Onboarding() {
   const [seen, setSeen] = useState(stored);
   if (stored !== seen) {
     setSeen(stored);
-    setP((x) => ({ ...x, ...stored }));
+    // Only what changed in the store (a restore, Apple's name, the coach), never over answers typed here.
+    const changed = (Object.keys(stored) as (keyof Profile)[]).filter((k) => stored[k] !== seen[k]);
+    if (changed.length) setP((x) => ({ ...x, ...Object.fromEntries(changed.map((k) => [k, stored[k]])) }));
   }
   const signedIn = useStore((st) => !!st.account.userId);
   const healthOn = useStore((st) => !!st.settings.health?.on);
@@ -344,7 +346,7 @@ function StarterCoach() {
             style={[styles.option, on && { borderColor: C.violet, backgroundColor: '#A267FF1F' }]}
             accessibilityRole="radio"
             accessibilityState={{ selected: on }}>
-            <T size={28}>{x.emoji}</T>
+            {x.portrait ? <Image source={x.portrait} style={styles.coachThumb} contentFit="cover" contentPosition="top" /> : <T size={28}>{x.emoji}</T>}
             <View style={{ flex: 1, gap: 2 }}>
               <Comic size={20} color={on ? C.text : C.textDim}>
                 {x.name.toUpperCase()}
@@ -410,6 +412,7 @@ function Summary({ ok, text }: { ok: boolean; text: string }) {
 }
 
 const styles = StyleSheet.create({
+  coachThumb: { width: 44, height: 58, borderRadius: 8 },
   content: { flexGrow: 1, paddingHorizontal: Space.lg, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   footer: { paddingHorizontal: Space.lg, paddingTop: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', backgroundColor: C.bg + 'E6' },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Space.lg },

@@ -1,9 +1,9 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RankScene, useWallLevel, WALL_NAMES } from '@/components/backdrops';
+import { useWall, WallScene } from '@/components/backdrops';
 import { GlassButton, Icon } from '@/components/icon';
 import { shareCard } from '@/components/share-card';
 import { Bar, Card, SectionTitle, T } from '@/components/ui';
@@ -12,6 +12,7 @@ import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { questXp } from '@/lib/quests';
 import { crewRank, RANKS, XP_SOURCES } from '@/lib/rank';
 import { actions, useStore } from '@/lib/store';
+import { rankWall, type WallDef } from '@/lib/walls';
 import { tap } from '@/lib/haptics';
 import { locale, t } from '@/lib/i18n';
 
@@ -24,7 +25,7 @@ export default function RanksScreen() {
   const claims = useStore((s) => s.game.claims);
   const frozen = useStore((s) => s.game.frozenDays);
   const crew = useMemo(() => crewRank(entries, questXp(claims), frozen), [entries, claims, frozen]);
-  const { wall } = useWallLevel();
+  const { wall } = useWall();
   const following = useStore((s) => s.game.wall == null);
   const name = useStore((s) => s.profile.name.split(' ')[0] ?? '');
 
@@ -114,9 +115,9 @@ export default function RanksScreen() {
                   <T size={12} color={current || done ? C.textDim : C.textMute} style={{ lineHeight: 17 }}>
                     {r.blurb}
                   </T>
-                  {/* Only ranks that unlock a new wall show one */}
-                  {(i === 0 || RANKS[i - 1].scene !== r.scene) && (
-                    <WallThumb level={i + 1} unlocked={done || current} inUse={RANKS[wall - 1].scene === r.scene} color={color} />
+                  {/* Only ranks that bring a new wall show one */}
+                  {(i === 0 || rankWall(i).id !== rankWall(i + 1).id) && (
+                    <WallThumb wall={rankWall(i + 1)} unlocked={done || current} inUse={wall.id === rankWall(i + 1).id} color={color} />
                   )}
                 </Card>
               </View>
@@ -143,20 +144,18 @@ export default function RanksScreen() {
 }
 
 /** Preview of a rank's wall; unlocked ones can be tapped to use as the app background. */
-function WallThumb({ level, unlocked, inUse, color }: { level: number; unlocked: boolean; inUse: boolean; color: string }) {
-  const [width, setWidth] = useState(0);
+function WallThumb({ wall, unlocked, inUse, color }: { wall: WallDef; unlocked: boolean; inUse: boolean; color: string }) {
   return (
     <Pressable
       disabled={!unlocked || inUse}
       onPress={() => {
         tap();
-        actions.setWall(level);
+        actions.setWall(wall.id);
       }}
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       accessibilityRole="button"
-      accessibilityLabel={t(unlocked ? 'ranks.wallLabel' : 'ranks.wallLabelLocked', { name: WALL_NAMES[RANKS[level - 1].scene] })}
+      accessibilityLabel={t(unlocked ? 'ranks.wallLabel' : 'ranks.wallLabelLocked', { name: wall.name })}
       style={[styles.thumb, { borderColor: inUse ? color : C.ink }]}>
-      {width > 0 && <RankScene level={level} width={width} height={130} />}
+      <WallScene wall={wall} />
       {!unlocked && (
         <View style={styles.locked}>
           <Icon name="lock" size={16} color={C.textDim} />
@@ -164,7 +163,7 @@ function WallThumb({ level, unlocked, inUse, color }: { level: number; unlocked:
       )}
       <View style={styles.thumbLabel}>
         <T size={10} rounded color={C.text}>
-          {WALL_NAMES[RANKS[level - 1].scene]}
+          {wall.name}
         </T>
         {(inUse || unlocked) && (
           <T size={10} rounded color={inUse ? color : C.cyan}>

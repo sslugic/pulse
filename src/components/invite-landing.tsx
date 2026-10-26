@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { C } from '@/constants/theme';
@@ -17,7 +17,9 @@ import { ArcadeButton, Backdrop, Comic } from './underground';
 export function InviteLanding({ kind, code }: { kind: 'friend' | 'crew'; code: string }) {
   const userId = useStore((s) => s.account.userId);
   const loaded = useSquad((s) => s.loaded);
-  const me = useSquad((s) => s.me);
+  // Whether there's a card, not the card itself: the card is a new object after every refresh.
+  const me = useSquad((s) => !!s.me);
+  const applied = useRef<string | null>(null);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   // Not signed in, or no Squad card yet: say what to do first.
   const setup = !userId ? t('squad.inviteSignInFirst', { code }) : loaded && !me ? t('squad.inviteJoinFirst', { code }) : null;
@@ -33,6 +35,10 @@ export function InviteLanding({ kind, code }: { kind: 'friend' | 'crew'; code: s
       return;
     }
     if (!me) return;
+    // Once per invite: adding the friend refreshes the Squad, which would otherwise run this again.
+    const key = `${kind}:${code}`;
+    if (applied.current === key) return;
+    applied.current = key;
     let cancelled = false;
     (kind === 'friend' ? addFriend(code).then((name) => t('squad.friendAddedBody', { name })) : joinCrew(code).then((c) => t('squad.crewJoinedBody', { name: c.name })))
       .then((text) => !cancelled && setResult({ ok: true, text }))
