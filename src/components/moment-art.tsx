@@ -1,10 +1,12 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { C } from '@/constants/theme';
 import { t } from '@/lib/i18n';
-import { SCENE_ELEMENTS, skyFor, type SceneElement } from '@/lib/scene';
+import { SCENE_ELEMENTS, SCENE_WALLS, skyFor, type SceneElement } from '@/lib/scene';
+import { wallById } from '@/lib/walls';
 
 import { Icon } from './icon';
 import { T } from './ui';
@@ -16,7 +18,10 @@ const SPOTS = [
   { x: 0.8, y: 0.74, size: 28, rotate: -6 },
 ];
 
-/** A comic-panel illustration of a journal moment, drawn from its scene elements instead of the photo. */
+/**
+ * A comic-panel illustration of a journal moment: the illustrated wall that fits it best (tinted by
+ * how the day felt) with the moment's elements as stickers on top. Drawn instead of the photo.
+ */
 export function MomentArt({ scene, mood, photo, height = 150 }: { scene: SceneElement[]; mood?: number; photo?: boolean; height?: number }) {
   const [hero, ...rest] = scene;
   const h = SCENE_ELEMENTS[hero];
@@ -24,16 +29,26 @@ export function MomentArt({ scene, mood, photo, height = 150 }: { scene: SceneEl
   const seed = scene.join('').split('').reduce((n, c) => (n * 31 + c.charCodeAt(0)) % 9973, 7);
   const dots = Array.from({ length: 14 }, (_, i) => ({ x: ((seed * (i + 3) * 37) % 100) / 100, y: ((seed * (i + 7) * 53) % 55) / 100, r: 0.8 + ((seed + i) % 3) * 0.6 }));
 
+  const wall = SCENE_WALLS[hero].map(wallById).find(Boolean);
+
   return (
     <View style={[styles.panel, { height }]}>
       <LinearGradient colors={skyFor(mood)} style={StyleSheet.absoluteFill} />
-      <Svg style={StyleSheet.absoluteFill} viewBox="0 0 100 100" preserveAspectRatio="none">
-        {dots.map((d, i) => (
-          <Circle key={i} cx={d.x * 100} cy={d.y * 100} r={d.r * 0.5} fill="#fff" opacity={0.35} />
-        ))}
-        <Path d="M0 78 Q 18 66 34 74 T 68 70 T 100 72 V100 H0 Z" fill="#0B0C0D" opacity={0.55} />
-        <Path d="M0 86 Q 25 78 50 86 T 100 84 V100 H0 Z" fill="#0B0C0D" opacity={0.8} />
-      </Svg>
+      {wall ? (
+        <>
+          <Image source={wall.art} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={200} />
+          <LinearGradient colors={skyFor(mood)} style={[StyleSheet.absoluteFill, { opacity: 0.35 }]} />
+          <LinearGradient colors={['#00000033', '#000000AA']} style={StyleSheet.absoluteFill} />
+        </>
+      ) : (
+        <Svg style={StyleSheet.absoluteFill} viewBox="0 0 100 100" preserveAspectRatio="none">
+          {dots.map((d, i) => (
+            <Circle key={i} cx={d.x * 100} cy={d.y * 100} r={d.r * 0.5} fill="#fff" opacity={0.35} />
+          ))}
+          <Path d="M0 78 Q 18 66 34 74 T 68 70 T 100 72 V100 H0 Z" fill="#0B0C0D" opacity={0.55} />
+          <Path d="M0 86 Q 25 78 50 86 T 100 84 V100 H0 Z" fill="#0B0C0D" opacity={0.8} />
+        </Svg>
+      )}
 
       {/* Halftone-ish glow behind the hero */}
       <View style={[styles.heroWrap, { shadowColor: h.color }]}>
