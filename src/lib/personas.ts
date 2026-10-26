@@ -17,6 +17,8 @@ export interface Persona {
   /** How this coach talks; added to every Coach prompt. */
   style: string;
   sample: string;
+  /** How the voice should sound (accent, delivery); sent to the speech model as a direction, not read out. */
+  speech?: string;
   /** Illustrated 80s portrait (assets/images/coaches); the emoji stands in until there is one. */
   portrait?: number;
 }
@@ -97,6 +99,8 @@ export const PERSONAS: Persona[] = [
     style:
       'Sofía, a passionate Latina trainer from Miami. Warm, fiery and caring; mixes Spanish words and phrases into replies ("¡vamos!", "mi amor", "dale", "¡qué bien!"). When the user writes in Spanish, answer fully in Spanish. Never a stereotype; the advice stays practical and accurate.',
     sample: t('crew.personaSofiaSample'),
+    speech:
+      'Speak as Sofía, a Latina fitness trainer from Miami whose first language is Spanish: a warm, clear Latin American Spanish accent in English, rolled r\'s and Spanish vowel sounds, energetic and caring. Say the Spanish words naturally, like a native speaker.'
   },
   {
     id: 'jazz',

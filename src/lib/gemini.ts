@@ -726,13 +726,18 @@ Write: headline (max 8 words), body (2-3 sentences linking THEIR stress/sleep/mo
 // through to the next one.
 const TTS_MODELS = ['gemini-3.8-flash-lite-tts', 'gemini-3.8-flash-tts', 'gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
 let ttsModel = 0;
+/** Set once a speech model rejects style directions, so later clips skip them. */
+let styleRefused = false;
 
 /** The Coach's voice before a persona is picked (each persona has its own, see lib/personas.ts). */
 export const DEFAULT_VOICE = 'Puck';
 
 /** Natural speech for a Coach reply. Usually 16-bit 24 kHz mono PCM; mimeType says which. */
-export async function synthesizeSpeech(opts: { apiKey: string; text: string; voice: string }): Promise<Media> {
+export async function synthesizeSpeech(opts: { apiKey: string; text: string; voice: string; style?: string }): Promise<Media> {
   const { apiKey, text, voice } = opts;
+  // A coach's accent and delivery go in as a direction (system instruction), never in the words,
+  // or the model reads them out. A model that won't take one is asked again without it.
+  let style = styleRefused ? undefined : opts.style;
   for (; ttsModel < TTS_MODELS.length; ttsModel++) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 15_000);
@@ -746,7 +751,8 @@ export async function synthesizeSpeech(opts: { apiKey: string; text: string; voi
         signal: ctrl.signal,
         body: JSON.stringify({
           // Only the words to say: TTS models read any style instruction in the text out loud.
-          // The tone comes from the chosen voice.
+          // The tone comes from the chosen voice, and the accent from the coach's direction.
+          ...(style ? { systemInstruction: { parts: [{ text: style }] } } : {}),
           contents: [{ role: 'user', parts: [{ text }] }],
           generationConfig: {
             responseModalities: ['AUDIO'],
@@ -757,6 +763,12 @@ export async function synthesizeSpeech(opts: { apiKey: string; text: string; voi
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
         const msg: string = json?.error?.message ?? `Speech request failed (${res.status})`;
+        if (style && res.status === 400 && /system.?instruction|developer instruction/i.test(msg)) {
+          styleRefused = true;
+          style = undefined;
+          ttsModel--; // same model again, without the direction
+          continue;
+        }
         if (res.status === 404 || /not found|not supported|unsupported|modalit/i.test(msg)) continue;
         throw new AiError(msg, res.status >= 500 || res.status === 429);
       }

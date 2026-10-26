@@ -127,10 +127,10 @@ function wavHeader(dataBytes: number, sampleRate: number) {
 }
 
 /** Gemini speech for a reply, saved as a playable file. Raw PCM gets a WAV header. */
-async function naturalClip(key: string, text: string, apiKey: string, voice: string) {
+async function naturalClip(key: string, text: string, apiKey: string, voice: string, style?: string) {
   const cached = clips.get(key);
   if (cached) return cached;
-  const { base64, mimeType } = await synthesizeSpeech({ apiKey, text, voice });
+  const { base64, mimeType } = await synthesizeSpeech({ apiKey, text, voice, style });
   const pcm = /L16|pcm/i.test(mimeType);
   const rate = Number(mimeType.match(/rate=(\d+)/)?.[1]) || 24000;
   const ext = pcm || /wav/i.test(mimeType) ? 'wav' : /mpeg|mp3/i.test(mimeType) ? 'mp3' : 'audio';
@@ -199,7 +199,7 @@ export interface SpeechStream {
  * Speaks a reply while it is still arriving. Speech is generated a chunk at a time: the first
  * sentence alone so the Coach starts talking quickly, then bigger chunks made while it speaks.
  */
-export function speakStream(id: string, opts: { apiKey: string; voice: string }): SpeechStream {
+export function speakStream(id: string, opts: { apiKey: string; voice: string; style?: string }): SpeechStream {
   const my = ++turn;
   releasePlayer();
   Speech?.stop().catch(() => {});
@@ -219,7 +219,7 @@ export function speakStream(id: string, opts: { apiKey: string; voice: string })
     // Generate up to two chunks ahead of the one playing.
     if (!natural || i >= parts.length || i > playing + 2) return;
     if (!clipsFor[i]) {
-      clipsFor[i] = naturalClip(`${opts.voice}-${hash(parts[i])}`, parts[i], opts.apiKey, opts.voice);
+      clipsFor[i] = naturalClip(`${opts.voice}-${opts.style ? hash(opts.style) : 'plain'}-${hash(parts[i])}`, parts[i], opts.apiKey, opts.voice, opts.style);
       clipsFor[i].catch(() => {}); // awaited when its turn comes; don't report prefetches as unhandled
     }
     return clipsFor[i];
@@ -319,7 +319,7 @@ export function speakStream(id: string, opts: { apiKey: string; voice: string })
 }
 
 /** Speaks a whole reply, e.g. when the user taps Listen. */
-export function speak(id: string, text: string, opts: { apiKey: string; voice: string }) {
+export function speak(id: string, text: string, opts: { apiKey: string; voice: string; style?: string }) {
   speakStream(id, opts).finish(text);
 }
 
