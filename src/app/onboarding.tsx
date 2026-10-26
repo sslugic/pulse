@@ -50,7 +50,9 @@ export default function Onboarding() {
   const [seen, setSeen] = useState(stored);
   if (stored !== seen) {
     setSeen(stored);
-    setP((x) => ({ ...x, ...stored }));
+    // Only what changed in the store (a restore, Apple's name, the coach), never over answers typed here.
+    const changed = (Object.keys(stored) as (keyof Profile)[]).filter((k) => stored[k] !== seen[k]);
+    if (changed.length) setP((x) => ({ ...x, ...Object.fromEntries(changed.map((k) => [k, stored[k]])) }));
   }
   const signedIn = useStore((st) => !!st.account.userId);
   const healthOn = useStore((st) => !!st.settings.health?.on);

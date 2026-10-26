@@ -3,29 +3,31 @@ import { useMemo, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { bestStreak, loggedDays } from '@/lib/nutrition';
-import { questXp } from '@/lib/quests';
+import { questXp, type Claim } from '@/lib/quests';
 import { crewRank } from '@/lib/rank';
 import { useStore } from '@/lib/store';
+import type { Entry } from '@/lib/types';
 import { isWallUnlocked, rankWall, wallById, type WallDef, type WallProgress } from '@/lib/walls';
 
 // The app's backdrop: the wall the player picked (src/lib/walls.ts), if they've unlocked it, else the
 // wall their current rank brings, so the walls change as they rank up.
 
 /** What the player has done toward unlocking walls. */
+export function wallProgressOf(entries: Entry[], claims: Claim[], frozen: string[] | undefined, unlocked: string[]): WallProgress {
+  return {
+    level: crewRank(entries, questXp(claims), frozen).level,
+    unlocked,
+    bestStreak: bestStreak(entries, frozen),
+    daysLogged: loggedDays(entries).size,
+  };
+}
+
 export function useWallProgress(): WallProgress {
   const entries = useStore((s) => s.entries);
   const claims = useStore((s) => s.game.claims);
   const frozen = useStore((s) => s.game.frozenDays);
   const unlocked = useStore((s) => s.game.unlocked);
-  return useMemo(
-    () => ({
-      level: crewRank(entries, questXp(claims), frozen).level,
-      unlocked,
-      bestStreak: bestStreak(entries, frozen),
-      daysLogged: loggedDays(entries).size,
-    }),
-    [entries, claims, frozen, unlocked],
-  );
+  return useMemo(() => wallProgressOf(entries, claims, frozen, unlocked), [entries, claims, frozen, unlocked]);
 }
 
 /** The wall this player sees: the one they picked, if it's unlocked, else their current rank's. */
@@ -39,17 +41,17 @@ export function useWall() {
 }
 
 /** Draws one wall, filling its box. The art is phone-shaped and cropped around its middle. */
-export function WallScene({ wall }: { wall: WallDef }) {
+export function WallScene({ wall, instant }: { wall: WallDef; /** No fade-in (for snapshots). */ instant?: boolean }) {
   return (
     <View style={[StyleSheet.absoluteFill, styles.base]} pointerEvents="none">
-      <Image source={wall.art} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={250} cachePolicy="memory" />
+      <Image source={wall.art} style={StyleSheet.absoluteFill} contentFit="cover" contentPosition="center" transition={instant ? 0 : 250} cachePolicy="memory" />
     </View>
   );
 }
 
-/** The wall a rank brings (share cards). `tags` and `station` are kept for older call sites. */
+/** The wall a rank brings, drawn without a fade so share cards capture it. `tags` and `station` are kept for older call sites. */
 export function RankScene({ level }: { level: number; width?: number; height?: number; tags?: string[]; station?: string }) {
-  return <WallScene wall={rankWall(level)} />;
+  return <WallScene wall={rankWall(level)} instant />;
 }
 
 /** Full-screen backdrop behind every screen, themed to the player's rank. */

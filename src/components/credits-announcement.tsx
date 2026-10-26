@@ -4,6 +4,7 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { C } from '@/constants/theme';
 import { t } from '@/lib/i18n';
+import { useOverlay, useOverlayBusy } from '@/lib/overlays';
 import { playSfx } from '@/lib/sound';
 import { dismissAnnouncement, nextStarter, STARTER_CREDITS, useAnnouncement } from '@/lib/starter-rewards';
 import { useStore } from '@/lib/store';
@@ -20,7 +21,9 @@ export function CreditsAnnouncement() {
   const next = useAnnouncement();
   // Held while the app tour is up, so it doesn't cover the tour cards.
   const touring = useStore((s) => s.tourStep != null);
-  const show = !!next && !touring;
+  const busy = useOverlayBusy('credits');
+  const show = !!next && !touring && !busy;
+  useOverlay('credits', show);
 
   useEffect(() => {
     if (show) playSfx('fanfare');

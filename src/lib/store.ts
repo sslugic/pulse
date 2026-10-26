@@ -23,6 +23,7 @@ import { logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
 import { avatarById, avatarUnlockId, avatarGiftId, isAvatarUnlocked, type AvatarId } from './avatars';
 import { OLD_TRACKS, trackById, trackUnlockId, type TrackId } from './music';
+import { notifyRestored } from './overlays';
 import { wallUnlockId, type WallId } from './walls';
 import { configureSound, playSfx } from './sound';
 import { speak, speakStream, stopSpeaking } from './voice';
@@ -995,6 +996,7 @@ export const actions = {
     const restored = state.onboarded ? d : { ...d, onboarded: false };
     AsyncStorage.setItem(DATA_KEY, JSON.stringify(restored))
       .then(() => hydrate())
+      .then(() => notifyRestored())
       .catch(() => {});
   },
   /** Meals saved without calories (an incomplete Coach reply) get estimated in the background. */

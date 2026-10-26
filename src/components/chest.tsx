@@ -9,6 +9,7 @@ import type { ChestTier } from '@/lib/arcade';
 import { CHEST_LOOK, type Loot } from '@/lib/brain';
 import { tap } from '@/lib/haptics';
 import { t } from '@/lib/i18n';
+import { useOverlay } from '@/lib/overlays';
 import { shareCard } from '@/lib/share-card';
 import { actions, getState } from '@/lib/store';
 
@@ -171,6 +172,7 @@ export function ChestOpener({ chest, day, onClose }: { chest: { id: string; tier
 function ChestModal({ chest, day, onClose }: { chest: { id: string; tier: ChestTier }; day: string; onClose: () => void }) {
   const [loot, setLoot] = useState<Loot[] | null>(null);
   const shake = useSharedValue(0);
+  useOverlay('chest', true);
 
   const shakeStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${shake.value}deg` }],

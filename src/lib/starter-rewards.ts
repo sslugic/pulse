@@ -16,7 +16,8 @@ export const STARTER_ORDER: StarterKind[] = ['profile', 'tour', 'first_day'];
 export const STARTER_CREDITS: Record<StarterKind, number> = { profile: 20, tour: 20, first_day: 30 };
 
 const EARNED_KEY = 'pulse:starter-earned';
-const PAID_KEY = 'pulse:starter-paid';
+// Steps are earned on this phone; payouts are per account, so another account here still gets paid.
+const paidKey = (userId: string) => `pulse:starter-paid:${userId}`;
 
 /** A full first day: at least three things logged, one of them a meal. */
 export function isFullDay(entries: Entry[], day: string) {
@@ -78,8 +79,9 @@ export function payStarter() {
 }
 
 async function pay() {
-  if (!supabase || !currentSession()) return;
-  const [earned, paid] = await Promise.all([readSet(EARNED_KEY), readSet(PAID_KEY)]);
+  const userId = currentSession()?.user.id;
+  if (!supabase || !userId) return;
+  const [earned, paid] = await Promise.all([readSet(EARNED_KEY), readSet(paidKey(userId))]);
   let changed = false;
   for (const kind of STARTER_ORDER) {
     if (!earned.has(kind) || paid.has(kind)) continue;
@@ -95,7 +97,7 @@ async function pay() {
     }
   }
   if (changed) {
-    await writeSet(PAID_KEY, paid);
+    await writeSet(paidKey(userId), paid);
     actions.refreshAccount().catch(() => {});
   }
 }

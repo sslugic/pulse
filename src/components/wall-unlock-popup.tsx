@@ -6,12 +6,13 @@ import Animated, { ZoomIn } from 'react-native-reanimated';
 
 import { C } from '@/constants/theme';
 import { t } from '@/lib/i18n';
+import { onRestored, useOverlay, useOverlayBusy } from '@/lib/overlays';
 import { playSfx } from '@/lib/sound';
 import { useAnnouncement } from '@/lib/starter-rewards';
-import { actions, useStore } from '@/lib/store';
+import { actions, getState, useStore } from '@/lib/store';
 import { isWallUnlocked, WALLS } from '@/lib/walls';
 
-import { useWallProgress } from './backdrops';
+import { useWallProgress, wallProgressOf } from './backdrops';
 import { T, tap } from './ui';
 import { ArcadeButton, Comic } from './underground';
 
@@ -25,7 +26,20 @@ export function WallUnlockPopup() {
   const progress = useWallProgress();
   const touring = useStore((s) => s.tourStep != null);
   const announcing = !!useAnnouncement();
+  const busy = useOverlayBusy('wall');
   const [seen, setSeen] = useState<string[] | null>(null);
+  // A backup restored on sign-in brings its walls along; they aren't news, so they become the baseline.
+  useEffect(
+    () =>
+      onRestored(() => {
+        const { entries, game } = getState();
+        const p = wallProgressOf(entries, game.claims, game.frozenDays, game.unlocked);
+        const all = WALLS.filter((w) => isWallUnlocked(w, p)).map((w) => w.id);
+        setSeen(all);
+        AsyncStorage.setItem(SEEN_KEY, JSON.stringify(all)).catch(() => {});
+      }),
+    [],
+  );
 
   const open = useMemo(() => WALLS.filter((w) => isWallUnlocked(w, progress)).map((w) => w.id), [progress]);
 
@@ -41,7 +55,8 @@ export function WallUnlockPopup() {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const next = seen ? WALLS.find((w) => open.includes(w.id) && !seen.includes(w.id) && !w.chest) : undefined;
-  const show = !!next && !touring && !announcing;
+  const show = !!next && !touring && !announcing && !busy;
+  useOverlay('wall', show);
 
   useEffect(() => {
     if (show) playSfx('fanfare');
