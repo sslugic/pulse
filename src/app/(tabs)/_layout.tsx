@@ -11,8 +11,7 @@ import { StreetTabBar } from '@/components/street-tab-bar';
 import { WallUnlockPopup } from '@/components/wall-unlock-popup';
 import { C } from '@/constants/theme';
 import { checkFirstDay, payStarter } from '@/lib/starter-rewards';
-import { actions, useStore } from '@/lib/store';
-import { useTodayKey } from '@/lib/use-today';
+import { useStore } from '@/lib/store';
 
 import { onShortcutLink, takePendingLink } from '../../../modules/pulse-intents';
 
@@ -23,9 +22,6 @@ export default function TabsLayout() {
     payStarter().catch(() => {});
   }, []);
   useEffect(() => checkFirstDay(), [entries]);
-  // Puzzle pieces for opening the app today, a full day logged and streak milestones.
-  const today = useTodayKey();
-  useEffect(() => actions.collectPuzzlePieces(today), [today, entries]);
 
   // Siri, Shortcuts, the Action Button and Back Tap open the Coach (see plugins/app-intents). Handled
   // here, once the tabs exist, so a cold launch from Siri has somewhere to navigate to.
