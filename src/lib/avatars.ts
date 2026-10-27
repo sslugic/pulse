@@ -41,6 +41,14 @@ const ART: Partial<Record<AvatarId, number>> = {
   writer: require('@/assets/images/avatars/writer.jpg'),
   skater: require('@/assets/images/avatars/skater.jpg'),
   cyborg: require('@/assets/images/avatars/cyborg.jpg'),
+  arcadeKid: require('@/assets/images/avatars/arcadeKid.jpg'),
+  punk: require('@/assets/images/avatars/punk.jpg'),
+  aerobics: require('@/assets/images/avatars/aerobics.jpg'),
+  skateboarder: require('@/assets/images/avatars/skateboarder.jpg'),
+  boxer: require('@/assets/images/avatars/boxer.jpg'),
+  dj: require('@/assets/images/avatars/dj.jpg'),
+  robot: require('@/assets/images/avatars/robot.jpg'),
+  ninja: require('@/assets/images/avatars/ninja.jpg'),
 };
 
 const PLAN: AvatarDef[] = [

@@ -30,8 +30,8 @@ Darker calm area in the middle."
 | underground | 7-day streak | underground.jpg | the user's own subway tunnel art | done |
 | video | 14-day streak | video.jpg | 80s VHS rental store | done |
 | boardwalk | 30-day streak | boardwalk.jpg | Coney-Island-like boardwalk at night, rides | done |
-| diner | 60-day streak | diner.jpg | rainy neon diner, chrome counter | todo |
-| rink | 100-day streak | rink.jpg | roller-skating rink, disco lights | todo |
+| diner | 60-day streak | diner.jpg | rainy neon diner, chrome counter | done |
+| rink | 100-day streak | rink.jpg | roller-skating rink, disco lights | done |
 | fireworks | 180-day streak | fireworks.jpg | pier under a big bridge, fireworks | todo |
 | goldLine | 365-day streak | gold-line.jpg | golden graffiti subway train in a gleaming station | todo |
 | records | 50 days logged | records.jpg | record shop with crates and listening booth | todo |
@@ -75,3 +75,6 @@ Status 2026-10-26: 16 of 24 drawn and wired in (`assets/images/avatars/<id>.jpg`
 mohawk), aerobics (instructor), skateboarder, boxer, dj, robot (breakdancing robot, chest), ninja (neon
 ninja, chest). Add each by saving the JPEG and adding its line to `ART`. Since Oct 26 the Figma connector
 uses slugics@gmail.com (file Fxp2YZtW9sGvbUuGZ4zVpm), which allows about 10 images a day (resets 00:00 UTC).
+
+Status 2026-10-27: all 24 avatars drawn and wired in. Walls: 20 of 30 (diner and rink added); still
+todo: fireworks, goldLine, records, radio, highway, laser, pool, skate, carwash, helipad.
