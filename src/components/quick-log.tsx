@@ -6,7 +6,7 @@ import { C, Space } from '@/constants/theme';
 import { t } from '@/lib/i18n';
 import { dayKey, fmtWater, macroTargets, summarize } from '@/lib/nutrition';
 import { actions, useStore } from '@/lib/store';
-import { dayWellbeing, MOODS, moodEmoji } from '@/lib/wellbeing';
+import { dayWellbeing, MOODS } from '@/lib/wellbeing';
 
 import { Icon } from './icon';
 import { Bar, Card, T, tap } from './ui';
@@ -32,11 +32,11 @@ export function QuickLog({ todayKey }: { todayKey: string }) {
   };
   const logMood = (mood: number) => {
     tap();
-    actions.addEntry({ kind: 'journal', title: t('wellbeing.moodCheckIn'), emoji: moodEmoji(mood), mood, source: 'quick' });
+    actions.checkIn({ mood });
   };
   const logSleep = (h: number) => {
     tap();
-    actions.addEntry({ kind: 'journal', title: t('wellbeing.sleptHours', { h }), emoji: '😴', sleepHours: h, source: 'quick' });
+    actions.checkIn({ sleepHours: h });
   };
 
   return (

@@ -66,11 +66,11 @@ export default function WellbeingScreen() {
 
   const logMood = (mood: number) => {
     tap();
-    actions.addEntry({ kind: 'journal', title: t('wellbeing.moodCheckIn'), emoji: moodEmoji(mood), mood, source: 'quick' });
+    actions.checkIn({ mood });
   };
   const logSleep = (h: number) => {
     tap();
-    actions.addEntry({ kind: 'journal', title: t('wellbeing.sleptHours', { h }), emoji: '😴', sleepHours: h, source: 'quick' });
+    actions.checkIn({ sleepHours: h });
   };
   const addMoment = async (from: 'camera' | 'library') => {
     const img = await pickImage(from);
