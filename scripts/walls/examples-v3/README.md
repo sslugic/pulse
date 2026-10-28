@@ -32,14 +32,14 @@ Darker calm area in the middle."
 | boardwalk | 30-day streak | boardwalk.jpg | Coney-Island-like boardwalk at night, rides | done |
 | diner | 60-day streak | diner.jpg | rainy neon diner, chrome counter | done |
 | rink | 100-day streak | rink.jpg | roller-skating rink, disco lights | done |
-| fireworks | 180-day streak | fireworks.jpg | pier under a big bridge, fireworks | todo |
-| goldLine | 365-day streak | gold-line.jpg | golden graffiti subway train in a gleaming station | todo |
-| records | 50 days logged | records.jpg | record shop with crates and listening booth | todo |
-| radio | 125 days logged | radio.jpg | late-night radio station booth over the city | todo |
-| highway | 250 days logged | highway.jpg | synthwave highway at midnight, retro sports car | todo |
-| laser | gold chest | laser.jpg | laser tag arena | todo |
-| pool | gold chest | pool.jpg | smoky pool hall | todo |
-| skate | gold chest | skate.jpg | night skate bowl under streetlights | todo |
+| fireworks | 180-day streak | fireworks.jpg | pier under a big bridge, fireworks | done |
+| goldLine | 365-day streak | gold-line.jpg | golden graffiti subway train in a gleaming station | done |
+| records | 50 days logged | records.jpg | record shop with crates and listening booth | done |
+| radio | 125 days logged | radio.jpg | late-night radio station booth over the city | done |
+| highway | 250 days logged | highway.jpg | synthwave highway at midnight, retro sports car | done |
+| laser | gold chest | laser.jpg | laser tag arena | done |
+| pool | gold chest | pool.jpg | smoky pool hall | done |
+| skate | gold chest | skate.jpg | night skate bowl under streetlights | done |
 | carwash | gold chest | carwash.jpg | neon car wash at night | todo |
 | helipad | gold chest | helipad.jpg | rooftop helipad over the city at night | todo |
 
@@ -76,5 +76,6 @@ mohawk), aerobics (instructor), skateboarder, boxer, dj, robot (breakdancing rob
 ninja, chest). Add each by saving the JPEG and adding its line to `ART`. Since Oct 26 the Figma connector
 uses slugics@gmail.com (file Fxp2YZtW9sGvbUuGZ4zVpm), which allows about 10 images a day (resets 00:00 UTC).
 
-Status 2026-10-27: all 24 avatars drawn and wired in. Walls: 20 of 30 (diner and rink added); still
-todo: fireworks, goldLine, records, radio, highway, laser, pool, skate, carwash, helipad.
+Status 2026-10-28: all 24 avatars drawn and wired in. Walls: 28 of 30 (fireworks, goldLine, records, radio,
+highway, laser, pool, skate added; radio's "ON-AIR" sign lettering was painted out by hand); still todo:
+carwash, helipad.
