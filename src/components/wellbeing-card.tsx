@@ -27,7 +27,7 @@ export function WellbeingCard({ todayKey, onTalk }: { todayKey: string; onTalk: 
 
   const logMood = (mood: number) => {
     tap();
-    actions.addEntry({ kind: 'journal', title: t('wellbeing.moodCheckIn'), emoji: moodEmoji(mood), mood, source: 'quick' });
+    actions.checkIn({ mood });
   };
 
   const color = w.level ? LEVEL_COLOR[w.level] : C.textMute;

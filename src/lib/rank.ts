@@ -45,13 +45,23 @@ const ENTRY_XP: Record<Entry['kind'], number> = { meal: 10, exercise: 15, journa
 // Water is a one-tap button, so its XP is capped per day.
 const WATER_XP_PER_DAY = 15;
 
+/** A one-tap mood or sleep check-in (not a written journal entry). */
+export const isQuickCheckIn = (e: Entry, field: 'mood' | 'sleepHours') => e.kind === 'journal' && e.source === 'quick' && e[field] != null;
+
 /** XP from logging alone: per-entry XP plus a bonus for each day logged and the current streak. */
 export function logXp(entries: Entry[], frozen: string[] = []) {
   const water = new Map<string, number>();
+  // Mood and sleep check-ins pay once per day each, however often they're re-tapped or changed.
+  const checkIns = new Set<string>();
   let xp = 0;
   for (const e of entries) {
     if (e.passive) continue;
-    if (e.kind === 'water') {
+    const field = isQuickCheckIn(e, 'mood') ? 'mood' : isQuickCheckIn(e, 'sleepHours') ? 'sleepHours' : null;
+    if (field) {
+      const k = `${field}:${dayKey(e.createdAt)}`;
+      if (!checkIns.has(k)) xp += ENTRY_XP.journal;
+      checkIns.add(k);
+    } else if (e.kind === 'water') {
       const k = dayKey(e.createdAt);
       const add = Math.min(ENTRY_XP.water, WATER_XP_PER_DAY - (water.get(k) ?? 0));
       water.set(k, (water.get(k) ?? 0) + add);

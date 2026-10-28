@@ -19,7 +19,7 @@ import { season, SEASON_BADGE_REWARD, SEASON_REWARD } from './seasons';
 import { isPersonaUnlocked, personaById, personaUnlockId, starterCoachId, type PersonaId } from './personas';
 import { dailyQuests, PERFECT_DAY, PERFECT_REWARD, tokenBalance, type Claim, type GameState } from './quests';
 import { t } from './i18n';
-import { logXp } from './rank';
+import { isQuickCheckIn, logXp } from './rank';
 import type { ChatMessage, Entry, Profile, Settings, Targets } from './types';
 import { avatarById, avatarUnlockId, avatarGiftId, isAvatarUnlocked, type AvatarId } from './avatars';
 import { OLD_TRACKS, trackById, trackUnlockId, type TrackId } from './music';
@@ -27,6 +27,7 @@ import { notifyRestored } from './overlays';
 import { wallUnlockId, type WallId } from './walls';
 import { configureSound, playSfx } from './sound';
 import { speak, speakStream, stopSpeaking } from './voice';
+import { moodEmoji } from './wellbeing';
 
 interface State {
   ready: boolean;
@@ -640,6 +641,21 @@ export const actions = {
     set((s) => ({ entries: s.entries.map((x) => (x.id === id ? { ...x, createdAt: at } : x)).sort((a, b) => b.createdAt - a.createdAt) }));
     const latest = latestWeight(state.entries);
     if (e.kind === 'weight' && latest?.weightKg) actions.updateProfile({ weightKg: latest.weightKg });
+  },
+  /**
+   * One-tap mood or sleep check-in. Each is one pick per day: tapping again changes today's pick
+   * instead of adding another entry, so re-tapping can't farm XP.
+   */
+  checkIn(what: { mood: number } | { sleepHours: number }) {
+    const today = dayKey(Date.now());
+    const field = 'mood' in what ? 'mood' : 'sleepHours';
+    const existing = state.entries.find((e) => isQuickCheckIn(e, field) && dayKey(e.createdAt) === today);
+    const entry =
+      'mood' in what
+        ? { title: t('wellbeing.moodCheckIn'), emoji: moodEmoji(what.mood), mood: what.mood }
+        : { title: t('wellbeing.sleptHours', { h: what.sleepHours }), emoji: '😴', sleepHours: what.sleepHours };
+    if (existing) actions.updateEntry(existing.id, entry);
+    else actions.addEntry({ kind: 'journal', source: 'quick', ...entry });
   },
   updateEntry(id: string, patch: Partial<Entry>) {
     set((s) => ({ entries: s.entries.map((e) => (e.id === id ? { ...e, ...patch } : e)) }));
