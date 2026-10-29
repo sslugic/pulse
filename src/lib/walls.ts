@@ -59,8 +59,8 @@ const PLAN: Plan[] = [
   { id: 'laser', chest: true, art: require('@/assets/images/walls/laser.jpg') },
   { id: 'pool', chest: true, art: require('@/assets/images/walls/pool.jpg') },
   { id: 'skate', chest: true, art: require('@/assets/images/walls/skate.jpg') },
-  { id: 'carwash', chest: true },
-  { id: 'helipad', chest: true },
+  { id: 'carwash', chest: true, art: require('@/assets/images/walls/carwash.jpg') },
+  { id: 'helipad', chest: true, art: require('@/assets/images/walls/helipad.jpg') },
 ];
 
 /** Every wall in the app, in unlock order. */
