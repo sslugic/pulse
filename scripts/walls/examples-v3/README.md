@@ -40,8 +40,8 @@ Darker calm area in the middle."
 | laser | gold chest | laser.jpg | laser tag arena | done |
 | pool | gold chest | pool.jpg | smoky pool hall | done |
 | skate | gold chest | skate.jpg | night skate bowl under streetlights | done |
-| carwash | gold chest | carwash.jpg | neon car wash at night | todo |
-| helipad | gold chest | helipad.jpg | rooftop helipad over the city at night | todo |
+| carwash | gold chest | carwash.jpg | neon car wash at night | done |
+| helipad | gold chest | helipad.jpg | rooftop helipad over the city at night | done |
 
 ## Coach portraits
 
@@ -76,6 +76,5 @@ mohawk), aerobics (instructor), skateboarder, boxer, dj, robot (breakdancing rob
 ninja, chest). Add each by saving the JPEG and adding its line to `ART`. Since Oct 26 the Figma connector
 uses slugics@gmail.com (file Fxp2YZtW9sGvbUuGZ4zVpm), which allows about 10 images a day (resets 00:00 UTC).
 
-Status 2026-10-28: all 24 avatars drawn and wired in. Walls: 28 of 30 (fireworks, goldLine, records, radio,
-highway, laser, pool, skate added; radio's "ON-AIR" sign lettering was painted out by hand); still todo:
-carwash, helipad.
+Status 2026-10-29: done. All 24 avatars and all 30 walls are drawn and wired in (carwash and helipad added
+last; radio's "ON-AIR" sign lettering was painted out by hand).
