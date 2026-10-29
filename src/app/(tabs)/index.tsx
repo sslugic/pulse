@@ -32,6 +32,9 @@ function greeting() {
   return h < 5 ? t('hq.lateNight') : h < 12 ? t('hq.goodMorning') : h < 18 ? t('hq.goodAfternoon') : t('hq.goodEvening');
 }
 
+// Today's log on HQ shows this many of the newest entries; the full day view has the rest.
+const LOG_PREVIEW = 4;
+
 export default function Today() {
   const insets = useSafeAreaInsets();
   const profile = useStore((s) => s.profile);
@@ -240,7 +243,23 @@ export default function Today() {
         <QuestsCard todayKey={todayKey} />
 
         {/* Log */}
-        <SectionTitle right={<T size={12} rounded color={C.textMute}>{t('hq.entries', { count: todays.length })}</T>}>{t('hq.todaysLog')}</SectionTitle>
+        <SectionTitle
+          right={
+            todays.length > 0 ? (
+              <Pressable onPress={() => openDay(todayKey)} accessibilityRole="button" hitSlop={8} style={styles.logCount}>
+                <T size={12} rounded color={C.textMute}>
+                  {t('hq.entries', { count: todays.length })}
+                </T>
+                <Icon name="chevron" size={11} color={C.textMute} />
+              </Pressable>
+            ) : (
+              <T size={12} rounded color={C.textMute}>
+                {t('hq.entries', { count: todays.length })}
+              </T>
+            )
+          }>
+          {t('hq.todaysLog')}
+        </SectionTitle>
         {todays.length === 0 ? (
           <Card style={{ alignItems: 'center', paddingVertical: Space.xl, gap: 6 }}>
             <Comic size={24} color={C.lime}>
@@ -252,9 +271,18 @@ export default function Today() {
           </Card>
         ) : (
           <View style={{ gap: 8 }}>
-            {todays.map((e) => (
+            {/* The newest few; the rest live in the full day view so the sections below stay in reach. */}
+            {todays.slice(0, LOG_PREVIEW).map((e) => (
               <EntryRow key={e.id} entry={e} />
             ))}
+            {todays.length > LOG_PREVIEW && (
+              <Pressable onPress={() => openDay(todayKey)} accessibilityRole="button" style={({ pressed }) => [styles.moreLog, pressed && { opacity: 0.7 }]}>
+                <T size={13} rounded color={C.cyan}>
+                  {t('hq.moreEntries', { count: todays.length - LOG_PREVIEW })}
+                </T>
+                <Icon name="chevron" size={12} color={C.cyan} />
+              </Pressable>
+            )}
           </View>
         )}
 
@@ -419,6 +447,8 @@ function MiniMacro({ label, value, target, color }: { label: string; value: numb
 }
 
 const styles = StyleSheet.create({
+  logCount: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  moreLog: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 10, borderRadius: 10, borderWidth: 2, borderColor: C.cyan + '55', backgroundColor: '#14222B' },
   content: { paddingHorizontal: Space.md, gap: Space.sm, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   wallet: { alignItems: 'center', gap: 3 },
