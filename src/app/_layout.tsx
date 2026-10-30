@@ -14,7 +14,7 @@ import { ShareCardHost } from '@/components/share-card';
 import { C } from '@/constants/theme';
 import '@/lib/referrals';
 import { refreshSquad, scheduleSync } from '@/lib/social';
-import { actions, hydrate, useStore } from '@/lib/store';
+import { actions, hydrate, loadQueue, useStore } from '@/lib/store';
 import { useTodayKey } from '@/lib/use-today';
 import { syncWidget } from '@/lib/widget-sync';
 
@@ -96,6 +96,7 @@ export default function RootLayout() {
         actions.syncHealth();
         actions.repairMeals();
         actions.ensurePlans();
+        loadQueue();
       })
       .finally(() => {});
   }, []);

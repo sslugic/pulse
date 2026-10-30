@@ -45,7 +45,9 @@ const en = {
   stop: 'STOP',
   listen: 'LISTEN',
   logged: 'LOGGED',
-  slowWarning: 'Gemini is slow right now — I’ll keep trying for a bit.',
+  slowWarning: 'Gemini is slow right now. If it doesn’t answer soon, I’ll queue it and try again.',
+  queued: 'Couldn’t process this right now. It’s queued, and I’ll process it as soon as I can.',
+  sendNow: 'Send now',
   secondsLeft: '{s}s left',
 } as const;
 
@@ -95,7 +97,9 @@ const es: Partial<Record<keyof typeof en, string>> = {
   stop: 'PARAR',
   listen: 'ESCUCHAR',
   logged: 'REGISTRADO',
-  slowWarning: 'Gemini va lento ahora mismo; seguiré intentándolo un rato.',
+  slowWarning: 'Gemini va lento ahora. Si no responde pronto, lo dejo en cola y lo vuelvo a intentar.',
+  queued: 'No pude procesarlo ahora. Está en cola y lo procesaré en cuanto pueda.',
+  sendNow: 'Enviar ahora',
   secondsLeft: 'quedan {s}s',
 };
 
@@ -145,7 +149,9 @@ const de: Partial<Record<keyof typeof en, string>> = {
   stop: 'STOPP',
   listen: 'ANHÖREN',
   logged: 'GELOGGT',
-  slowWarning: 'Gemini ist gerade langsam – ich versuch’s noch eine Weile.',
+  slowWarning: 'Gemini ist gerade langsam. Wenn bald keine Antwort kommt, stelle ich es in die Warteschlange und versuche es erneut.',
+  queued: 'Konnte das gerade nicht verarbeiten. Es ist in der Warteschlange und ich erledige es, sobald ich kann.',
+  sendNow: 'Jetzt senden',
   secondsLeft: 'noch {s}s',
 };
 
@@ -195,7 +201,9 @@ const fr: Partial<Record<keyof typeof en, string>> = {
   stop: 'STOP',
   listen: 'ÉCOUTER',
   logged: 'ENREGISTRÉ',
-  slowWarning: 'Gemini est lent en ce moment — je continue d’essayer encore un peu.',
+  slowWarning: 'Gemini est lent en ce moment. S’il ne répond pas bientôt, je le mets en file d’attente et je réessaie.',
+  queued: 'Impossible de traiter ça pour l’instant. C’est en file d’attente et je le traiterai dès que possible.',
+  sendNow: 'Envoyer maintenant',
   secondsLeft: 'encore {s}s',
 };
 
@@ -245,7 +253,9 @@ const it: Partial<Record<keyof typeof en, string>> = {
   stop: 'STOP',
   listen: 'ASCOLTA',
   logged: 'REGISTRATO',
-  slowWarning: 'Gemini è lento adesso — continuo a provare ancora un po’.',
+  slowWarning: 'Gemini è lento adesso. Se non risponde presto, lo metto in coda e riprovo.',
+  queued: 'Non riesco a elaborarlo adesso. È in coda e lo elaboro appena posso.',
+  sendNow: 'Invia ora',
   secondsLeft: 'mancano {s}s',
 };
 
@@ -295,7 +305,9 @@ const pt: Partial<Record<keyof typeof en, string>> = {
   stop: 'PARAR',
   listen: 'OUVIR',
   logged: 'REGISTRADO',
-  slowWarning: 'O Gemini tá lento agora — vou continuar tentando mais um pouco.',
+  slowWarning: 'O Gemini tá lento agora. Se não responder logo, coloco na fila e tento de novo.',
+  queued: 'Não consegui processar isso agora. Está na fila e vou processar assim que puder.',
+  sendNow: 'Enviar agora',
   secondsLeft: 'faltam {s}s',
 };
 

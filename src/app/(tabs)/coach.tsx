@@ -314,9 +314,26 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
 
   return (
     <Animated.View entering={FadeInDown.duration(260)} style={{ alignItems: 'flex-start', gap: 8, maxWidth: '92%' }}>
-      <View style={[styles.bubble, styles.theirs, msg.error && { borderColor: C.danger + '88' }]}>
-        {msg.pending && !msg.text ? (
-          <PendingStatus since={msg.createdAt} label={PENDING_LABEL[msg.pendingKind ?? 'text']} />
+      <View style={[styles.bubble, styles.theirs, msg.error && { borderColor: C.danger + '88' }, msg.queued && { borderColor: C.yellow + '88' }]}>
+        {msg.queued ? (
+          <View style={{ gap: 10 }}>
+            <T size={15} color={C.text} style={{ lineHeight: 21 }}>
+              {msg.text}
+            </T>
+            <Pressable
+              onPress={() => {
+                tap();
+                actions.retry();
+              }}
+              style={({ pressed }) => [styles.retry, pressed && { opacity: 0.7 }]}>
+              <Icon name="retry" size={14} color="#07080C" weight="bold" />
+              <T size={13} weight="800" color="#07080C">
+                {t('coach.sendNow')}
+              </T>
+            </Pressable>
+          </View>
+        ) : msg.pending && !msg.text ? (
+          <PendingStatus since={msg.pendingSince ?? msg.createdAt} label={PENDING_LABEL[msg.pendingKind ?? 'text']} />
         ) : msg.error ? (
           <View style={{ gap: 10 }}>
             <T size={15} color={C.danger} style={{ lineHeight: 21 }}>
@@ -339,7 +356,7 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
               <Pressable
                 onPress={() => {
                   tap();
-                  actions.retry(msg.id);
+                  actions.retry();
                 }}
                 style={({ pressed }) => [styles.retry, pressed && { opacity: 0.7 }]}>
                 <Icon name="retry" size={14} color="#07080C" weight="bold" />
@@ -355,7 +372,7 @@ function Bubble({ msg, entryById, speaking }: { msg: ChatMessage; entryById: Map
           </T>
         )}
       </View>
-      {!msg.pending && !msg.error && !!msg.text && (
+      {!msg.pending && !msg.error && !msg.queued && !!msg.text && (
         <Pressable
           hitSlop={8}
           onPress={() => {
