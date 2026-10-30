@@ -305,6 +305,23 @@ function entryTime(hoursAgo?: number, daysAgo?: number, replaced?: number) {
   return now - Math.max(0, Math.min(hoursAgo ?? 0, 48)) * 3600_000;
 }
 
+// The reply putting something on yesterday ("added to yesterday", "for yesterday", "yesterday's log"), in each app language.
+const YESTERDAY = /\b(?:(?:to|for|into|onto|under) yesterday|yesterday's (?:log|total|day)|ayer|gestern|hier|ieri|ontem)\b/i;
+
+/**
+ * The Coach sometimes says it added something to yesterday but leaves daysAgo out, so the entry
+ * lands on today. When a reply sentence names yesterday and the entry, set daysAgo to match.
+ */
+function fillDay<T extends { title?: string; daysAgo?: number; hoursAgo?: number }>(e: T, reply: string): T {
+  if (e.daysAgo != null || !e.title) return e;
+  const words = e.title.toLowerCase().match(/\p{L}{4,}/gu) ?? [];
+  const named = reply.split(/(?<=[.!?])\s+/).some((c) => {
+    const lc = c.toLowerCase();
+    return YESTERDAY.test(c) && words.some((w) => lc.includes(w));
+  });
+  return named ? { ...e, daysAgo: 1, hoursAgo: 0 } : e;
+}
+
 type CoachInput = { text?: string; image?: Media & { uri: string }; audio?: Media };
 // Failed sends keep their payload in memory so the user can retry with one tap.
 const retryInputs = new Map<string, CoachInput>();
@@ -1112,6 +1129,7 @@ export const actions = {
       const source: Entry['source'] = input.audio ? 'voice' : input.image ? 'photo' : 'text';
       const onlyWorkout = result.entries.filter((e) => e.kind === 'exercise').length === 1;
       const added = result.entries
+        .map((e) => fillDay(e, result.reply))
         .map((e) => fillExercise(e, result.reply, onlyWorkout, state.profile.weightKg))
         .map(cleanEntry)
         .map(fillJournal)
