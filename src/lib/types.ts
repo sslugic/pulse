@@ -88,8 +88,12 @@ export interface ChatMessage {
   entryIds?: string[];
   pending?: boolean;
   pendingKind?: 'voice' | 'photo' | 'text';
+  /** When the current try started; a queued message sent again starts its timer over. */
+  pendingSince?: number;
   error?: boolean;
   retryable?: boolean;
+  /** Couldn't be answered yet (offline, too slow or the AI was down); it's sent again on its own. */
+  queued?: boolean;
   /** The reply failed because the account is out of AI credits. */
   needsCredits?: boolean;
 }

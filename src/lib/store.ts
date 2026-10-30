@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { AiError, aiAvailable, askCoach, onCreditBalance, DEFAULT_MODEL, DEFAULT_VOICE, estimateMeal, makeMealPlan, makeWorkoutPlan, type Media, type PlanResult } from './gemini';
 import { matchMeal, mealKey, nextDays, resultFor, spanDays, type MealPlanState, type MealSpan, type PlanResult as PlanDayResult, type WorkoutPlanState, type WorkoutSpan } from './plans';
@@ -291,8 +291,7 @@ function fillJournal<T extends Partial<Entry>>(e: T): T {
  * When a Coach entry happened. A named day ("yesterday") moves the entry back whole days, keeping the
  * replaced entry's time of day if there is one; a plain correction keeps the replaced entry's time.
  */
-function entryTime(hoursAgo?: number, daysAgo?: number, replaced?: number) {
-  const now = Date.now();
+function entryTime(hoursAgo?: number, daysAgo?: number, replaced?: number, now = Date.now()) {
   if (daysAgo != null && daysAgo > 0) {
     const d = new Date(replaced ?? now - Math.max(0, Math.min(hoursAgo ?? 0, 12)) * 3600_000);
     const target = new Date(now);
@@ -323,8 +322,6 @@ function fillDay<T extends { title?: string; daysAgo?: number; hoursAgo?: number
 }
 
 type CoachInput = { text?: string; image?: Media & { uri: string }; audio?: Media };
-// Failed sends keep their payload in memory so the user can retry with one tap.
-const retryInputs = new Map<string, CoachInput>();
 
 export function useStore<T>(select: (s: State) => T): T {
   return useSyncExternalStore(
@@ -1056,27 +1053,23 @@ export const actions = {
   clearReward(id: string) {
     if (state.reward?.id === id) set({ reward: null });
   },
-  retry(aiMsgId: string) {
-    const input = retryInputs.get(aiMsgId);
-    if (!input) return;
-    retryInputs.delete(aiMsgId);
-    // Drop the failed pair (user message + error) and send again.
-    set((s) => {
-      const i = s.messages.findIndex((m) => m.id === aiMsgId);
-      return { messages: s.messages.filter((_, j) => j !== i && j !== i - 1) };
-    });
-    return actions.sendToCoach(input);
+  /** "Try now" on a queued message: send the queue straight away. */
+  retry() {
+    queueDelay = QUEUE_FIRST_DELAY;
+    return actions.processQueue();
   },
   clearChat() {
     stopSpeaking();
+    saveQueue([]);
     set({ messages: [] });
   },
   resetAll() {
+    saveQueue([]);
     set({ entries: [], messages: [], onboarded: false, profile: defaultProfile, game: { claims: [], unlocked: [], freezes: 0, frozenDays: [], chests: [], doubler: 0, bests: {} }, photos: [], mealPlan: undefined, workoutPlan: undefined, planHistory: {}, reward: null });
   },
 
+  /** Sends a Coach message. It stays in the saved queue until it gets an answer, so nothing is lost offline or if the app is closed. */
   async sendToCoach(input: CoachInput) {
-    const s = state;
     const userMsg: ChatMessage = {
       id: uid(),
       role: 'user',
@@ -1091,85 +1084,211 @@ export const actions = {
       text: '',
       createdAt: Date.now(),
       pending: true,
-      pendingKind: input.audio ? 'voice' : input.image ? 'photo' : 'text',
+      pendingKind: pendingKind(input),
     };
-    set({ messages: [...s.messages, userMsg, pending], thinking: true });
-    const { apiKey, coachVoice, voiceReplies } = s.settings;
-    // Start talking as soon as the first sentence of the reply streams in.
-    const { speech: style, speechLanguage: language } = personaById(s.profile.persona);
-    let voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice, style, language }) : null;
-    if (!voice) stopSpeaking();
-
+    set((s) => ({ messages: [...s.messages, userMsg, pending] }));
+    const job: QueuedSend = { aiMsgId: pending.id, userMsgId: userMsg.id, sentAt: userMsg.createdAt, input };
+    saveQueue([...queue, job]);
+    return runCoach(job);
+  },
+  /** Sends queued Coach messages, oldest first. Stops at the first one that still can't get through. */
+  async processQueue() {
+    clearTimeout(queueTimer);
+    if (draining || !queue.length) return;
+    draining = true;
     try {
-      const result = await askCoach({
+      for (const job of [...queue]) {
+        // Wait out a send already in flight; it may be this very message.
+        while (state.thinking) await new Promise((r) => setTimeout(r, 500));
+        if (!queue.includes(job)) continue;
+        set((s) => ({
+          messages: s.messages.map((m) => (m.id === job.aiMsgId ? { ...m, queued: false, pending: true, text: '', pendingSince: Date.now() } : m)),
+        }));
+        await runCoach(job);
+        if (queue.includes(job)) break;
+      }
+    } finally {
+      draining = false;
+    }
+    if (queue.length) scheduleQueue();
+    else queueDelay = QUEUE_FIRST_DELAY;
+  },
+};
+
+type QueuedSend = { aiMsgId: string; userMsgId: string; sentAt: number; input: CoachInput };
+
+const QUEUE_KEY = 'pulse:coach-queue:v1';
+// Longest a Coach answer may take, retries included, before the message is queued and sent again later.
+const COACH_DEADLINE_MS = 120_000;
+const QUEUE_FIRST_DELAY = 20_000;
+const QUEUE_MAX_DELAY = 300_000;
+let queue: QueuedSend[] = [];
+let draining = false;
+let queueDelay = QUEUE_FIRST_DELAY;
+let queueTimer: ReturnType<typeof setTimeout> | undefined;
+
+const pendingKind = (input: CoachInput): ChatMessage['pendingKind'] => (input.audio ? 'voice' : input.image ? 'photo' : 'text');
+
+function saveQueue(next: QueuedSend[]) {
+  queue = next;
+  AsyncStorage.setItem(QUEUE_KEY, JSON.stringify(next)).catch(() => {});
+}
+
+const dropFromQueue = (aiMsgId: string) => saveQueue(queue.filter((j) => j.aiMsgId !== aiMsgId));
+
+/** Tries the queue again later, waiting longer each time it still can't get through. */
+function scheduleQueue() {
+  clearTimeout(queueTimer);
+  queueTimer = setTimeout(() => {
+    if (AppState.currentState === 'active') actions.processQueue();
+  }, queueDelay);
+  queueDelay = Math.min(queueDelay * 2, QUEUE_MAX_DELAY);
+}
+
+/** Loads the saved queue. A message whose answer was still on its way when the app closed gets its queued bubble back. */
+export async function loadQueue() {
+  try {
+    const raw = await AsyncStorage.getItem(QUEUE_KEY);
+    queue = raw ? JSON.parse(raw) : [];
+  } catch {
+    queue = [];
+  }
+  if (!queue.length) return;
+  const ids = new Set(state.messages.map((m) => m.id));
+  set((s) => ({
+    messages: s.messages.flatMap((m): ChatMessage[] => {
+      if (queue.some((j) => j.aiMsgId === m.id)) return [{ ...m, pending: false, error: false, queued: true, text: t('coach.queued') }];
+      // The reply bubble wasn't saved yet: put it back right after the user's message.
+      const lost = queue.find((j) => j.userMsgId === m.id && !ids.has(j.aiMsgId));
+      if (!lost) return [m];
+      return [m, { id: lost.aiMsgId, role: 'ai', text: t('coach.queued'), createdAt: lost.sentAt, queued: true, pendingKind: pendingKind(lost.input) }];
+    }),
+  }));
+  actions.processQueue();
+}
+
+// Back in the app: try what's queued straight away.
+AppState.addEventListener('change', (st) => {
+  if (st === 'active' && queue.length) {
+    queueDelay = QUEUE_FIRST_DELAY;
+    actions.processQueue();
+  }
+});
+
+/** Asks the Coach for a queued message and applies the answer to its chat bubble. */
+async function runCoach(job: QueuedSend): Promise<Entry[]> {
+  const { input, aiMsgId } = job;
+  const s = state;
+  set({ thinking: true });
+  const { apiKey, coachVoice, voiceReplies } = s.settings;
+  // Start talking as soon as the first sentence of the reply streams in.
+  const { speech: style, speechLanguage: language } = personaById(s.profile.persona);
+  let voice = voiceReplies ? speakStream(aiMsgId, { apiKey, voice: coachVoice, style, language }) : null;
+  if (!voice) stopSpeaking();
+  // Once the deadline passes, a late answer is ignored: the message is queued and asked again.
+  let late = false;
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+  const update = (patch: (m: ChatMessage) => ChatMessage) => {
+    if (!late) set((st) => ({ messages: st.messages.map((m) => (m.id === aiMsgId ? patch(m) : m)) }));
+  };
+
+  try {
+    const result = await Promise.race([
+      askCoach({
         apiKey: s.settings.apiKey,
         model: s.settings.model,
         profile: s.profile,
         entries: s.entries,
-        history: s.messages,
+        // Only the conversation before this message; queued replies after it aren't part of it yet.
+        history: s.messages.filter((m) => m.id !== aiMsgId && !m.queued && m.createdAt <= job.sentAt),
         text: input.text,
         image: input.image,
         audio: input.audio,
         onReply: (reply) => {
+          if (late) return;
           // Still pending (kept out of history and storage) until the whole answer is in.
-          set((st) => ({ messages: st.messages.map((m) => (m.id === pending.id ? { ...m, text: reply } : m)) }));
+          update((m) => ({ ...m, text: reply }));
           voice?.update(reply);
         },
         // The connection dropped midway: clear the half answer and start speaking the new one afresh.
         onRestart: () => {
-          set((st) => ({ messages: st.messages.map((m) => (m.id === pending.id ? { ...m, text: '' } : m)) }));
+          if (late) return;
+          update((m) => ({ ...m, text: '' }));
           voice?.cancel();
-          voice = voiceReplies ? speakStream(pending.id, { apiKey, voice: coachVoice, style, language }) : null;
+          voice = voiceReplies ? speakStream(aiMsgId, { apiKey, voice: coachVoice, style, language }) : null;
         },
-      });
-      // Remember when replaced entries happened before they're removed, so corrections keep their date.
-      const replacedAt = new Map(s.entries.map((e) => [e.id, e.createdAt]));
-      result.removeEntryIds.forEach(actions.removeEntry);
-      if (result.goalUpdate) actions.setGoal(result.goalUpdate.goal, result.goalUpdate.pace, result.goalUpdate.note);
-      const source: Entry['source'] = input.audio ? 'voice' : input.image ? 'photo' : 'text';
-      const onlyWorkout = result.entries.filter((e) => e.kind === 'exercise').length === 1;
-      const added = result.entries
-        .map((e) => fillDay(e, result.reply))
-        .map((e) => fillExercise(e, result.reply, onlyWorkout, state.profile.weightKg))
-        .map(cleanEntry)
-        .map(fillJournal)
-        .map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
+      }),
+      new Promise<never>((_, reject) => {
+        deadline = setTimeout(() => {
+          late = true;
+          reject(new AiError(t('errors.tooSlow')));
+        }, COACH_DEADLINE_MS);
+      }),
+    ]);
+    clearTimeout(deadline);
+    dropFromQueue(aiMsgId);
+    // Remember when replaced entries happened before they're removed, so corrections keep their date.
+    const replacedAt = new Map(state.entries.map((e) => [e.id, e.createdAt]));
+    result.removeEntryIds.forEach(actions.removeEntry);
+    if (result.goalUpdate) actions.setGoal(result.goalUpdate.goal, result.goalUpdate.pace, result.goalUpdate.note);
+    const source: Entry['source'] = input.audio ? 'voice' : input.image ? 'photo' : 'text';
+    const onlyWorkout = result.entries.filter((e) => e.kind === 'exercise').length === 1;
+    const added = result.entries
+      .map((e) => fillDay(e, result.reply))
+      .map((e) => fillExercise(e, result.reply, onlyWorkout, state.profile.weightKg))
+      .map(cleanEntry)
+      .map(fillJournal)
+      .map(({ hoursAgo, daysAgo, replacesId, ...e }) =>
         actions.addEntry({
           ...e,
           source,
           hasPhoto: !!input.image,
-          createdAt: entryTime(hoursAgo, daysAgo, replacesId ? replacedAt.get(replacesId) : undefined),
+          // Timed from when the user sent it, so a message answered later keeps its time.
+          createdAt: entryTime(hoursAgo, daysAgo, replacesId ? replacedAt.get(replacesId) : undefined, job.sentAt),
         }),
       );
-      // Keep the photo with journal moments so the timeline can show it later.
-      const img = input.image;
-      if (img) {
-        for (const e of added.filter((a) => a.kind === 'journal')) {
-          saveJournalPhoto(img.uri, e.id)
-            .then((photo) => actions.updateEntry(e.id, { photo }))
-            .catch((err) => console.warn('[journal] photo save failed', err));
-        }
+    // Keep the photo with journal moments so the timeline can show it later.
+    const img = input.image;
+    if (img) {
+      for (const e of added.filter((a) => a.kind === 'journal')) {
+        saveJournalPhoto(img.uri, e.id)
+          .then((photo) => actions.updateEntry(e.id, { photo }))
+          .catch((err) => console.warn('[journal] photo save failed', err));
       }
+    }
+    set((st) => ({
+      thinking: false,
+      messages: st.messages.map((m) =>
+        m.id === aiMsgId ? { ...m, pending: false, queued: false, error: false, text: result.reply, entryIds: added.map((a) => a.id) } : m,
+      ),
+    }));
+    voice?.finish(result.reply);
+    if (added.some((e) => e.kind === 'meal' && !hasNutrition(e))) actions.repairMeals();
+    // It got through, so anything else waiting can go now too.
+    queueDelay = QUEUE_FIRST_DELAY;
+    if (queue.length && !draining) actions.processQueue();
+    return added;
+  } catch (err) {
+    clearTimeout(deadline);
+    late = true;
+    voice?.cancel();
+    const retryable = !(err instanceof AiError) || err.retryable;
+    if (retryable) {
+      // Offline, too slow or Gemini down: keep it queued and send it again on its own.
       set((st) => ({
         thinking: false,
-        messages: st.messages.map((m) =>
-          m.id === pending.id ? { ...m, pending: false, text: result.reply, entryIds: added.map((a) => a.id) } : m,
-        ),
+        messages: st.messages.map((m) => (m.id === aiMsgId ? { ...m, pending: false, error: false, queued: true, text: t('coach.queued') } : m)),
       }));
-      voice?.finish(result.reply);
-      if (added.some((e) => e.kind === 'meal' && !hasNutrition(e))) actions.repairMeals();
-      return added;
-    } catch (err) {
-      voice?.cancel();
-      const retryable = !(err instanceof AiError) || err.retryable;
-      if (retryable) retryInputs.set(pending.id, input);
-      set((st) => ({
-        thinking: false,
-        messages: st.messages.map((m) =>
-          m.id === pending.id ? { ...m, pending: false, error: true, retryable, needsCredits: err instanceof AiError && err.code === 'credits', text: (err as Error).message } : m,
-        ),
-      }));
+      if (!draining) scheduleQueue();
       return [];
     }
-  },
-};
+    dropFromQueue(aiMsgId);
+    set((st) => ({
+      thinking: false,
+      messages: st.messages.map((m) =>
+        m.id === aiMsgId ? { ...m, pending: false, queued: false, error: true, retryable: false, needsCredits: err instanceof AiError && err.code === 'credits', text: (err as Error).message } : m,
+      ),
+    }));
+    return [];
+  }
+}
