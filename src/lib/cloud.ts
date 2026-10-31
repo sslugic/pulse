@@ -59,6 +59,12 @@ export function cloudAI() {
  * app is in the background, so the first request after coming back could otherwise go out stale.
  */
 export async function freshCloudAI() {
+  // Right after launch (or while an expired token is being refreshed) the saved session isn't loaded
+  // yet. Wait for it instead of treating a signed-in user as signed out and dropping the request.
+  if (supabase && !session) {
+    const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    if (data.session) session = data.session;
+  }
   if (supabase && session && (session.expires_at ?? 0) * 1000 - Date.now() < 60_000) {
     // Offline, this fails and the request goes out with the old token, reporting the real problem.
     const { data } = await supabase.auth.refreshSession().catch(() => ({ data: { session: null } }));
