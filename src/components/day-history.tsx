@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { C, Space } from '@/constants/theme';
@@ -24,14 +24,18 @@ const label = (k: string, todayKey: string) => {
   return new Date(k + 'T12:00').toLocaleDateString(locale, { weekday: 'long' }).toUpperCase();
 };
 
+// Day cards shown before "Show more"; the rest stay folded away so the list stays short.
+const PREVIEW_DAYS = 3;
+
 /**
  * Day-by-day history: a strip of the last 14 days to jump to any of them, then one big
- * tappable card per logged day (today first) with its totals.
+ * tappable card per logged day (today first) with its totals. Only the latest few are open.
  */
 export function DayHistory({ todayKey }: { todayKey: string }) {
   const entries = useStore((s) => s.entries);
   const profile = useStore((s) => s.profile);
   const tg = macroTargets(profile);
+  const [expanded, setExpanded] = useState(false);
 
   const strip = useMemo(() => {
     const logged = loggedDays(entries);
@@ -65,7 +69,7 @@ export function DayHistory({ todayKey }: { todayKey: string }) {
         ))}
       </ScrollView>
 
-      {days.map(([k, list]) => {
+      {(expanded ? days : days.slice(0, PREVIEW_DAYS)).map(([k, list]) => {
         const s = summarize(list, k);
         const left = Math.round(tg.calories + s.burned - s.eaten);
         return (
@@ -112,6 +116,22 @@ export function DayHistory({ todayKey }: { todayKey: string }) {
           </Pressable>
         );
       })}
+      {days.length > PREVIEW_DAYS && (
+        <Pressable
+          onPress={() => {
+            tap();
+            setExpanded((v) => !v);
+          }}
+          style={styles.more}
+          accessibilityRole="button">
+          <T size={12} rounded color={C.cyan}>
+            {expanded ? t('log.showFewerDays') : t('log.showMoreDays', { count: days.length - PREVIEW_DAYS })}
+          </T>
+          <View style={{ transform: [{ rotate: expanded ? '-90deg' : '90deg' }] }}>
+            <Icon name="chevron" size={12} color={C.cyan} />
+          </View>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -137,4 +157,5 @@ const styles = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   openBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 2, borderColor: C.cyan + '66', backgroundColor: '#12232A' },
   row: { flexDirection: 'row', gap: 12 },
+  more: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10 },
 });

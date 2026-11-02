@@ -78,10 +78,6 @@ export default function Trends() {
         ))}
       </Card>
 
-      {/* Day by day: tap any day for its full breakdown */}
-      <SectionTitle>{t('stats.history')}</SectionTitle>
-      <DayHistory todayKey={todayKey} />
-
       {/* Weight */}
       <SectionTitle>{t('stats.weight')}</SectionTitle>
       <WeightCard weighIns={weights} profile={profile} />
@@ -171,6 +167,9 @@ export default function Trends() {
         )}
       </Card>
 
+      {/* Day by day, last so the charts come first: tap any day for its full breakdown */}
+      <SectionTitle>{t('stats.history')}</SectionTitle>
+      <DayHistory todayKey={todayKey} />
     </ScrollView>
     </View>
   );
