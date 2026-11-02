@@ -3,9 +3,9 @@ import * as SecureStore from 'expo-secure-store';
 import { useSyncExternalStore } from 'react';
 import { AppState, Platform } from 'react-native';
 
-import { AiError, aiAvailable, askCoach, onCreditBalance, DEFAULT_MODEL, DEFAULT_VOICE, estimateMeal, makeMealPlan, makeWorkoutPlan, type Media, type PlanResult } from './gemini';
+import { AiError, aiAvailable, askCoach, onCreditBalance, DEFAULT_MODEL, DEFAULT_VOICE, estimateMeal, makeMealPlan, makeWorkoutPlan, photoAngle, retroPhoto, type Media, type PhotoAngle, type PlanResult } from './gemini';
 import { matchMeal, mealKey, nextDays, resultFor, spanDays, type MealPlanState, type MealSpan, type PlanResult as PlanDayResult, type WorkoutPlanState, type WorkoutSpan } from './plans';
-import { deleteJournalPhoto, pickImage, saveJournalPhoto, saveProgressPhoto } from './media';
+import { deleteJournalPhoto, journalPhotoUri, pickProgressPhotos, saveJournalPhoto, saveProgressImage, saveProgressPhoto, shrinkForAi } from './media';
 import { celebrate } from './haptics';
 import { deleteAccount, fetchBalance, fetchCosts, fetchSubscription, loadBackup, onSessionChange, saveBackup, signInWithApple, signOut } from './cloud';
 import { linkPurchases, unlinkPurchases } from './purchases';
@@ -29,6 +29,16 @@ import { configureSound, playSfx } from './sound';
 import { speak, speakStream, stopSpeaking } from './voice';
 import { moodEmoji } from './wellbeing';
 
+/** A private body-progress photo. `angle` is which way the body faces (AI-sorted or set by hand); `retro` is its cartoon version. */
+export interface ProgressPhoto {
+  id: string;
+  path: string;
+  at: number;
+  weightKg?: number;
+  angle?: PhotoAngle;
+  retro?: string;
+}
+
 interface State {
   ready: boolean;
   onboarded: boolean;
@@ -41,7 +51,7 @@ interface State {
   /** Pulse cloud account (not persisted here; Supabase keeps the session). */
   account: Account;
   /** Private body-progress photos (paths relative to documents), oldest first. */
-  photos: { id: string; path: string; at: number; weightKg?: number }[];
+  photos: ProgressPhoto[];
   /** Last AI meal plan and which grocery items are ticked; persisted. */
   mealPlan?: MealPlanState;
   workoutPlan?: WorkoutPlanState;
@@ -382,6 +392,7 @@ function matchToPlans(entry: Entry, announce: boolean) {
   }
 }
 
+let sortingAngles = false;
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 /**
@@ -896,16 +907,57 @@ export const actions = {
     set((s) => ({ game: { ...s.game, freezes, frozenDays: [...(s.game.frozenDays ?? []), ...gap] } }));
     pushReward(0, 0, t('rewards.streakSaved', { count: gap.length }), true);
   },
-  async addProgressPhoto(from: 'camera' | 'library') {
-    const img = await pickImage(from);
-    if (!img) return;
-    const id = uid();
-    const path = await saveProgressPhoto(img.uri, id);
-    set((s) => ({ photos: [...s.photos, { id, path, at: Date.now(), weightKg: s.profile.weightKg }].sort((a, b) => a.at - b.at) }));
+  /** Adds one or more photos to a day (yyyy-mm-dd), then sorts them by angle in the background. */
+  async addProgressPhotos(from: 'camera' | 'library', day: string) {
+    const uris = await pickProgressPhotos(from);
+    if (!uris.length) return 0;
+    const today = day === dayKey(new Date());
+    const base = today ? Date.now() : new Date(day + 'T12:00').getTime();
+    const end = new Date(day + 'T23:59:59').getTime();
+    const weighIn = state.entries.find((e) => e.kind === 'weight' && e.weightKg && e.createdAt <= end)?.weightKg;
+    const added: ProgressPhoto[] = [];
+    for (const [i, uri] of uris.entries()) {
+      const id = uid();
+      added.push({ id, path: await saveProgressPhoto(uri, id), at: base + i * 1000, weightKg: weighIn ?? (today ? state.profile.weightKg : undefined) });
+    }
+    set((s) => ({ photos: [...s.photos, ...added].sort((a, b) => a.at - b.at) }));
+    void actions.sortPhotoAngles();
+    return added.length;
+  },
+  /** Asks the AI which way the body faces in photos that don't have an angle yet. Free; failures just leave them unsorted. */
+  async sortPhotoAngles() {
+    if (sortingAngles || !canUseAI()) return;
+    sortingAngles = true;
+    try {
+      for (const p of state.photos.filter((x) => !x.angle)) {
+        try {
+          const image = await shrinkForAi(journalPhotoUri(p.path), 512);
+          const angle = await photoAngle({ apiKey: state.settings.apiKey, model: state.settings.model, image });
+          set((s) => ({ photos: s.photos.map((x) => (x.id === p.id && !x.angle ? { ...x, angle } : x)) }));
+        } catch (e) {
+          if (e instanceof AiError && !e.retryable) break; // signed out or out of credits: stop for now
+        }
+      }
+    } finally {
+      sortingAngles = false;
+    }
+  },
+  setPhotoAngle(id: string, angle: PhotoAngle) {
+    set((s) => ({ photos: s.photos.map((x) => (x.id === id ? { ...x, angle } : x)) }));
+  },
+  /** Draws the retro cartoon version of a photo and keeps it next to the original. */
+  async makeRetroPhoto(id: string) {
+    const p = state.photos.find((x) => x.id === id);
+    if (!p || p.retro) return;
+    const image = await shrinkForAi(journalPhotoUri(p.path), 1024);
+    const art = await retroPhoto({ apiKey: state.settings.apiKey, image });
+    const retro = await saveProgressImage(art.base64, art.mimeType, `${id}-retro`);
+    set((s) => ({ photos: s.photos.map((x) => (x.id === id ? { ...x, retro } : x)) }));
   },
   removeProgressPhoto(id: string) {
     const p = state.photos.find((x) => x.id === id);
     if (p) deleteJournalPhoto(p.path);
+    if (p?.retro) deleteJournalPhoto(p.retro);
     set((s) => ({ photos: s.photos.filter((x) => x.id !== id) }));
   },
   async generateMealPlan(span: MealSpan, prefs: string, auto = false) {

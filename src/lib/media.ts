@@ -1,5 +1,6 @@
 import { AudioQuality, IOSOutputFormat, type RecordingOptions } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { Alert, Platform } from 'react-native';
 
@@ -71,6 +72,50 @@ export async function pickImage(from: 'camera' | 'library'): Promise<PickedImage
   const a = res.assets[0];
   const base64 = a.base64 ?? (await readBase64(a.uri));
   return { uri: a.uri, base64, mimeType: a.mimeType ?? 'image/jpeg' };
+}
+
+/**
+ * Progress photos: several at once from the library, or one from the camera. Returns file URIs only;
+ * the photos are copied into the app and shrunk for AI separately.
+ */
+export async function pickProgressPhotos(from: 'camera' | 'library'): Promise<string[]> {
+  const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.7, allowsEditing: false };
+  let res: ImagePicker.ImagePickerResult;
+  if (from === 'camera') {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(t('errors.cameraTitle'), t('errors.cameraBody'));
+      return [];
+    }
+    try {
+      res = await ImagePicker.launchCameraAsync(opts);
+    } catch {
+      // No camera (e.g. Simulator): fall back to the photo library.
+      res = await ImagePicker.launchImageLibraryAsync({ ...opts, allowsMultipleSelection: true, selectionLimit: 20 });
+    }
+  } else {
+    res = await ImagePicker.launchImageLibraryAsync({ ...opts, allowsMultipleSelection: true, selectionLimit: 20 });
+  }
+  return res.canceled ? [] : (res.assets ?? []).map((a) => a.uri);
+}
+
+/** A small JPEG of a photo for AI requests: fewer tokens, same picture. */
+export async function shrinkForAi(uri: string, width = 768): Promise<{ base64: string; mimeType: string }> {
+  if (Platform.OS === 'web') return { base64: await readBase64(uri), mimeType: 'image/jpeg' };
+  const img = await ImageManipulator.manipulate(uri).resize({ width }).renderAsync();
+  const out = await img.saveAsync({ format: SaveFormat.JPEG, compress: 0.7, base64: true });
+  return { base64: out.base64 ?? (await readBase64(out.uri)), mimeType: 'image/jpeg' };
+}
+
+/** Saves an AI-drawn image next to the progress photos and returns its relative path. */
+export async function saveProgressImage(base64: string, mimeType: string, id: string): Promise<string> {
+  const ext = mimeType.includes('png') ? 'png' : 'jpg';
+  if (Platform.OS === 'web') return `data:${mimeType};base64,${base64}`;
+  const dir = new Directory(Paths.document, 'progress');
+  if (!dir.exists) dir.create({ intermediates: true, idempotent: true });
+  const name = `progress/${id}.${ext}`;
+  await new File(Paths.document, name).write(base64, { encoding: 'base64' });
+  return name;
 }
 
 // Journal photos live in documents/journal. We store the relative path because the absolute

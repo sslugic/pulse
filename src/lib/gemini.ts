@@ -62,14 +62,16 @@ export type Feature =
   | 'workout_plan_7d'
   | 'recap'
   | 'estimate'
-  | 'goal_plan';
+  | 'goal_plan'
+  | 'photo_angle'
+  | 'photo_retro';
 
 /**
  * Structured or short jobs run on Flash-Lite with minimal thinking: about a third of the cost of Flash
  * (see docs/CREDIT-ECONOMICS.md). The Coach and goal plans stay on the main model.
  */
 export const LITE_MODEL = 'gemini-3.5-flash-lite';
-const LITE_FEATURES = new Set<Feature>(['insight', 'wellbeing', 'meal_plan', 'meal_plan_3d', 'workout_plan', 'workout_plan_3d', 'workout_plan_7d', 'recap', 'estimate']);
+const LITE_FEATURES = new Set<Feature>(['insight', 'wellbeing', 'meal_plan', 'meal_plan_3d', 'workout_plan', 'workout_plan_3d', 'workout_plan_7d', 'recap', 'estimate', 'photo_angle']);
 const modelFor = (feature: Feature, model: string) => (LITE_FEATURES.has(feature) ? LITE_MODEL : model);
 // The Coach is a live conversation (and often spoken), so it thinks minimally too: the first words arrive sooner.
 const QUICK_FEATURES = new Set<Feature>([...LITE_FEATURES, 'coach', 'coach_media']);
@@ -1055,4 +1057,77 @@ summary: one or two sentences in character on how this plan serves the goal. Use
   );
   const j = jsonOf(raw);
   return { summary: String(j.summary ?? ''), days: (j.days ?? []).slice(0, days) };
+}
+
+export type PhotoAngle = 'front' | 'side' | 'back' | 'other';
+const ANGLES: PhotoAngle[] = ['front', 'side', 'back', 'other'];
+
+/** Which way the body faces in a progress photo, so before/after compares like with like. */
+export async function photoAngle(opts: { apiKey: string; model: string; image: Media }): Promise<PhotoAngle> {
+  const raw = await generate(
+    opts.apiKey,
+    opts.model,
+    {
+      systemInstruction: {
+        parts: [{ text: 'Classify a body progress photo by which way the person faces the camera: front (chest or face toward camera, including slight turns), side (profile, left or right), back (back toward camera), or other (no full or half body visible, a close-up, or not a body photo).' }],
+      },
+      contents: [{ role: 'user', parts: [{ inlineData: { mimeType: opts.image.mimeType, data: opts.image.base64 } }] }],
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: 'application/json',
+        responseSchema: { type: 'OBJECT', properties: { angle: { type: 'STRING', enum: ANGLES } }, required: ['angle'] },
+      },
+    },
+    20_000,
+    'photo_angle',
+  );
+  const angle = jsonOf(raw).angle;
+  return ANGLES.includes(angle) ? angle : 'other';
+}
+
+// Cheapest first; a model this key or region doesn't have is skipped.
+const RETRO_MODELS = ['gemini-3.1-flash-lite-image', 'gemini-3.1-flash-image', 'gemini-2.5-flash-image'];
+let retroModel = 0;
+
+const RETRO_PROMPT = `Redraw this body progress photo as a retro 1990s arcade cartoon: bold black ink outlines, flat cel shading, a warm neon palette and a plain dark backdrop with a faint halftone pattern.
+It sits next to the same person's other photos to show fitness progress, so keep the body exactly as photographed: the same shape, proportions, waist, muscle definition, pose, camera angle and framing. Do not slim, bulk up, flatter or idealize anything.
+Keep their clothes, hair and skin tone. No text, logos or borders.`;
+
+/** A retro cartoon version of a progress photo that keeps the body as it is, for comparing. */
+export async function retroPhoto(opts: { apiKey: string; image: Media }): Promise<Media> {
+  for (; retroModel < RETRO_MODELS.length; retroModel++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 90_000);
+    try {
+      const res = await aiFetch({
+        apiKey: opts.apiKey,
+        model: RETRO_MODELS[retroModel],
+        method: 'generateContent',
+        feature: 'photo_retro',
+        id: requestId(),
+        signal: ctrl.signal,
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ inlineData: { mimeType: opts.image.mimeType, data: opts.image.base64 } }, { text: RETRO_PROMPT }] }],
+          generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg: string = json?.error?.message ?? `Request failed (${res.status})`;
+        if (res.status === 404 || /not found|not supported|unsupported|modalit/i.test(msg)) continue;
+        throw requestError(res.status, json, RETRO_MODELS[retroModel]);
+      }
+      type Part = { inlineData?: { data?: string; mimeType?: string } };
+      const img = (json?.candidates?.[0]?.content?.parts as Part[] | undefined)?.find((p) => p.inlineData?.data)?.inlineData;
+      if (!img?.data) throw new AiError(t('errors.noRetroImage'));
+      return { base64: img.data, mimeType: img.mimeType ?? 'image/png' };
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') throw new AiError(t('errors.tooSlow'));
+      throw err;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  retroModel = 0;
+  throw new AiError(t('errors.noRetroModel'), false);
 }
