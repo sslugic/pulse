@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View, type
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassButton, Icon } from '@/components/icon';
-import { Card, Chip, SectionTitle, T, tap } from '@/components/ui';
+import { Card, Chip, T, tap } from '@/components/ui';
 import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, Gradients, MaxContentWidth, Space } from '@/constants/theme';
 import { AiError } from '@/lib/gemini';
@@ -42,6 +42,9 @@ export default function ProgressPhotosScreen() {
   const [angle, setAngle] = useState<CompareAngle | null | undefined>(undefined);
   const [from, setFrom] = useState<string | undefined>(undefined);
   const [addDay, setAddDay] = useState(todayKey);
+  // Photo cells are three across the card, sized from the grid's measured width.
+  const [gridW, setGridW] = useState(0);
+  const cellW = gridW ? Math.floor((gridW - 16) / 3) : 96;
 
   // Photos from before angle sorting existed get sorted the first time this screen opens.
   useEffect(() => {
@@ -120,11 +123,13 @@ export default function ProgressPhotosScreen() {
             ) : tab === 'compare' ? (
               <>
                 <Compare beforeUri={journalPhotoUri(pair.before.path)} afterUri={journalPhotoUri(pair.after.path)} />
-                <PairCaption before={pair.before} after={pair.after} units={units} />
-                <FromPicker days={days} value={from} onChange={setFrom} />
-                <T size={11} color={C.textMute}>
-                  {sorting ? t('photos.sorting') : active ? t('photos.smartHint', { angle: ANGLE_LABEL[active].toLocaleLowerCase(locale) }) : t('photos.compareHint')}
-                </T>
+                <Card style={styles.info}>
+                  <PairCaption before={pair.before} after={pair.after} units={units} />
+                  <FromPicker days={days} value={from} onChange={setFrom} />
+                  <T size={12} color={C.textDim} style={styles.note}>
+                    {sorting ? t('photos.sorting') : active ? t('photos.smartHint', { angle: ANGLE_LABEL[active].toLocaleLowerCase(locale) }) : t('photos.compareHint')}
+                  </T>
+                </Card>
               </>
             ) : (
               <RetroPair before={pair.before} after={pair.after} units={units} days={days} from={from} onFrom={setFrom} />
@@ -152,7 +157,7 @@ export default function ProgressPhotosScreen() {
                 <ArcadeButton label={t('photos.library')} size="md" colors={Gradients.cool} textColor="#fff" onPress={() => add('library')} icon={<Icon name="photo" size={20} color="#fff" weight="bold" />} style={{ flex: 1 }} />
               </View>
               <T size={11} color={C.textMute}>
-                {t('photos.multiHint')}
+                {t('photos.multiHint')} {photos.length ? t('photos.cellHint') : ''}
               </T>
             </Card>
             {photos.length === 0 ? (
@@ -165,20 +170,22 @@ export default function ProgressPhotosScreen() {
             ) : (
               <>
                 {byDay(photos).map(([k, list]) => (
-                  <View key={k} style={{ gap: 8 }}>
-                    <SectionTitle right={<T size={12} rounded color={C.textMute}>{t('photos.count', { count: list.length })}</T>}>
-                      {k === todayKey ? t('common.today') : shortDay(k)}
-                    </SectionTitle>
-                    <View style={styles.grid}>
+                  <Card key={k} style={{ gap: 10 }}>
+                    <View style={styles.between}>
+                      <T size={15} rounded color={k === todayKey ? C.lime : C.text}>
+                        {k === todayKey ? t('common.today') : shortDay(k)}
+                      </T>
+                      <T size={12} rounded color={C.textMute}>
+                        {t('photos.count', { count: list.length })}
+                      </T>
+                    </View>
+                    <View style={styles.grid} onLayout={(e) => setGridW(e.nativeEvent.layout.width)}>
                       {list.map((p) => (
-                        <PhotoCell key={p.id} photo={p} />
+                        <PhotoCell key={p.id} photo={p} w={cellW} />
                       ))}
                     </View>
-                  </View>
+                  </Card>
                 ))}
-                <T size={11} color={C.textMute}>
-                  {t('photos.cellHint')}
-                </T>
               </>
             )}
           </>
@@ -223,7 +230,7 @@ function FromPicker({ days, value, onChange }: { days: string[]; value?: string;
 
 const ANGLE_OPTIONS: PhotoAngle[] = ['front', 'side', 'back', 'other'];
 
-function PhotoCell({ photo }: { photo: ProgressPhoto }) {
+function PhotoCell({ photo, w }: { photo: ProgressPhoto; w: number }) {
   const remove = () =>
     Alert.alert(t('photos.deleteTitle'), t('photos.deleteMessage'), [
       { text: t('photos.cancel'), style: 'cancel' },
@@ -239,7 +246,7 @@ function PhotoCell({ photo }: { photo: ProgressPhoto }) {
     ]);
   };
   return (
-    <Pressable onPress={edit} onLongPress={remove} style={styles.cell} accessibilityRole="button" accessibilityLabel={photo.angle ? ANGLE_LABEL[photo.angle] : t('photos.unsorted')}>
+    <Pressable onPress={edit} onLongPress={remove} style={[styles.cell, { width: w, height: Math.round((w * 4) / 3) }]} accessibilityRole="button" accessibilityLabel={photo.angle ? ANGLE_LABEL[photo.angle] : t('photos.unsorted')}>
       <Image source={{ uri: journalPhotoUri(photo.path) }} style={StyleSheet.absoluteFill} contentFit="cover" />
       <View style={styles.cellLabel}>
         <T size={10} rounded color={photo.angle ? C.text : C.textMute}>
@@ -303,11 +310,13 @@ function RetroPair({ before, after, units, days, from, onFrom }: { before: Progr
           </View>
         </View>
       )}
-      <PairCaption before={before} after={after} units={units} />
-      <FromPicker days={days} value={from} onChange={onFrom} />
-      <T size={11} color={C.textMute}>
-        {t('photos.retroHint')}
-      </T>
+      <Card style={styles.info}>
+        <PairCaption before={before} after={after} units={units} />
+        <FromPicker days={days} value={from} onChange={onFrom} />
+        <T size={12} color={C.textDim} style={styles.note}>
+          {t('photos.retroHint')}
+        </T>
+      </Card>
     </>
   );
 }
@@ -369,6 +378,8 @@ const styles = StyleSheet.create({
   knob: { flexDirection: 'row', width: 34, height: 34, borderRadius: 17, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: C.ink },
   tag: { position: 'absolute', top: 8, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4, backgroundColor: C.yellow },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  cell: { width: '31.5%', aspectRatio: 3 / 4, borderRadius: 8, overflow: 'hidden', borderWidth: 3, borderColor: C.ink, backgroundColor: '#111' },
+  note: { lineHeight: 17 },
+  info: { gap: 10 },
+  cell: { borderRadius: 8, overflow: 'hidden', borderWidth: 3, borderColor: C.ink, backgroundColor: '#111' },
   cellLabel: { position: 'absolute', left: 0, right: 0, bottom: 0, padding: 4, backgroundColor: 'rgba(11,12,13,0.7)' },
 });
