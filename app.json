@@ -17,7 +17,7 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "appleTeamId": "8SX4DK48U6",
-      "buildNumber": "8",
+      "buildNumber": "9",
       "usesAppleSignIn": true,
       "supportsTablet": false,
       "associatedDomains": [
@@ -52,7 +52,8 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Pulse uses the microphone so you can log by voice."
+          "microphonePermission": "Pulse uses the microphone so you can log by voice.",
+          "enableBackgroundPlayback": false
         }
       ],
       "expo-secure-store",

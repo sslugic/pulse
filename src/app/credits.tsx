@@ -11,7 +11,8 @@ import { ArcadeButton, Backdrop, Comic } from '@/components/underground';
 import { C, MaxContentWidth, Space } from '@/constants/theme';
 import { locale, t } from '@/lib/i18n';
 import { LEGAL } from '@/lib/legal';
-import { buy, loadOffers, purchasesConfigured, restore, type CreditOffer, describePurchaseError } from '@/lib/purchases';
+import { ensureAccount } from '@/lib/cloud';
+import { buy, linkPurchases, loadOffers, purchasesConfigured, restore, type CreditOffer, describePurchaseError } from '@/lib/purchases';
 import { actions, useStore } from '@/lib/store';
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -52,6 +53,9 @@ export default function CreditsScreen() {
     tap();
     setBusy(o.id);
     try {
+      // No sign-in needed to buy (App Review 5.1.1): a guest account holds the credits until the
+      // player signs in with Apple, which keeps them.
+      await linkPurchases(await ensureAccount());
       if (await buy(o)) {
         // The server adds the credits when Apple confirms; give the webhook a moment.
         for (const wait of [1500, 3000, 6000]) {
@@ -102,16 +106,23 @@ export default function CreditsScreen() {
           )}
         </Card>
 
-        {account.userId && <FreeCredits />}
+        {account.userId && !account.guest && <FreeCredits />}
 
-        {!account.userId ? (
+        {(!account.userId || account.guest) && (
           <Card style={{ gap: 10 }}>
-            <T size={14} color={C.text}>
-              {t('credits.signInPitch')}
+            <T size={13} color={C.textDim} style={{ lineHeight: 19 }}>
+              {t('credits.guestPitch')}
             </T>
-            <ArcadeButton label={t('credits.goToAccount')} size="md" onPress={() => router.replace('/profile')} />
+            <Pressable onPress={() => router.replace('/profile')} style={styles.link} accessibilityRole="button">
+              <Icon name="person" size={14} color={C.cyan} />
+              <T size={13} rounded color={C.cyan}>
+                {t('credits.signInOptional')}
+              </T>
+            </Pressable>
           </Card>
-        ) : !purchasesConfigured ? (
+        )}
+
+        {!purchasesConfigured ? (
           <Card>
             <T size={13} color={C.textDim}>
               {t('credits.notSetUp')}
@@ -193,6 +204,7 @@ export default function CreditsScreen() {
                 tap();
                 setBusy('restore');
                 try {
+                  await linkPurchases(await ensureAccount());
                   await restore();
                   await actions.refreshAccount();
                   Alert.alert(t('credits.restoredTitle'), t('credits.restoredBody'));

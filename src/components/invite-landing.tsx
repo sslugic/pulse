@@ -15,7 +15,7 @@ import { ArcadeButton, Backdrop, Comic } from './underground';
 // joins the crew right away; otherwise it keeps the invite and applies it as soon as there's a card.
 
 export function InviteLanding({ kind, code }: { kind: 'friend' | 'crew'; code: string }) {
-  const userId = useStore((s) => s.account.userId);
+  const userId = useStore((s) => (s.account.guest ? undefined : s.account.userId));
   const loaded = useSquad((s) => s.loaded);
   // Whether there's a card, not the card itself: the card is a new object after every refresh.
   const me = useSquad((s) => !!s.me);

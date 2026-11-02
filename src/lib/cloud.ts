@@ -44,6 +44,8 @@ if (supabase) {
 }
 
 export const currentSession = () => session;
+/** A guest is an anonymous account made only so purchases have somewhere to land (no sign-in needed). */
+export const isGuestSession = (s: Session | null) => !!s?.user.is_anonymous;
 export const onSessionChange = (l: (s: Session | null) => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
@@ -73,6 +75,25 @@ export async function freshCloudAI() {
   return cloudAI();
 }
 
+/**
+ * Makes sure there's an account for a purchase to land on: the signed-in one, or a new guest account.
+ * App Review requires that buying credits doesn't need registration; signing in with Apple later
+ * keeps the guest's credits (same account) and adds them to every device.
+ */
+export async function ensureAccount() {
+  if (!supabase) throw new Error('Pulse cloud isn’t configured in this build.');
+  if (!session) {
+    const { data } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    if (data.session) session = data.session;
+  }
+  if (session) return session.user.id;
+  const { data, error } = await supabase.auth.signInAnonymously();
+  if (error || !data.session) throw error ?? new Error('Couldn’t start a guest account.');
+  session = data.session;
+  listeners.forEach((l) => l(session));
+  return data.session.user.id;
+}
+
 export async function appleSignInAvailable() {
   return Platform.OS === 'ios' && cloudConfigured && (await AppleAuthentication.isAvailableAsync());
 }
@@ -90,10 +111,21 @@ export async function signInWithApple() {
     nonce: hashed,
   });
   if (!cred.identityToken) throw new Error('Apple didn’t return a sign-in token.');
-  const { data, error } = await supabase.auth.signInWithIdToken({ provider: 'apple', token: cred.identityToken, nonce: raw });
-  if (error) throw error;
+  // A guest upgrades in place, so credits they bought stay theirs. If this Apple ID already has a
+  // Pulse account, sign in to that one instead.
+  let user;
+  if (isGuestSession(session)) {
+    const linked = await supabase.auth.linkIdentity({ provider: 'apple', token: cred.identityToken, nonce: raw });
+    if (!linked.error) user = linked.data.user;
+    else if (!/already|exists|linked/i.test(linked.error.message)) throw linked.error;
+  }
+  if (!user) {
+    const { data, error } = await supabase.auth.signInWithIdToken({ provider: 'apple', token: cred.identityToken, nonce: raw });
+    if (error) throw error;
+    user = data.user;
+  }
   const name = [cred.fullName?.givenName, cred.fullName?.familyName].filter(Boolean).join(' ');
-  return { user: data.user, name };
+  return { user, name };
 }
 
 export async function signOut() {
