@@ -29,6 +29,8 @@ const FEATURE_LABELS: Record<string, string> = {
   goal_plan: t('credits.featureGoalPlan'),
   insight: t('credits.featureInsight'),
   estimate: t('credits.featureEstimate'),
+  photo_angle: t('credits.featurePhotoAngle'),
+  photo_retro: t('credits.featurePhotoRetro'),
 };
 
 /** AI credits: balance, what things cost, credit packs, Pulse Pro, and restore. */
