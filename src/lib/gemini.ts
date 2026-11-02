@@ -277,8 +277,20 @@ PERSONA: You are ${persona.name}. Your personality: ${persona.style} Stay fully 
 ${userContext(profile, entries)}`;
 }
 
-// Gemini 3 accepts a thinking level; older models reject it, so we drop it for that model on that error.
+// Gemini 3 accepts a thinking level, but not every model takes every level (some reject "minimal"),
+// and older models reject it altogether. On that error we step down for that model: minimal -> low -> none.
+const noMinimal = new Set<string>();
 const noThinking = new Set<string>();
+
+/** The retry signal when Gemini rejected the thinking setting, after stepping down for that model; else undefined. */
+function thinkingRetry(msg: string, model: string) {
+  if (!/thinking/i.test(msg)) return;
+  if (/minimal/i.test(msg) && !noMinimal.has(model)) noMinimal.add(model);
+  else if (!noThinking.has(model)) noThinking.add(model);
+  else return;
+  return new AiError(RETRY_THINKING);
+}
+const RETRY_THINKING = 'retry-without-thinking';
 
 // Every AI answer comes back in the app's language. The rule is appended after the system prompt so
 // the cached prefix stays the same for everyone.
@@ -294,7 +306,7 @@ function withLanguage(body: Record<string, unknown>) {
 }
 
 function requestBody(body: Record<string, unknown>, model: string, feature: Feature) {
-  const level = QUICK_FEATURES.has(feature) ? 'minimal' : 'low';
+  const level = QUICK_FEATURES.has(feature) && !noMinimal.has(model) ? 'minimal' : 'low';
   const generationConfig = {
     ...(body.generationConfig as object),
     ...(noThinking.has(model) ? {} : { thinkingConfig: { thinkingLevel: level } }),
@@ -304,10 +316,8 @@ function requestBody(body: Record<string, unknown>, model: string, feature: Feat
 
 function requestError(status: number, json: { error?: { message?: string } }, model: string) {
   const msg = json?.error?.message ?? `Request failed (${status})`;
-  if (status === 400 && !noThinking.has(model) && /thinking/i.test(msg)) {
-    noThinking.add(model);
-    return new AiError('retry-without-thinking');
-  }
+  const retry = status === 400 ? thinkingRetry(msg, model) : undefined;
+  if (retry) return retry;
   if (/API key/i.test(msg)) return new AiError(t('errors.keyRejected'), false);
   if (status === 429) return new AiError(t('errors.rateLimited'));
   return new AiError(msg, status >= 500);
@@ -377,9 +387,14 @@ async function withRetry(
       return await run();
     } catch (err) {
       const e = err as AiError;
+      // Stepping down the thinking setting is a fix, not a failure, so it doesn't use up the retries.
+      if (e.message === RETRY_THINKING) {
+        tries--;
+        continue;
+      }
       if (!e.retryable || !canRetry() || tries >= (e.code === 'network' ? 2 : 1)) throw e;
       await whenActive();
-      await new Promise((r) => setTimeout(r, e.message === 'retry-without-thinking' ? 0 : 1000 * 2 ** tries));
+      await new Promise((r) => setTimeout(r, 1000 * 2 ** tries));
     }
   }
 }
@@ -440,7 +455,8 @@ function generateStream(
           } catch {
             continue;
           }
-          if (event.error) throw new AiError(event.error.message ?? 'Gemini stopped answering.');
+          // A rejected thinking setting can arrive inside the stream instead of as a 400.
+          if (event.error) throw thinkingRetry(event.error.message ?? '', model) ?? new AiError(event.error.message ?? 'Gemini stopped answering.');
           const parts: { text?: string; thought?: boolean }[] = event.candidates?.[0]?.content?.parts ?? [];
           const delta = parts.map((p) => (p.thought ? '' : (p.text ?? ''))).join('');
           if (!delta) continue;
