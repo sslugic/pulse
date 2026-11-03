@@ -7,7 +7,7 @@ import { AiError, aiAvailable, askCoach, onCreditBalance, DEFAULT_MODEL, DEFAULT
 import { matchMeal, mealKey, nextDays, resultFor, spanDays, type MealPlanState, type MealSpan, type PlanResult as PlanDayResult, type WorkoutPlanState, type WorkoutSpan } from './plans';
 import { deleteJournalPhoto, journalPhotoUri, pickProgressPhotos, saveJournalPhoto, saveProgressImage, saveProgressPhoto, shrinkForAi } from './media';
 import { celebrate } from './haptics';
-import { deleteAccount, fetchBalance, fetchCosts, fetchSubscription, loadBackup, onSessionChange, saveBackup, signInWithApple, signOut } from './cloud';
+import { deleteAccount, fetchBalance, fetchCosts, fetchSubscription, isGuestSession, loadBackup, onSessionChange, saveBackup, signInWithApple, signOut } from './cloud';
 import { linkPurchases, unlinkPurchases } from './purchases';
 import { activeEnergyByDay, connectHealth, healthAvailable, pullHealth, ensureHealthAccess } from './health';
 import { cancelReminders, enableReminders, scheduleReminder } from './reminders';
@@ -468,6 +468,8 @@ function pushReward(xp: number, tokens: number, label: string, always = false) {
 
 export interface Account {
   userId?: string;
+  /** Signed in only as a guest (made to hold purchases); squad, backup and free credits need Sign in with Apple. */
+  guest?: boolean;
   email?: string;
   credits?: number;
   costs: Record<string, number>;
@@ -478,8 +480,9 @@ export interface Account {
 // Keep the account in step with the Supabase session and every AI call's new balance.
 onSessionChange((s) => {
   const userId = s?.user.id;
-  if (userId === state.account.userId) return;
-  set({ account: { costs: state.account.costs, userId, email: s?.user.email } });
+  const guest = isGuestSession(s);
+  if (userId === state.account.userId && guest === !!state.account.guest) return;
+  set({ account: { ...(userId === state.account.userId ? state.account : { costs: state.account.costs }), userId, guest, email: s?.user.email } });
   if (userId) {
     actions.refreshAccount();
     linkPurchases(userId).catch(() => {});

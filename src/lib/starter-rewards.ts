@@ -80,7 +80,8 @@ export function payStarter() {
 
 async function pay() {
   const userId = currentSession()?.user.id;
-  if (!supabase || !userId) return;
+  // Guests earn no free credits; the steps stay earned and are paid once they sign in with Apple.
+  if (!supabase || !userId || currentSession()?.user.is_anonymous) return;
   const [earned, paid] = await Promise.all([readSet(EARNED_KEY), readSet(paidKey(userId))]);
   let changed = false;
   for (const kind of STARTER_ORDER) {

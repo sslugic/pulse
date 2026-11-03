@@ -54,7 +54,7 @@ export default function Onboarding() {
     const changed = (Object.keys(stored) as (keyof Profile)[]).filter((k) => stored[k] !== seen[k]);
     if (changed.length) setP((x) => ({ ...x, ...Object.fromEntries(changed.map((k) => [k, stored[k]])) }));
   }
-  const signedIn = useStore((st) => !!st.account.userId);
+  const signedIn = useStore((st) => !!st.account.userId && !st.account.guest);
   const healthOn = useStore((st) => !!st.settings.health?.on);
   const reminderHour = useStore((st) => st.settings.reminderHour);
   const scroll = useRef<React.ComponentRef<typeof ScrollView>>(null);

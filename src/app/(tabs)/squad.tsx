@@ -54,7 +54,8 @@ import { useTodayKey } from '@/lib/use-today';
 /** Squad: the weekly friends board, challenges, crews and nudges. */
 export default function SquadScreen() {
   const insets = useSafeAreaInsets();
-  const userId = useStore((s) => s.account.userId);
+  // Guests (made only to hold purchases) need Sign in with Apple for the Squad, like signed-out players.
+  const userId = useStore((s) => (s.account.guest ? undefined : s.account.userId));
   const loaded = useSquad((s) => s.loaded);
   const me = useSquad((s) => s.me);
   const loading = useSquad((s) => s.loading);

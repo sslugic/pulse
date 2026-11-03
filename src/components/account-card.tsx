@@ -45,7 +45,7 @@ export function AccountCard() {
     );
   }
 
-  if (!account.userId) {
+  if (!account.userId || account.guest) {
     const [pitchBefore, pitchAfter] = t('account.signInPitch').split('{credits}');
     return (
       <Card style={{ gap: 12 }} accent={C.yellow + '99'}>
