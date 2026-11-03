@@ -76,6 +76,12 @@ export function AccountCard() {
             {t('account.appleUnavailable')}
           </T>
         )}
+        {/* Buying credits needs no sign-in (App Review 5.1.1(v)), so the store is always one tap away. */}
+        <Pressable onPress={() => router.push('/credits')} style={styles.action}>
+          <T size={13} rounded color={C.ink}>
+            {t('account.getMoreCredits')}
+          </T>
+        </Pressable>
         {__DEV__ && devBackend && (
           <Pressable onPress={() => run('dev', () => devSignIn())} style={styles.small}>
             <T size={12} rounded color={C.orange}>
