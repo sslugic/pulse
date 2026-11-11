@@ -48,3 +48,6 @@ example
 scripts/walls/examples-v3/*.png
 scripts/walls/examples-v3/batch2.jpg
 scripts/walls/examples-v3/urls.txt
+
+# Local admin labels (who is who) stay on this Mac
+tools/admin/labels.json
