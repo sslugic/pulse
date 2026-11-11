@@ -198,7 +198,8 @@
       ];
       box.innerHTML = '';
       box.append(el('div', { className: 'cards' }, ...cards.map(([k, v]) => el('div', { className: 'card' }, el('div', { className: 'v', textContent: v }), el('div', { className: 'k', textContent: k })))));
-      if (!st.salesConfigured) box.append(el('p', { className: 'note warn', textContent: 'Downloads and purchases need your vendor number in tools/admin/asc.json ("vendorNumber"). Find it in App Store Connect → Payments and Financial Reports.' }));
+      if (st.salesError) box.append(el('p', { className: 'note warn', textContent: 'Sales: ' + st.salesError }));
+      else if (!st.salesConfigured) box.append(el('p', { className: 'note warn', textContent: 'Downloads and purchases need your vendor number in tools/admin/asc.json ("vendorNumber"). Find it in App Store Connect → Payments and Financial Reports.' }));
       if (st.analytics.error) box.append(el('p', { className: 'note warn', textContent: 'Analytics: ' + st.analytics.error }));
       else if (!st.analytics.haveData) box.append(el('p', { className: 'note', textContent: st.analytics.requestCreated ? 'Asked Apple to start generating analytics reports just now. Impressions, page views and conversion appear in about 1–2 days.' : 'Analytics reports are requested; Apple hasn’t delivered data yet (usually 1–2 days after the first request).' }));
       const days = st.rows.filter((r) => r.firstDownloads || r.redownloads || r.purchases || r.impressions || r.pageViews || r.downloads).reverse();
