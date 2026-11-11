@@ -190,10 +190,12 @@ export async function appStoreStats({ count = 30, fresh = false } = {}) {
   const days = [];
   for (let i = count; i >= 1; i--) days.push(ymd(new Date(Date.now() - i * 86400000)));
   const [sales, ana] = await Promise.all([
-    Promise.all(days.map((d) => salesDay(c, d).catch(() => null))),
+    Promise.all(days.map((d) => salesDay(c, d).catch((e) => ({ error: e.message })))),
     analytics(c, days).catch((e) => ({ error: e.message })),
   ]);
-  const rows = days.map((date, i) => ({ date, ...(sales[i] ?? {}), ...(ana.byDay?.[date] ?? {}) }));
+  // One failing day is a gap; every day failing (say a 403 for the key's role) is the real answer.
+  const salesError = sales.every((s) => s?.error) ? sales[0].error : null;
+  const rows = days.map((date, i) => ({ date, ...(sales[i]?.error ? {} : sales[i] ?? {}), ...(ana.byDay?.[date] ?? {}) }));
   const sum = (k) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
   const totals = {
     firstDownloads: sum('firstDownloads'),
@@ -209,7 +211,8 @@ export async function appStoreStats({ count = 30, fresh = false } = {}) {
   const stats = {
     rows,
     totals,
-    salesConfigured: Boolean(c.vendorNumber),
+    salesConfigured: Boolean(c.vendorNumber) && !salesError,
+    salesError,
     analytics: ana.error ? { error: ana.error } : { requestCreated: ana.requestCreated, haveData: ana.haveData },
   };
   await writeFile(CACHE, JSON.stringify({ at: Date.now(), stats }));
