@@ -157,7 +157,13 @@
 
   async function load() {
     $('#rows').innerHTML = '<tr><td colspan="9" class="empty">Loading accounts from production…</td></tr>';
-    try { users = await api('/api/users'); render(); } catch (e) { toast(e.message, true); $('#rows').innerHTML = ''; }
+    try { users = await api('/api/users'); render(); } catch (e) {
+      // Keep the failure on screen (a blank table reads as "no accounts"); usually the server was restarting.
+      const msg = e instanceof TypeError ? 'Couldn’t reach the admin server. Is `npm run admin` running?' : e.message;
+      $('#rows').innerHTML = '';
+      $('#rows').append(el('tr', {}, el('td', { colSpan: 9, className: 'empty', textContent: msg + ' Press Reload to try again.' })));
+      $('#stats').textContent = '';
+    }
   }
   $('#q').addEventListener('input', render);
   $('#reload').addEventListener('click', load);
