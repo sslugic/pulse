@@ -17,6 +17,7 @@ import { personaById } from '@/lib/personas';
 import { fallbackCaptions, weekStats, type RecapCaptions } from '@/lib/recap';
 import { canUseAI, getState, useStore } from '@/lib/store';
 import { moodEmoji } from '@/lib/wellbeing';
+import { askForReviewAtHighPoint } from '@/lib/review-prompt';
 
 const fmtRange = (a: string, b: string) => {
   const f = (k: string) => new Date(k + 'T12:00').toLocaleDateString(locale, { month: 'short', day: 'numeric' }).toLocaleUpperCase(locale);
@@ -48,6 +49,11 @@ export default function RecapScreen() {
       cancelled = true;
     };
   }, [stats.digest, round]);
+
+  // A strong week (5+ days logged) is a good moment to ask for a rating.
+  useEffect(() => {
+    if (stats.daysLogged >= 5) askForReviewAtHighPoint(3000);
+  }, [stats.daysLogged]);
 
   const share = async () => {
     if (!page.current) return;
