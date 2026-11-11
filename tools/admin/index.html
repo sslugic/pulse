@@ -42,6 +42,15 @@
   #msg { position: fixed; bottom: 16px; right: 16px; padding: 10px 14px; border-radius: 8px; background: var(--card); border: 1px solid var(--line); display: none; max-width: 420px; }
   #msg.err { border-color: var(--red); }
   .empty { color: var(--dim); padding: 24px 8px; }
+  section.store { margin-bottom: 28px; }
+  section.store h2, section.accounts h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--dim); margin: 0 0 10px; display: flex; gap: 10px; align-items: center; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .card .v { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .card .k { color: var(--dim); font-size: 12px; }
+  .note { color: var(--dim); font-size: 12px; margin: 6px 0; }
+  .note.warn { color: var(--yellow); }
+  details summary { cursor: pointer; color: var(--dim); font-size: 12px; margin: 6px 0; }
 </style>
 </head>
 <body>
@@ -54,6 +63,12 @@
   </div>
 </header>
 <main>
+  <section class="store">
+    <h2>App Store · last 30 days <button id="storeReload" style="font-size:11px;padding:2px 8px">Refresh</button></h2>
+    <div id="store"><p class="note">Loading App Store numbers…</p></div>
+  </section>
+  <section class="accounts">
+  <h2>Accounts</h2>
   <table>
     <thead>
       <tr>
@@ -63,6 +78,7 @@
     </thead>
     <tbody id="rows"><tr><td colspan="9" class="empty">Loading accounts from production…</td></tr></tbody>
   </table>
+  </section>
 </main>
 <div id="msg"></div>
 <script>
@@ -165,6 +181,43 @@
       $('#stats').textContent = '';
     }
   }
+  async function loadStore(fresh) {
+    const box = $('#store');
+    box.innerHTML = '<p class="note">Loading App Store numbers…</p>';
+    try {
+      const st = await api('/api/appstore' + (fresh ? '?fresh=1' : ''));
+      const t = st.totals, fmt = (n) => (n == null ? '–' : Number(n).toLocaleString());
+      const cards = [
+        ['First-time downloads', st.salesConfigured ? fmt(t.firstDownloads) : '–'],
+        ['Redownloads', st.salesConfigured ? fmt(t.redownloads) : '–'],
+        ['In-app purchases', st.salesConfigured ? fmt(t.purchases) : '–'],
+        ['Proceeds', st.salesConfigured && t.proceeds ? `${t.proceeds.toLocaleString()} ${t.currency}` : '–'],
+        ['Impressions', st.analytics.haveData ? fmt(t.impressions) : '–'],
+        ['Product page views', st.analytics.haveData ? fmt(t.pageViews) : '–'],
+        ['Conversion (page → download)', st.analytics.haveData && t.conversion != null ? (t.conversion * 100).toFixed(1) + '%' : '–'],
+      ];
+      box.innerHTML = '';
+      box.append(el('div', { className: 'cards' }, ...cards.map(([k, v]) => el('div', { className: 'card' }, el('div', { className: 'v', textContent: v }), el('div', { className: 'k', textContent: k })))));
+      if (!st.salesConfigured) box.append(el('p', { className: 'note warn', textContent: 'Downloads and purchases need your vendor number in tools/admin/asc.json ("vendorNumber"). Find it in App Store Connect → Payments and Financial Reports.' }));
+      if (st.analytics.error) box.append(el('p', { className: 'note warn', textContent: 'Analytics: ' + st.analytics.error }));
+      else if (!st.analytics.haveData) box.append(el('p', { className: 'note', textContent: st.analytics.requestCreated ? 'Asked Apple to start generating analytics reports just now. Impressions, page views and conversion appear in about 1–2 days.' : 'Analytics reports are requested; Apple hasn’t delivered data yet (usually 1–2 days after the first request).' }));
+      const days = st.rows.filter((r) => r.firstDownloads || r.redownloads || r.purchases || r.impressions || r.pageViews || r.downloads).reverse();
+      if (days.length) {
+        const tb = el('table', {}, el('tr', {}, ...['Day', 'Downloads', 'Redownloads', 'Purchases', 'Impressions', 'Page views', 'Conversion'].map((h) => el('th', { textContent: h, className: h === 'Day' ? '' : 'num' }))));
+        for (const r of days) tb.append(el('tr', {},
+          el('td', { textContent: r.date }),
+          ...[r.firstDownloads, r.redownloads, r.purchases, r.impressions, r.pageViews].map((v) => el('td', { className: 'num', textContent: fmt(v || 0) })),
+          el('td', { className: 'num', textContent: r.pageViews ? ((r.downloads / r.pageViews) * 100).toFixed(1) + '%' : '–' }),
+        ));
+        box.append(el('details', {}, el('summary', { textContent: `By day (${days.length} days with activity)` }), tb));
+      }
+    } catch (e) {
+      box.innerHTML = '';
+      box.append(el('p', { className: 'note warn', textContent: e.message }));
+    }
+  }
+  $('#storeReload').addEventListener('click', () => loadStore(true));
+  loadStore(false);
   $('#q').addEventListener('input', render);
   $('#reload').addEventListener('click', load);
   load();

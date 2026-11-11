@@ -1,0 +1,8 @@
+{
+  "keyId": "ABC123DEFG",
+  "issuerId": "00000000-0000-0000-0000-000000000000",
+  "keyPath": "~/.appstoreconnect/private_keys/AuthKey_ABC123DEFG.p8",
+  "appId": "6824666479",
+  "sku": "pulse-ios",
+  "vendorNumber": ""
+}

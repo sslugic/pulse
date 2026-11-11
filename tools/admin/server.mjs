@@ -10,6 +10,8 @@ import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { appStoreStats } from './appstore.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..', '..');
 const PROJECT = process.env.PULSE_PROJECT_REF ?? 'zkdvvnrjpcodmvqdbbck';
@@ -65,6 +67,7 @@ const USERS = `
   order by u.created_at desc`;
 
 const routes = {
+  'GET /api/appstore': (q) => appStoreStats({ fresh: q.get('fresh') === '1' }),
   'GET /api/users': async () => {
     const [rows, names] = await Promise.all([sql(USERS), labels()]);
     return rows.map((r) => ({ ...r, label: names[r.id] ?? '' }));

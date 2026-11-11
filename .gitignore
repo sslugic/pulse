@@ -51,3 +51,5 @@ scripts/walls/examples-v3/urls.txt
 
 # Local admin labels (who is who) stay on this Mac
 tools/admin/labels.json
+tools/admin/asc.json
+tools/admin/.appstore-cache.json
