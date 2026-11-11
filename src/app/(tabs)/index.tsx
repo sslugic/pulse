@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,6 +26,7 @@ import { useTodayKey } from '@/lib/use-today';
 import { useSteps } from '@/lib/health';
 import { season } from '@/lib/seasons';
 import { dayWellbeing } from '@/lib/wellbeing';
+import { askForReviewAtHighPoint } from '@/lib/review-prompt';
 
 function greeting() {
   const h = new Date().getHours();
@@ -50,6 +51,12 @@ export default function Today() {
   const targets = useMemo(() => macroTargets(profile), [profile]);
   const todays = useMemo(() => entries.filter((e) => dayKey(e.createdAt) === today.key), [entries, today.key]);
   const days = useMemo(() => streak(entries, game.frozenDays), [entries, game.frozenDays]);
+  // A streak that just grew to a week or more is a good moment to ask for a rating (not on launch).
+  const lastStreak = useRef<number | null>(null);
+  useEffect(() => {
+    if (lastStreak.current != null && days > lastStreak.current && days >= 7) askForReviewAtHighPoint(2500);
+    lastStreak.current = days;
+  }, [days]);
   const crew = useMemo(() => crewRank(entries, questXp(claims), game.frozenDays), [entries, claims, game.frozenDays]);
   const tokens = useMemo(() => tokenBalance(game), [game]);
   const mind = useMemo(() => dayWellbeing(entries, todayKey), [entries, todayKey]);

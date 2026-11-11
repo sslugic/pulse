@@ -2,7 +2,7 @@
   "expo": {
     "name": "Pulse",
     "slug": "pulse",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "pulse",
@@ -17,13 +17,14 @@
         "ITSAppUsesNonExemptEncryption": false
       },
       "appleTeamId": "8SX4DK48U6",
-      "buildNumber": "10",
+      "buildNumber": "11",
       "usesAppleSignIn": true,
       "supportsTablet": false,
       "associatedDomains": [
         "applinks:pulseretro.fit",
         "applinks:www.pulseretro.fit"
-      ]
+      ],
+      "appStoreUrl": "https://apps.apple.com/app/id6824666479"
     },
     "android": {
       "adaptiveIcon": {
