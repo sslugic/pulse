@@ -22,10 +22,13 @@ function sql(statement, { write = false } = {}) {
   const args = ['supabase', 'db', 'query', `--remote=${PROJECT}`, '--output-format', 'json', write ? '--yes' : '--read-only', statement];
   return new Promise((resolve, reject) => {
     execFile('npx', args, { cwd: ROOT, maxBuffer: 20 * 1024 * 1024 }, (err, stdout, stderr) => {
-      const start = stdout.indexOf('{');
+      // In a normal terminal the CLI prints the rows as a bare JSON array; under an AI agent it wraps
+      // them as { rows, boundary, warning } or { error }. Accept both.
+      const start = stdout.search(/[[{]/);
       try {
         const out = JSON.parse(stdout.slice(start));
-        if (out.error) return reject(new Error(out.error.message));
+        if (Array.isArray(out)) return resolve(out);
+        if (out.error) return reject(new Error(out.error.message ?? String(out.error)));
         resolve(out.rows ?? []);
       } catch {
         reject(new Error((stderr || err?.message || 'Supabase CLI failed').trim().split('\n').slice(-3).join(' ')));
