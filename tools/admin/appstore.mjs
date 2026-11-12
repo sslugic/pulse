@@ -43,9 +43,13 @@ async function token(c) {
 }
 
 async function call(c, path, { method = 'GET', body, raw = false } = {}) {
-  const res = await fetch(path.startsWith('http') ? path : API + path, {
+  const url = path.startsWith('http') ? path : API + path;
+  // Report segment URLs are presigned S3 links: they carry their own signature and S3 rejects a second
+  // auth mechanism, so only send the bearer token to the App Store Connect API itself.
+  const ours = url.startsWith(API);
+  const res = await fetch(url, {
     method,
-    headers: { authorization: `Bearer ${await token(c)}`, ...(body ? { 'content-type': 'application/json' } : {}) },
+    headers: { ...(ours ? { authorization: `Bearer ${await token(c)}` } : {}), ...(body ? { 'content-type': 'application/json' } : {}) },
     body: body ? JSON.stringify(body) : undefined,
   });
   if (res.status === 404 && raw) return null; // no sales report for that day (yet)
